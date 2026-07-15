@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
+import '../services/supplier_store.dart';
 
 Future<Product?> showProductForm(
   BuildContext context, {
@@ -157,6 +158,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   late final TextEditingController _quantity;
   late final TextEditingController _shop;
   late final TextEditingController _note;
+  late final TextEditingValue _shopInitial;
 
   @override
   void initState() {
@@ -169,7 +171,9 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     _quantity = TextEditingController(
       text: o == null ? '' : _fmt(o.quantity),
     );
-    _shop = TextEditingController(text: o?.shop ?? '');
+    final shopText = o?.shop ?? '';
+    _shop = TextEditingController(text: shopText);
+    _shopInitial = TextEditingValue(text: shopText);
     _note = TextEditingController(text: o?.note ?? '');
   }
 
@@ -188,26 +192,31 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     final price = double.parse(_price.text.trim());
     final quantity = double.parse(_quantity.text.trim());
+    final shop = _shop.text.trim();
+    if (shop.isNotEmpty) {
+      await SupplierStore.instance.ensureName(shop);
+    }
     final base = widget.offer;
     final result = base == null
         ? Offer(
             brand: _brand.text.trim(),
             price: price,
             quantity: quantity,
-            shop: _shop.text.trim(),
+            shop: shop,
             note: _note.text.trim(),
           )
         : base.copyWith(
             brand: _brand.text.trim(),
             price: price,
             quantity: quantity,
-            shop: _shop.text.trim(),
+            shop: shop,
             note: _note.text.trim(),
           );
+    if (!mounted) return;
     Navigator.of(context).pop(result);
   }
 
@@ -286,14 +295,76 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
               ],
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _shop,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: s.shopOptional,
-                hintText: s.shopHint,
-                border: const OutlineInputBorder(),
-              ),
+            Builder(
+              builder: (context) {
+                final options = SupplierStore.instance.names;
+                return RawAutocomplete<String>(
+                  initialValue: _shopInitial,
+                  optionsBuilder: (value) {
+                    final current = SupplierStore.instance.names;
+                    final q = value.text.trim().toLowerCase();
+                    if (q.isEmpty) return current;
+                    return current
+                        .where((name) => name.toLowerCase().contains(q));
+                  },
+                  onSelected: (value) {
+                    _shop.text = value;
+                  },
+                  displayStringForOption: (v) => v,
+                  fieldViewBuilder:
+                      (context, controller, focusNode, onFieldSubmitted) {
+                    return TextFormField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: s.shopOptional,
+                        hintText:
+                            options.isEmpty ? s.shopHint : s.selectSupplier,
+                        border: const OutlineInputBorder(),
+                        suffixIcon: options.isEmpty
+                            ? null
+                            : const Icon(Icons.arrow_drop_down),
+                      ),
+                      onChanged: (v) => _shop.text = v,
+                      onFieldSubmitted: (_) => onFieldSubmitted(),
+                    );
+                  },
+                  optionsViewBuilder: (context, onSelected, opts) {
+                    final list = opts.toList();
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 4,
+                        borderRadius: BorderRadius.circular(12),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxHeight: 200,
+                            maxWidth: 360,
+                          ),
+                          child: ListView.builder(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: list.length,
+                            itemBuilder: (context, index) {
+                              final option = list[index];
+                              return ListTile(
+                                dense: true,
+                                leading: const Icon(
+                                  Icons.storefront_outlined,
+                                  size: 18,
+                                ),
+                                title: Text(option),
+                                onTap: () => onSelected(option),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(

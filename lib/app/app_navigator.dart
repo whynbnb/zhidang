@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../screens/settings_page.dart';
+import '../screens/suppliers_page.dart';
 
 class AppNavigator {
   static final key = GlobalKey<NavigatorState>();
@@ -14,7 +15,10 @@ class AppNavigator {
       topName = route.settings.name;
       return true;
     });
-    if (topName == SettingsPage.routeName) return;
+    if (topName == SettingsPage.routeName ||
+        topName == SuppliersPage.routeName) {
+      return;
+    }
 
     await navigator.push(
       MaterialPageRoute<void>(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
 import '../settings/app_settings.dart';
+import 'suppliers_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -129,6 +130,31 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _SectionTitle(s.data),
+          Card(
+            elevation: 0,
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: scheme.outlineVariant),
+            ),
+            child: ListTile(
+              leading: Icon(Icons.storefront_outlined, color: scheme.primary),
+              title: Text(s.suppliersManage),
+              subtitle: Text(s.suppliersManageHint),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    settings:
+                        const RouteSettings(name: SuppliersPage.routeName),
+                    builder: (_) => const SuppliersPage(),
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 20),

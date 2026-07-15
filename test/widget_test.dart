@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zhidang/main.dart';
+import 'package:zhidang/services/supplier_store.dart';
 import 'package:zhidang/settings/app_settings.dart';
 
 void main() {
@@ -8,7 +9,10 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    await AppSettings.instance.load();
+    await Future.wait([
+      AppSettings.instance.load(),
+      SupplierStore.instance.load(),
+    ]);
   });
 
   testWidgets('值当 app loads', (tester) async {

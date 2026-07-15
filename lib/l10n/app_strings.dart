@@ -47,6 +47,37 @@ class AppStrings {
   String get themeLight => isZh ? '浅色' : 'Light';
   String get themeDark => isZh ? '深色' : 'Dark';
   String get themeColor => isZh ? '主题色' : 'Theme color';
+  String get data => isZh ? '数据' : 'Data';
+  String get suppliers => isZh ? '供应商' : 'Suppliers';
+  String get suppliersManage => isZh ? '管理供应商' : 'Manage suppliers';
+  String get suppliersManageHint => isZh
+      ? '预先维护超市、电商等购买渠道'
+      : 'Predefine stores and purchase channels';
+  String get addSupplier => isZh ? '添加供应商' : 'Add supplier';
+  String get editSupplier => isZh ? '编辑供应商' : 'Edit supplier';
+  String get deleteSupplier => isZh ? '删除供应商' : 'Delete supplier';
+  String deleteSupplierConfirm(String name) =>
+      isZh ? '确定删除供应商「$name」？' : 'Delete supplier "$name"?';
+  String get supplierName => isZh ? '供应商名称' : 'Supplier name';
+  String get supplierNameHint =>
+      isZh ? '例如：盒马、京东、沃尔玛' : 'e.g. Costco, Amazon, Walmart';
+  String get supplierNameRequired =>
+      isZh ? '请填写供应商名称' : 'Please enter a supplier name';
+  String get supplierNameExists =>
+      isZh ? '该供应商已存在' : 'This supplier already exists';
+  String get searchSuppliers =>
+      isZh ? '搜索供应商' : 'Search suppliers';
+  String get noSuppliers => isZh ? '还没有供应商' : 'No suppliers yet';
+  String get noSupplierResults => isZh ? '没有匹配的供应商' : 'No matching suppliers';
+  String get suppliersHint => isZh
+      ? '添加常用购买渠道后，录入报价时可快速选择。'
+      : 'Add common stores so you can pick them quickly when adding offers.';
+  String supplierCount(int n) =>
+      isZh ? '共 $n 个供应商' : (n == 1 ? '1 supplier' : '$n suppliers');
+  String get selectSupplier => isZh ? '选择供应商' : 'Select supplier';
+  String get noneOption => isZh ? '无' : 'None';
+  String get customSupplier => isZh ? '其他（手动输入）' : 'Other (type manually)';
+
   String get about => isZh ? '关于' : 'About';
   String get aboutBody => isZh
       ? '记录商品单价，比较不同品牌谁更值当。'
@@ -118,9 +149,9 @@ class AppStrings {
   String get totalPrice => isZh ? '总价（元）' : 'Total price';
   String quantityLabel(String unit) =>
       isZh ? '数量（$unit）' : 'Quantity ($unit)';
-  String get shopOptional => isZh ? '购买渠道（可选）' : 'Store (optional)';
+  String get shopOptional => isZh ? '供应商（可选）' : 'Supplier (optional)';
   String get shopHint =>
-      isZh ? '超市 / 电商 / 本地店' : 'Supermarket / online / local';
+      isZh ? '选择或输入购买渠道' : 'Select or type a purchase channel';
   String get requiredField => isZh ? '请填写' : 'Required';
   String get enterNumber => isZh ? '请输入数字' : 'Enter a number';
   String get mustBePositive => isZh ? '需大于 0' : 'Must be greater than 0';
