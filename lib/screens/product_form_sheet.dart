@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../models/product.dart';
 
 Future<Product?> showProductForm(
@@ -61,6 +62,9 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final editing = widget.product != null;
+    final s = AppStrings.of(context);
+    final units = {...s.unitOptions, if (!s.unitOptions.contains(_unit)) _unit}
+        .toList();
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
@@ -71,7 +75,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              editing ? '编辑商品' : '新建商品',
+              editing ? s.editProduct : s.newProduct,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -81,22 +85,22 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
               controller: _name,
               autofocus: !editing,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: '商品名称',
-                hintText: '例如：牛奶、洗衣液、大米',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: s.productName,
+                hintText: s.productNameHint,
+                border: const OutlineInputBorder(),
               ),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? '请填写商品名称' : null,
+                  (v == null || v.trim().isEmpty) ? s.productNameRequired : null,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _unit,
-              decoration: const InputDecoration(
-                labelText: '计量单位',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: s.unitOfMeasure,
+                border: const OutlineInputBorder(),
               ),
-              items: unitOptions
+              items: units
                   .map((u) => DropdownMenuItem(value: u, child: Text(u)))
                   .toList(),
               onChanged: (v) {
@@ -106,15 +110,15 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _note,
-              decoration: const InputDecoration(
-                labelText: '备注（可选）',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: s.noteOptional,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _submit,
-              child: Text(editing ? '保存' : '创建'),
+              child: Text(editing ? s.save : s.createAction),
             ),
           ],
         ),
@@ -207,11 +211,11 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     Navigator.of(context).pop(result);
   }
 
-  String? _positiveNumber(String? v) {
-    if (v == null || v.trim().isEmpty) return '请填写';
+  String? _positiveNumber(String? v, AppStrings s) {
+    if (v == null || v.trim().isEmpty) return s.requiredField;
     final n = double.tryParse(v.trim());
-    if (n == null) return '请输入数字';
-    if (n <= 0) return '需大于 0';
+    if (n == null) return s.enterNumber;
+    if (n <= 0) return s.mustBePositive;
     return null;
   }
 
@@ -220,6 +224,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final editing = widget.offer != null;
     final unit = widget.unit;
+    final s = AppStrings.of(context);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
@@ -230,7 +235,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              editing ? '编辑报价' : '添加报价',
+              editing ? s.editOffer : s.addOffer,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -240,13 +245,13 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
               controller: _brand,
               autofocus: !editing,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: '品牌 / 规格名',
-                hintText: '例如：伊利金典、蓝月亮',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: s.brandOrSpec,
+                hintText: s.brandHint,
+                border: const OutlineInputBorder(),
               ),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? '请填写品牌' : null,
+                  (v == null || v.trim().isEmpty) ? s.brandRequired : null,
             ),
             const SizedBox(height: 12),
             Row(
@@ -257,11 +262,11 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: '总价（元）',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: s.totalPrice,
+                      border: const OutlineInputBorder(),
                     ),
-                    validator: _positiveNumber,
+                    validator: (v) => _positiveNumber(v, s),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -272,10 +277,10 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                         const TextInputType.numberWithOptions(decimal: true),
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
-                      labelText: '数量（$unit）',
+                      labelText: s.quantityLabel(unit),
                       border: const OutlineInputBorder(),
                     ),
-                    validator: _positiveNumber,
+                    validator: (v) => _positiveNumber(v, s),
                   ),
                 ),
               ],
@@ -284,24 +289,24 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             TextFormField(
               controller: _shop,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: '购买渠道（可选）',
-                hintText: '超市 / 电商 / 本地店',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: s.shopOptional,
+                hintText: s.shopHint,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _note,
-              decoration: const InputDecoration(
-                labelText: '备注（可选）',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: s.noteOptional,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _submit,
-              child: Text(editing ? '保存' : '添加'),
+              child: Text(editing ? s.save : s.add),
             ),
           ],
         ),

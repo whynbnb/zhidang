@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../l10n/app_strings.dart';
 import '../models/product.dart';
 
 final _currency = NumberFormat('#,##0.##');
@@ -23,6 +24,7 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final best = product.bestOffer;
+    final s = AppStrings.of(context);
 
     return Card(
       elevation: selected ? 2 : 0,
@@ -66,7 +68,7 @@ class ProductCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        '${product.offers.length} 个品牌',
+                        s.brandCount(product.offers.length),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: scheme.onSecondaryContainer,
                             ),
@@ -77,7 +79,7 @@ class ProductCard extends StatelessWidget {
               const SizedBox(height: 8),
               if (best != null) ...[
                 Text(
-                  '最优：${best.brand}',
+                  s.bestBrand(best.brand),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 4),
@@ -90,7 +92,7 @@ class ProductCard extends StatelessWidget {
                 ),
               ] else
                 Text(
-                  '还没有报价，点进来添加',
+                  s.noOfferHintCard,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),

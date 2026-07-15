@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../app/app_navigator.dart';
+import '../l10n/app_strings.dart';
 import '../models/product.dart';
 import '../services/storage_service.dart';
 import '../widgets/offer_tile.dart';
@@ -46,8 +48,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _products = items;
       _loading = false;
-      if (_selectedId != null &&
-          !_products.any((p) => p.id == _selectedId)) {
+      if (_selectedId != null && !_products.any((p) => p.id == _selectedId)) {
         _selectedId = null;
       }
       if (_selectedId == null && _products.isNotEmpty) {
@@ -78,6 +79,8 @@ class _HomePageState extends State<HomePage> {
         .toList();
   }
 
+  Future<void> _openSettings() => AppNavigator.openSettings();
+
   Future<void> _addProduct() async {
     final result = await showProductForm(context);
     if (result == null) return;
@@ -101,19 +104,20 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _deleteProduct(Product product) async {
+    final s = AppStrings.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除商品'),
-        content: Text('确定删除「${product.name}」及其全部报价？'),
+        title: Text(s.deleteProduct),
+        content: Text(s.deleteProductConfirm(product.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
+            child: Text(s.delete),
           ),
         ],
       ),
@@ -159,19 +163,20 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _deleteOffer(Product product, Offer offer) async {
+    final s = AppStrings.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除报价'),
-        content: Text('确定删除「${offer.brand}」？'),
+        title: Text(s.deleteOffer),
+        content: Text(s.deleteOfferConfirm(offer.brand)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
+            child: Text(s.delete),
           ),
         ],
       ),
@@ -192,6 +197,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isWide = width >= 840;
+    final s = AppStrings.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -203,6 +209,7 @@ class _HomePageState extends State<HomePage> {
                     products: _filtered,
                     selected: _selected,
                     onSelect: (id) => setState(() => _selectedId = id),
+                    onOpenSettings: _openSettings,
                     onAddProduct: _addProduct,
                     onEditProduct: _editProduct,
                     onDeleteProduct: _deleteProduct,
@@ -216,6 +223,7 @@ class _HomePageState extends State<HomePage> {
                     selected: _selected,
                     onSelect: (id) => setState(() => _selectedId = id),
                     onBack: () => setState(() => _selectedId = null),
+                    onOpenSettings: _openSettings,
                     onAddProduct: _addProduct,
                     onEditProduct: _editProduct,
                     onDeleteProduct: _deleteProduct,
@@ -224,12 +232,12 @@ class _HomePageState extends State<HomePage> {
                     onDeleteOffer: _deleteOffer,
                   ),
       ),
-      floatingActionButton: isWide
+      floatingActionButton: isWide || _selected != null
           ? null
           : FloatingActionButton.extended(
               onPressed: _addProduct,
               icon: const Icon(Icons.add),
-              label: const Text('新建商品'),
+              label: Text(s.newProduct),
             ),
     );
   }
@@ -241,6 +249,7 @@ class _WideLayout extends StatelessWidget {
     required this.products,
     required this.selected,
     required this.onSelect,
+    required this.onOpenSettings,
     required this.onAddProduct,
     required this.onEditProduct,
     required this.onDeleteProduct,
@@ -253,6 +262,7 @@ class _WideLayout extends StatelessWidget {
   final List<Product> products;
   final Product? selected;
   final ValueChanged<String> onSelect;
+  final VoidCallback onOpenSettings;
   final VoidCallback onAddProduct;
   final ValueChanged<Product> onEditProduct;
   final ValueChanged<Product> onDeleteProduct;
@@ -271,6 +281,7 @@ class _WideLayout extends StatelessWidget {
             products: products,
             selectedId: selected?.id,
             onSelect: onSelect,
+            onOpenSettings: onOpenSettings,
             onAddProduct: onAddProduct,
             onEditProduct: onEditProduct,
             onDeleteProduct: onDeleteProduct,
@@ -301,6 +312,7 @@ class _NarrowLayout extends StatelessWidget {
     required this.selected,
     required this.onSelect,
     required this.onBack,
+    required this.onOpenSettings,
     required this.onAddProduct,
     required this.onEditProduct,
     required this.onDeleteProduct,
@@ -314,6 +326,7 @@ class _NarrowLayout extends StatelessWidget {
   final Product? selected;
   final ValueChanged<String> onSelect;
   final VoidCallback onBack;
+  final VoidCallback onOpenSettings;
   final VoidCallback onAddProduct;
   final ValueChanged<Product> onEditProduct;
   final ValueChanged<Product> onDeleteProduct;
@@ -323,12 +336,15 @@ class _NarrowLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+
     if (selected == null) {
       return _ProductListPane(
         search: search,
         products: products,
         selectedId: null,
         onSelect: onSelect,
+        onOpenSettings: onOpenSettings,
         onAddProduct: onAddProduct,
         onEditProduct: onEditProduct,
         onDeleteProduct: onDeleteProduct,
@@ -343,13 +359,13 @@ class _NarrowLayout extends StatelessWidget {
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: onBack,
-              tooltip: '返回列表',
+              tooltip: s.backToList,
             ),
             title: Text(
               selected!.name,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            subtitle: Text('单位：${selected!.unit}'),
+            subtitle: Text(s.unitLabel(selected!.unit)),
           ),
         ),
         const Divider(height: 1),
@@ -375,6 +391,7 @@ class _ProductListPane extends StatelessWidget {
     required this.products,
     required this.selectedId,
     required this.onSelect,
+    required this.onOpenSettings,
     required this.onAddProduct,
     required this.onEditProduct,
     required this.onDeleteProduct,
@@ -384,6 +401,7 @@ class _ProductListPane extends StatelessWidget {
   final List<Product> products;
   final String? selectedId;
   final ValueChanged<String> onSelect;
+  final VoidCallback onOpenSettings;
   final VoidCallback onAddProduct;
   final ValueChanged<Product> onEditProduct;
   final ValueChanged<Product> onDeleteProduct;
@@ -391,27 +409,34 @@ class _ProductListPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final s = AppStrings.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
           child: Row(
             children: [
               Icon(Icons.savings_outlined, color: scheme.primary),
               const SizedBox(width: 8),
-              Text(
-                '值当',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+              Expanded(
+                child: Text(
+                  s.appName,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
               ),
-              const Spacer(),
+              IconButton(
+                onPressed: onOpenSettings,
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: s.settings,
+              ),
               FilledButton.tonalIcon(
                 onPressed: onAddProduct,
                 icon: const Icon(Icons.add),
-                label: const Text('新建'),
+                label: Text(s.create),
               ),
             ],
           ),
@@ -421,7 +446,7 @@ class _ProductListPane extends StatelessWidget {
           child: TextField(
             controller: search,
             decoration: InputDecoration(
-              hintText: '搜索商品 / 品牌',
+              hintText: s.searchHint,
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -433,7 +458,7 @@ class _ProductListPane extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
           child: Text(
-            products.isEmpty ? '还没有商品' : '共 ${products.length} 个商品',
+            products.isEmpty ? s.noProducts : s.productCount(products.length),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -454,12 +479,12 @@ class _ProductListPane extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          '记录单价，轻松比价',
+                          s.emptyHintTitle,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '添加商品，再录入不同品牌的价格和规格，\n自动算出谁更值当。',
+                          s.emptyHintBody,
                           textAlign: TextAlign.center,
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -470,7 +495,7 @@ class _ProductListPane extends StatelessWidget {
                         FilledButton.icon(
                           onPressed: onAddProduct,
                           icon: const Icon(Icons.add),
-                          label: const Text('添加第一个商品'),
+                          label: Text(s.addFirstProduct),
                         ),
                       ],
                     ),
@@ -508,6 +533,7 @@ class _ProductListPane extends StatelessWidget {
     ValueChanged<Product> onEdit,
     ValueChanged<Product> onDelete,
   ) {
+    final s = AppStrings.of(context);
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -517,7 +543,7 @@ class _ProductListPane extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.edit_outlined),
-              title: const Text('编辑商品'),
+              title: Text(s.editProduct),
               onTap: () {
                 Navigator.pop(context);
                 onEdit(product);
@@ -529,7 +555,7 @@ class _ProductListPane extends StatelessWidget {
                 color: Theme.of(context).colorScheme.error,
               ),
               title: Text(
-                '删除商品',
+                s.deleteProduct,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
               onTap: () {
@@ -549,9 +575,10 @@ class _EmptyDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Center(
       child: Text(
-        '从左侧选择一个商品查看比价',
+        s.selectProductHint,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -582,6 +609,7 @@ class _ProductDetailPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final s = AppStrings.of(context);
     final offers = [...product.offers]
       ..sort((a, b) => a.unitPrice.compareTo(b.unitPrice));
     final best = offers.isEmpty ? null : offers.first;
@@ -603,17 +631,17 @@ class _ProductDetailPane extends StatelessWidget {
               IconButton(
                 onPressed: onEditProduct,
                 icon: const Icon(Icons.edit_outlined),
-                tooltip: '编辑商品',
+                tooltip: s.editProduct,
               ),
               IconButton(
                 onPressed: onDeleteProduct,
                 icon: const Icon(Icons.delete_outline),
-                tooltip: '删除商品',
+                tooltip: s.deleteProduct,
               ),
             ],
           ),
           Text(
-            '计量单位：${product.unit}',
+            s.measureUnit(product.unit),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -630,12 +658,12 @@ class _ProductDetailPane extends StatelessWidget {
               TextButton.icon(
                 onPressed: onEditProduct,
                 icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('编辑'),
+                label: Text(s.edit),
               ),
               TextButton.icon(
                 onPressed: onDeleteProduct,
                 icon: const Icon(Icons.delete_outline, size: 18),
-                label: const Text('删除'),
+                label: Text(s.delete),
               ),
             ],
           ),
@@ -658,7 +686,7 @@ class _ProductDetailPane extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '当前最值当',
+                          s.bestValueNow,
                           style:
                               Theme.of(context).textTheme.labelLarge?.copyWith(
                                     color: scheme.onPrimaryContainer,
@@ -689,7 +717,7 @@ class _ProductDetailPane extends StatelessWidget {
         Row(
           children: [
             Text(
-              '品牌比价',
+              s.brandCompare,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -698,7 +726,7 @@ class _ProductDetailPane extends StatelessWidget {
             FilledButton.icon(
               onPressed: onAddOffer,
               icon: const Icon(Icons.add),
-              label: const Text('添加报价'),
+              label: Text(s.addOffer),
             ),
           ],
         ),
@@ -715,12 +743,12 @@ class _ProductDetailPane extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '还没有报价',
+                  s.noOffers,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '添加不同品牌的总价和规格，自动换算单价',
+                  s.noOffersHint,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../l10n/app_strings.dart';
 import '../models/product.dart';
 
 final _currency = NumberFormat('#,##0.##');
@@ -26,6 +27,7 @@ class OfferTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final s = AppStrings.of(context);
 
     return Card(
       elevation: 0,
@@ -50,8 +52,11 @@ class OfferTile extends StatelessWidget {
               foregroundColor:
                   isBest ? scheme.onPrimary : scheme.onSurfaceVariant,
               child: Text(
-                isBest ? '优' : '$rank',
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                isBest ? s.bestBadge : '$rank',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: isBest && !s.isZh ? 10 : null,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -106,9 +111,9 @@ class OfferTile extends StatelessWidget {
                 if (v == 'edit') onEdit();
                 if (v == 'delete') onDelete();
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'edit', child: Text('编辑')),
-                PopupMenuItem(value: 'delete', child: Text('删除')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'edit', child: Text(s.edit)),
+                PopupMenuItem(value: 'delete', child: Text(s.delete)),
               ],
             ),
           ],
