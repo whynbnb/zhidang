@@ -86,6 +86,17 @@ List<QuantityPreset> quantityPresetsFor(String unit) {
         QuantityPreset(value: 10, label: '10'),
         QuantityPreset(value: 12, label: '12'),
       ];
+    case '张':
+    case '片':
+    case 'sheet':
+      return const [
+        QuantityPreset(value: 50, label: '50'),
+        QuantityPreset(value: 100, label: '100'),
+        QuantityPreset(value: 200, label: '200'),
+        QuantityPreset(value: 300, label: '300'),
+        QuantityPreset(value: 500, label: '500'),
+        QuantityPreset(value: 1000, label: '1000'),
+      ];
     default:
       return const [
         QuantityPreset(value: 1, label: '1'),

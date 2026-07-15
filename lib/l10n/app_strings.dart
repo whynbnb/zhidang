@@ -154,8 +154,8 @@ class AppStrings {
   String get unitOfMeasure => isZh ? '计量单位' : 'Unit of measure';
   String get measureDimensions => isZh ? '度量维度' : 'Measure dimensions';
   String get measureDimensionsHint => isZh
-      ? '可多选，如西红柿可按 g / 个 / 盒 分别比价'
-      : 'Select multiple, e.g. compare by g / piece / box';
+      ? '可多选，如纸巾可按 包 / 张 分别比价'
+      : 'Select multiple, e.g. pack / sheet';
   String get measureDimensionRequired =>
       isZh ? '请至少选择一个度量维度' : 'Select at least one dimension';
   String measureUnitsLabel(String units) =>
@@ -163,6 +163,34 @@ class AppStrings {
   String dimensionCount(int n) =>
       isZh ? '$n 个维度' : (n == 1 ? '1 dimension' : '$n dimensions');
   String get compareByDimension => isZh ? '按维度比价' : 'Compare by dimension';
+  String get advancedOptions => isZh ? '高级选项' : 'Advanced';
+  String get unitRelations => isZh ? '单位换算（可选）' : 'Unit conversion (optional)';
+  String get unitRelationsHint => isZh
+      ? '仅在需要「1 包 = 200 张」这类自动换算时使用'
+      : 'Only when you need auto conversion like 1 pack = 200 sheets';
+  String get offerRelations => isZh ? '本报价换算（可选）' : 'Offer conversion (optional)';
+  String get offerRelationsHint => isZh
+      ? '不同品牌可设不同换算；不填也能手动输入各单位数量'
+      : 'Each brand can differ; you can still enter quantities manually';
+  String get addRelation => isZh ? '添加换算' : 'Add relation';
+  String get editRelation => isZh ? '编辑换算' : 'Edit relation';
+  String get deleteRelation => isZh ? '删除换算' : 'Delete relation';
+  String get noRelations => isZh ? '未设置换算' : 'No conversion set';
+  String get useDefaultRelations =>
+      isZh ? '套用商品默认' : 'Use product default';
+  String relationsConfigured(int n) =>
+      isZh ? '已设 $n 条' : (n == 1 ? '1 set' : '$n set');
+  String get relationFrom => isZh ? '从单位' : 'From';
+  String get relationTo => isZh ? '到单位' : 'To';
+  String get relationFactor => isZh ? '数量' : 'Amount';
+  String relationEquals(String from, String factor, String to) =>
+      isZh ? '1 $from = $factor $to' : '1 $from = $factor $to';
+  String get relationInvalid => isZh
+      ? '请填写有效换算（两单位不同且数量大于 0）'
+      : 'Enter a valid relation (different units, amount > 0)';
+  String get relationSameUnit =>
+      isZh ? '两个单位不能相同' : 'Units must be different';
+  String get autoFilled => isZh ? '已按换算自动填入' : 'Auto-filled by relation';
   String get noteOptional => isZh ? '备注（可选）' : 'Note (optional)';
 
   String get editOffer => isZh ? '编辑报价' : 'Edit offer';
@@ -171,10 +199,10 @@ class AppStrings {
       isZh ? '例如：伊利金典、蓝月亮' : 'e.g. Brand A, Value pack';
   String get brandRequired => isZh ? '请填写品牌' : 'Please enter a brand';
   String get totalPrice => isZh ? '总价（元）' : 'Total price';
-  String get offerMeasures => isZh ? '规格度量（可多填）' : 'Measures (multi)';
+  String get offerMeasures => isZh ? '规格数量' : 'Quantities';
   String get offerMeasuresHint => isZh
-      ? '同一报价可同时填写多个维度，例如 1.5kg + 6个 + 1盒'
-      : 'One offer can include multiple measures, e.g. 1.5kg + 6 pcs + 1 box';
+      ? '填写购买数量；需要自动换算时再展开下方高级选项'
+      : 'Enter purchase quantities; open Advanced only if you need conversion';
   String get measureAtLeastOneRequired => isZh
       ? '请至少填写一个维度的数量'
       : 'Enter quantity for at least one dimension';
@@ -190,8 +218,20 @@ class AppStrings {
   String get mustBePositive => isZh ? '需大于 0' : 'Must be greater than 0';
 
   List<String> get unitOptions => isZh
-      ? const ['g', 'kg', 'ml', 'L', '个', '包', '盒', '瓶', '袋', '卷']
-      : const ['g', 'kg', 'ml', 'L', 'pc', 'pack', 'box', 'bottle', 'bag', 'roll'];
+      ? const ['g', 'kg', 'ml', 'L', '个', '包', '盒', '瓶', '袋', '卷', '张', '片']
+      : const [
+          'g',
+          'kg',
+          'ml',
+          'L',
+          'pc',
+          'pack',
+          'box',
+          'bottle',
+          'bag',
+          'roll',
+          'sheet',
+        ];
 }
 
 class _StringsScope extends InheritedWidget {

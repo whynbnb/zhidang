@@ -147,6 +147,7 @@ class _HomePageState extends State<HomePage> {
     final result = await showOfferForm(
       context,
       units: product.measureUnits,
+      defaultRelations: product.relations,
       preferredUnit: unit,
     );
     if (result == null) return;
@@ -173,6 +174,7 @@ class _HomePageState extends State<HomePage> {
       context,
       offer: offer,
       units: product.measureUnits,
+      defaultRelations: product.relations,
       preferredUnit: offer.unit,
     );
     if (result == null) return;

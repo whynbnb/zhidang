@@ -31,6 +31,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
   late final TextEditingController _name;
   late final TextEditingController _note;
   late Set<String> _units;
+  late List<UnitRelation> _relations;
 
   @override
   void initState() {
@@ -38,6 +39,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
     _name = TextEditingController(text: widget.product?.name ?? '');
     _note = TextEditingController(text: widget.product?.note ?? '');
     _units = {...(widget.product?.units ?? const ['g'])};
+    _relations = [...(widget.product?.relations ?? const [])];
   }
 
   @override
@@ -51,19 +53,57 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
     if (!_formKey.currentState!.validate()) return;
     if (_units.isEmpty) return;
     final selected = _units.toList();
+    // Keep units referenced by relations.
+    for (final r in _relations) {
+      if (!_units.contains(r.fromUnit)) selected.add(r.fromUnit);
+      if (!_units.contains(r.toUnit)) selected.add(r.toUnit);
+    }
     final base = widget.product;
     final result = base == null
         ? Product(
             name: _name.text.trim(),
             units: selected,
+            relations: _relations,
             note: _note.text.trim(),
           )
         : base.copyWith(
             name: _name.text.trim(),
             units: selected,
+            relations: _relations,
             note: _note.text.trim(),
           );
     Navigator.of(context).pop(result);
+  }
+
+  Future<void> _addOrEditRelation([UnitRelation? existing]) async {
+    final result = await showUnitRelationForm(
+      context,
+      units: {
+        ..._units,
+        ...AppStrings.of(context).unitOptions,
+        if (existing != null) existing.fromUnit,
+        if (existing != null) existing.toUnit,
+      }.toList(),
+      relation: existing,
+    );
+    if (result == null) return;
+    setState(() {
+      _units.add(result.fromUnit);
+      _units.add(result.toUnit);
+      if (existing == null) {
+        _relations = [..._relations, result];
+      } else {
+        _relations = _relations
+            .map((r) => r.id == existing.id ? result : r)
+            .toList();
+      }
+    });
+  }
+
+  void _deleteRelation(UnitRelation relation) {
+    setState(() {
+      _relations = _relations.where((r) => r.id != relation.id).toList();
+    });
   }
 
   @override
@@ -71,10 +111,12 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final editing = widget.product != null;
     final s = AppStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final options = {
       ...s.unitOptions,
       ..._units,
       if (widget.product != null) ...widget.product!.measureUnits,
+      for (final r in _relations) ...[r.fromUnit, r.toUnit],
     }.toList();
 
     return Padding(
@@ -117,7 +159,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
               Text(
                 s.measureDimensionsHint,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      color: scheme.onSurfaceVariant,
                     ),
               ),
               const SizedBox(height: 10),
@@ -147,7 +189,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                   child: Text(
                     s.measureDimensionRequired,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                      color: scheme.error,
                       fontSize: 12,
                     ),
                   ),
@@ -160,7 +202,111 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                   border: const OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  initiallyExpanded: false,
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  leading: Icon(Icons.tune, color: scheme.onSurfaceVariant),
+                  title: Text(
+                    s.advancedOptions,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  subtitle: Text(
+                    _relations.isEmpty
+                        ? s.unitRelations
+                        : '${s.unitRelations} · ${s.relationsConfigured(_relations.length)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        s.unitRelationsHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _units.length < 2
+                            ? null
+                            : () => _addOrEditRelation(),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: Text(s.addRelation),
+                      ),
+                    ),
+                    if (_relations.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: scheme.outlineVariant),
+                        ),
+                        child: Text(
+                          s.noRelations,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                        ),
+                      )
+                    else
+                      ..._relations.map((r) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Material(
+                            color: scheme.surfaceContainerHighest.withValues(
+                              alpha: 0.35,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            child: ListTile(
+                              dense: true,
+                              title: Text(
+                                r.label,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    tooltip: s.edit,
+                                    onPressed: () => _addOrEditRelation(r),
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: s.delete,
+                                    onPressed: () => _deleteRelation(r),
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
               FilledButton(
                 onPressed: _units.isEmpty ? null : _submit,
                 child: Text(editing ? s.save : s.createAction),
@@ -173,10 +319,219 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
   }
 }
 
+Future<UnitRelation?> showUnitRelationForm(
+  BuildContext context, {
+  required List<String> units,
+  UnitRelation? relation,
+}) {
+  return showModalBottomSheet<UnitRelation>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => _UnitRelationFormSheet(
+      units: units,
+      relation: relation,
+    ),
+  );
+}
+
+class _UnitRelationFormSheet extends StatefulWidget {
+  const _UnitRelationFormSheet({
+    required this.units,
+    this.relation,
+  });
+
+  final List<String> units;
+  final UnitRelation? relation;
+
+  @override
+  State<_UnitRelationFormSheet> createState() => _UnitRelationFormSheetState();
+}
+
+class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late String _from;
+  late String _to;
+  late final TextEditingController _factor;
+
+  @override
+  void initState() {
+    super.initState();
+    final units = widget.units.isNotEmpty ? widget.units : ['g', '个'];
+    _from = widget.relation?.fromUnit ?? units.first;
+    _to = widget.relation?.toUnit ??
+        (units.length > 1 ? units[1] : units.first);
+    _factor = TextEditingController(
+      text: widget.relation == null
+          ? ''
+          : formatQuantityValue(widget.relation!.factor),
+    );
+  }
+
+  @override
+  void dispose() {
+    _factor.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final s = AppStrings.of(context);
+    if (!_formKey.currentState!.validate()) return;
+    if (_from == _to) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.relationSameUnit)),
+      );
+      return;
+    }
+    final factor = double.parse(_factor.text.trim());
+    final base = widget.relation;
+    final result = base == null
+        ? UnitRelation(fromUnit: _from, toUnit: _to, factor: factor)
+        : base.copyWith(fromUnit: _from, toUnit: _to, factor: factor);
+    Navigator.of(context).pop(result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final s = AppStrings.of(context);
+    final editing = widget.relation != null;
+    final units = {
+      ...widget.units,
+      _from,
+      _to,
+    }.toList();
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              editing ? s.editRelation : s.addRelation,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              s.offerRelationsHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Text(
+                  '1',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _from,
+                    decoration: InputDecoration(
+                      labelText: s.relationFrom,
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: units
+                        .map(
+                          (u) => DropdownMenuItem(value: u, child: Text(u)),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) setState(() => _from = v);
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    '=',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+                Expanded(
+                  child: TextFormField(
+                    controller: _factor,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: s.relationFactor,
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return s.requiredField;
+                      }
+                      final n = double.tryParse(v.trim());
+                      if (n == null) return s.enterNumber;
+                      if (n <= 0) return s.mustBePositive;
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _to,
+                    decoration: InputDecoration(
+                      labelText: s.relationTo,
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: units
+                        .map(
+                          (u) => DropdownMenuItem(value: u, child: Text(u)),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) setState(() => _to = v);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              s.relationEquals(
+                _from,
+                _factor.text.trim().isEmpty ? '?' : _factor.text.trim(),
+                _to,
+              ),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: _submit,
+              child: Text(editing ? s.save : s.createAction),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
 Future<Offer?> showOfferForm(
   BuildContext context, {
   Offer? offer,
   required List<String> units,
+  /// Product-level defaults used only when creating a new offer.
+  List<UnitRelation> defaultRelations = const [],
   String? preferredUnit,
 }) {
   return showModalBottomSheet<Offer>(
@@ -186,6 +541,7 @@ Future<Offer?> showOfferForm(
     builder: (context) => _OfferFormSheet(
       offer: offer,
       units: units,
+      defaultRelations: defaultRelations,
       preferredUnit: preferredUnit,
     ),
   );
@@ -195,11 +551,13 @@ class _OfferFormSheet extends StatefulWidget {
   const _OfferFormSheet({
     this.offer,
     required this.units,
+    this.defaultRelations = const [],
     this.preferredUnit,
   });
 
   final Offer? offer;
   final List<String> units;
+  final List<UnitRelation> defaultRelations;
   final String? preferredUnit;
 
   @override
@@ -213,8 +571,10 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   late final TextEditingController _shop;
   late final TextEditingController _note;
   late final TextEditingValue _shopInitial;
-  late final List<String> _availableUnits;
-  late final Map<String, TextEditingController> _qtyControllers;
+  late List<String> _availableUnits;
+  late Map<String, TextEditingController> _qtyControllers;
+  late List<UnitRelation> _offerRelations;
+  final Set<String> _manualUnits = {};
   String? _activePresetUnit;
   String? _measureError;
 
@@ -222,13 +582,30 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   void initState() {
     super.initState();
     final o = widget.offer;
+    _offerRelations = o == null
+        ? widget.defaultRelations
+            .map(
+              (r) => UnitRelation(
+                fromUnit: r.fromUnit,
+                toUnit: r.toUnit,
+                factor: r.factor,
+              ),
+            )
+            .toList()
+        : [...o.relations];
+
     final baseUnits = widget.units.isNotEmpty
         ? widget.units.map(normalizeUnit).toList()
         : ['g'];
     final fromOffer = o?.measureUnits ?? const <String>[];
+    final fromRelations = <String>[
+      for (final r in _offerRelations) ...[r.fromUnit, r.toUnit],
+      for (final r in widget.defaultRelations) ...[r.fromUnit, r.toUnit],
+    ];
     _availableUnits = {
       ...baseUnits,
       ...fromOffer,
+      ...fromRelations,
       if (widget.preferredUnit != null) normalizeUnit(widget.preferredUnit),
     }.toList();
 
@@ -239,7 +616,6 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
         ),
     };
 
-    // Seed preferred unit empty field focus by ensuring map has it.
     final preferred = normalizeUnit(
       widget.preferredUnit ?? _availableUnits.first,
       fallback: _availableUnits.first,
@@ -266,6 +642,15 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     return _fmt(v);
   }
 
+  void _ensureUnitController(String unit) {
+    final u = normalizeUnit(unit);
+    if (_qtyControllers.containsKey(u)) return;
+    _qtyControllers[u] = TextEditingController();
+    if (!_availableUnits.contains(u)) {
+      _availableUnits = [..._availableUnits, u];
+    }
+  }
+
   @override
   void dispose() {
     _brand.dispose();
@@ -276,6 +661,117 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _addOrEditRelation([UnitRelation? existing]) async {
+    final result = await showUnitRelationForm(
+      context,
+      units: {
+        ..._availableUnits,
+        ...AppStrings.of(context).unitOptions,
+        if (existing != null) existing.fromUnit,
+        if (existing != null) existing.toUnit,
+      }.toList(),
+      relation: existing,
+    );
+    if (result == null) return;
+    setState(() {
+      _ensureUnitController(result.fromUnit);
+      _ensureUnitController(result.toUnit);
+      if (existing == null) {
+        _offerRelations = [..._offerRelations, result];
+      } else {
+        _offerRelations = _offerRelations
+            .map((r) => r.id == existing.id ? result : r)
+            .toList();
+      }
+    });
+    final source = _activePresetUnit ?? _availableUnits.first;
+    if ((_qtyControllers[source]?.text.trim().isNotEmpty ?? false) ||
+        _manualUnits.isNotEmpty) {
+      _applyAutoFill(sourceUnit: source);
+    }
+  }
+
+  void _deleteRelation(UnitRelation relation) {
+    setState(() {
+      _offerRelations =
+          _offerRelations.where((r) => r.id != relation.id).toList();
+    });
+    final source = _activePresetUnit ?? _availableUnits.first;
+    if (_manualUnits.isNotEmpty) {
+      _applyAutoFill(sourceUnit: source);
+    }
+  }
+
+  void _useProductDefaults() {
+    setState(() {
+      _offerRelations = widget.defaultRelations
+          .map(
+            (r) => UnitRelation(
+              fromUnit: r.fromUnit,
+              toUnit: r.toUnit,
+              factor: r.factor,
+            ),
+          )
+          .toList();
+      for (final r in _offerRelations) {
+        _ensureUnitController(r.fromUnit);
+        _ensureUnitController(r.toUnit);
+      }
+    });
+    final source = _activePresetUnit ?? _availableUnits.first;
+    if (_manualUnits.isNotEmpty ||
+        (_qtyControllers[source]?.text.trim().isNotEmpty ?? false)) {
+      _applyAutoFill(sourceUnit: source);
+    }
+  }
+
+  void _applyAutoFill({required String sourceUnit}) {
+    final seeded = <String, double>{};
+    for (final unit in _manualUnits) {
+      final raw = _qtyControllers[unit]?.text.trim() ?? '';
+      final n = double.tryParse(raw);
+      if (n != null && n > 0) seeded[unit] = n;
+    }
+
+    final sourceRaw = _qtyControllers[sourceUnit]?.text.trim() ?? '';
+    final sourceN = double.tryParse(sourceRaw);
+    if (sourceN != null && sourceN > 0) {
+      seeded[sourceUnit] = sourceN;
+    } else {
+      seeded.remove(sourceUnit);
+    }
+
+    if (seeded.isEmpty) {
+      for (final unit in _availableUnits) {
+        if (!_manualUnits.contains(unit)) {
+          _qtyControllers[unit]?.text = '';
+        }
+      }
+      setState(() {});
+      return;
+    }
+
+    final expanded = Product.expandQuantitiesWithRelations(
+      seeded,
+      relations: _offerRelations,
+    );
+    for (final unit in _availableUnits) {
+      if (_manualUnits.contains(unit)) continue;
+      final controller = _qtyControllers[unit];
+      if (controller == null) continue;
+      final value = expanded[unit];
+      if (value == null) {
+        controller.text = '';
+        continue;
+      }
+      final text = formatQuantityValue(value);
+      if (controller.text != text) {
+        controller.text = text;
+      }
+    }
+    setState(() {});
   }
 
   List<OfferMeasure> _collectMeasures() {
@@ -312,6 +808,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             brand: _brand.text.trim(),
             price: price,
             measures: measures,
+            relations: _offerRelations,
             shop: shop,
             note: _note.text.trim(),
           )
@@ -319,6 +816,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             brand: _brand.text.trim(),
             price: price,
             measures: measures,
+            relations: _offerRelations,
             shop: shop,
             note: _note.text.trim(),
           );
@@ -349,6 +847,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
     final presetUnit = _activePresetUnit ?? _availableUnits.first;
+    final hasRelations = _offerRelations.isNotEmpty;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
@@ -418,13 +917,22 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                     hintText: s.quantityOptionalHint,
                     border: const OutlineInputBorder(),
                     suffixText: unit,
+                    helperText: !_manualUnits.contains(unit) &&
+                            (_qtyControllers[unit]?.text.isNotEmpty ?? false) &&
+                            hasRelations
+                        ? s.autoFilled
+                        : null,
                   ),
                   onTap: () => setState(() => _activePresetUnit = unit),
-                  onChanged: (_) {
-                    setState(() {
-                      _activePresetUnit = unit;
-                      if (_measureError != null) _measureError = null;
-                    });
+                  onChanged: (value) {
+                    _activePresetUnit = unit;
+                    if (value.trim().isEmpty) {
+                      _manualUnits.remove(unit);
+                    } else {
+                      _manualUnits.add(unit);
+                    }
+                    _measureError = null;
+                    _applyAutoFill(sourceUnit: unit);
                   },
                   validator: (v) => _optionalPositiveNumber(v, s),
                 ),
@@ -459,13 +967,13 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                         final text = formatQuantityValue(preset.value);
                         final controller = _qtyControllers[presetUnit];
                         if (controller == null) return;
-                        setState(() {
-                          controller.text = text;
-                          controller.selection = TextSelection.collapsed(
-                            offset: text.length,
-                          );
-                          _measureError = null;
-                        });
+                        _manualUnits.add(presetUnit);
+                        controller.text = text;
+                        controller.selection = TextSelection.collapsed(
+                          offset: text.length,
+                        );
+                        _measureError = null;
+                        _applyAutoFill(sourceUnit: presetUnit);
                       },
                     ),
                 ],
@@ -550,7 +1058,118 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                   border: const OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
+              Theme(
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  initiallyExpanded: false,
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  leading: Icon(Icons.tune, color: scheme.onSurfaceVariant),
+                  title: Text(
+                    s.advancedOptions,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  subtitle: Text(
+                    hasRelations
+                        ? '${s.offerRelations} · ${s.relationsConfigured(_offerRelations.length)}'
+                        : s.offerRelations,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        s.offerRelationsHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        if (widget.defaultRelations.isNotEmpty)
+                          TextButton(
+                            onPressed: _useProductDefaults,
+                            child: Text(s.useDefaultRelations),
+                          ),
+                        TextButton.icon(
+                          onPressed: () => _addOrEditRelation(),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: Text(s.addRelation),
+                        ),
+                      ],
+                    ),
+                    if (!hasRelations)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: scheme.outlineVariant),
+                        ),
+                        child: Text(
+                          s.noRelations,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                        ),
+                      )
+                    else
+                      ..._offerRelations.map((r) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Material(
+                            color: scheme.surfaceContainerHighest
+                                .withValues(alpha: 0.35),
+                            borderRadius: BorderRadius.circular(12),
+                            child: ListTile(
+                              dense: true,
+                              leading:
+                                  Icon(Icons.link, color: scheme.primary),
+                              title: Text(
+                                r.label,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    tooltip: s.edit,
+                                    onPressed: () => _addOrEditRelation(r),
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: s.delete,
+                                    onPressed: () => _deleteRelation(r),
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
               FilledButton(
                 onPressed: _submit,
                 child: Text(editing ? s.save : s.add),
