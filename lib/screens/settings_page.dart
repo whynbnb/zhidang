@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
+import '../services/app_icon_service.dart';
 import '../settings/app_settings.dart';
 import 'suppliers_page.dart';
 
@@ -8,6 +9,20 @@ class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   static const routeName = '/settings';
+
+  Future<void> _setIcon(BuildContext context, AppIconStyle style) async {
+    final s = AppStrings.of(context);
+    final ok = await AppIconService.instance.setStyle(style);
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (!AppIconService.instance.supported) {
+      messenger.showSnackBar(SnackBar(content: Text(s.appIconUnsupported)));
+      return;
+    }
+    messenger.showSnackBar(
+      SnackBar(content: Text(ok ? s.appIconChanged : s.appIconFailed)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,6 +142,55 @@ class SettingsPage extends StatelessWidget {
                           onTap: () => settings.setColorId(option.id),
                         ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _SectionTitle(s.appIcon),
+          Card(
+            elevation: 0,
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: scheme.outlineVariant),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    s.appIconHint,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListenableBuilder(
+                    listenable: AppIconService.instance,
+                    builder: (context, _) {
+                      final current = AppIconService.instance.style;
+                      return Row(
+                        children: [
+                          for (final style in AppIconStyle.values) ...[
+                            Expanded(
+                              child: _IconChoice(
+                                style: style,
+                                label: style == AppIconStyle.defaultIcon
+                                    ? s.appIconDefault
+                                    : s.appIconClassic,
+                                selected: current == style,
+                                onTap: () => _setIcon(context, style),
+                              ),
+                            ),
+                            if (style != AppIconStyle.values.last)
+                              const SizedBox(width: 12),
+                          ],
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -259,6 +323,64 @@ class _ColorChoice extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IconChoice extends StatelessWidget {
+  const _IconChoice({
+    required this.style,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppIconStyle style;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? scheme.primary : scheme.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+          color: selected
+              ? scheme.primaryContainer.withValues(alpha: 0.35)
+              : null,
+        ),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.asset(
+                style.previewAsset,
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    color: selected ? scheme.primary : null,
                   ),
             ),
           ],

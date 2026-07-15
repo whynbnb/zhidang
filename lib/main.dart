@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'app/app_navigator.dart';
 import 'l10n/app_strings.dart';
 import 'screens/home_page.dart';
+import 'services/app_icon_service.dart';
 import 'services/supplier_store.dart';
 import 'settings/app_settings.dart';
 import 'widgets/macos_menu_bar.dart';
@@ -12,6 +13,7 @@ Future<void> main() async {
   await Future.wait([
     AppSettings.instance.load(),
     SupplierStore.instance.load(),
+    AppIconService.instance.load(),
   ]);
   runApp(const ZhidangApp());
 }

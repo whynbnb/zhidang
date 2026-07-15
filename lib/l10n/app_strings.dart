@@ -47,6 +47,19 @@ class AppStrings {
   String get themeLight => isZh ? '浅色' : 'Light';
   String get themeDark => isZh ? '深色' : 'Dark';
   String get themeColor => isZh ? '主题色' : 'Theme color';
+  String get appIcon => isZh ? '应用图标' : 'App icon';
+  String get appIconHint => isZh
+      ? '仅 iOS / Android 可切换桌面图标'
+      : 'Desktop icon switching works on iOS / Android';
+  String get appIconDefault => isZh ? '默认' : 'Default';
+  String get appIconClassic => isZh ? '经典' : 'Classic';
+  String get appIconChanged => isZh
+      ? '图标已切换，部分设备可能稍后生效'
+      : 'Icon updated; some devices apply it shortly';
+  String get appIconUnsupported => isZh
+      ? '当前平台不支持切换桌面图标'
+      : 'This platform cannot change the launcher icon';
+  String get appIconFailed => isZh ? '切换图标失败' : 'Failed to change icon';
   String get data => isZh ? '数据' : 'Data';
   String get suppliers => isZh ? '供应商' : 'Suppliers';
   String get suppliersManage => isZh ? '管理供应商' : 'Manage suppliers';
