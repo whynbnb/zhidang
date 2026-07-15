@@ -149,6 +149,7 @@ class AppStrings {
   String get totalPrice => isZh ? '总价（元）' : 'Total price';
   String quantityLabel(String unit) =>
       isZh ? '数量（$unit）' : 'Quantity ($unit)';
+  String get quantityQuickPick => isZh ? '快速数量' : 'Quick quantity';
   String get shopOptional => isZh ? '供应商（可选）' : 'Supplier (optional)';
   String get shopHint =>
       isZh ? '选择或输入购买渠道' : 'Select or type a purchase channel';

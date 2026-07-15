@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
 import '../services/supplier_store.dart';
+import '../utils/quantity_presets.dart';
 
 Future<Product?> showProductForm(
   BuildContext context, {
@@ -292,6 +293,36 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                     validator: (v) => _positiveNumber(v, s),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                s.quantityQuickPick,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final preset in quantityPresetsFor(unit))
+                  ActionChip(
+                    label: Text(preset.label),
+                    onPressed: () {
+                      final text = formatQuantityValue(preset.value);
+                      setState(() {
+                        _quantity.text = text;
+                        _quantity.selection = TextSelection.collapsed(
+                          offset: text.length,
+                        );
+                      });
+                    },
+                  ),
               ],
             ),
             const SizedBox(height: 12),
