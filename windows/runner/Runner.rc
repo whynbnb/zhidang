@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.zhidang" "\0"
-            VALUE "FileDescription", "zhidang" "\0"
+            VALUE "FileDescription", "值当" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "zhidang" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.zhidang. All rights reserved." "\0"
             VALUE "OriginalFilename", "zhidang.exe" "\0"
-            VALUE "ProductName", "zhidang" "\0"
+            VALUE "ProductName", "值当" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
