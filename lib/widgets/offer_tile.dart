@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
+import '../utils/quantity_presets.dart';
 
 final _currency = NumberFormat('#,##0.##');
 
@@ -28,6 +29,12 @@ class OfferTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final s = AppStrings.of(context);
+    final qty = offer.quantityFor(unit) ?? 0;
+    final unitPrice = offer.unitPriceFor(unit) ?? 0;
+    final allMeasures = offer.measures
+        .where((m) => m.quantity > 0)
+        .map((m) => '${formatQuantityValue(m.quantity)}${m.unit}')
+        .join(' · ');
 
     return Card(
       elevation: 0,
@@ -72,12 +79,19 @@ class OfferTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '¥${_currency.format(offer.price)} / ${_currency.format(offer.quantity)}$unit'
+                    '¥${_currency.format(offer.price)} / ${_currency.format(qty)}$unit'
                     '${offer.shop.isNotEmpty ? ' · ${offer.shop}' : ''}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
                   ),
+                  if (offer.measures.length > 1)
+                    Text(
+                      allMeasures,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: scheme.primary,
+                          ),
+                    ),
                   if (offer.note.isNotEmpty)
                     Text(
                       offer.note,
@@ -92,7 +106,7 @@ class OfferTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '¥${_currency.format(offer.unitPrice)}',
+                  '¥${_currency.format(unitPrice)}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: isBest ? scheme.primary : scheme.onSurface,
                         fontWeight: FontWeight.w800,

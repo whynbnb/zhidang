@@ -132,10 +132,23 @@ class _HomePageState extends State<HomePage> {
     await _persist();
   }
 
-  Future<void> _addOffer(Product product) async {
-    final result = await showOfferForm(context, unit: product.unit);
+  Future<void> _addOffer(Product product, {String? preferredUnit}) async {
+    final unit =
+        normalizeUnit(preferredUnit ?? product.unit, fallback: product.unit);
+    final result = await showOfferForm(
+      context,
+      units: product.measureUnits,
+      preferredUnit: unit,
+    );
     if (result == null) return;
-    final updated = product.copyWith(offers: [...product.offers, result]);
+    final units = <String>[...product.units];
+    for (final m in result.measures) {
+      if (!units.contains(m.unit)) units.add(m.unit);
+    }
+    final updated = product.copyWith(
+      units: units,
+      offers: [...product.offers, result],
+    );
     setState(() {
       _products = _products
           .map((p) => p.id == updated.id ? updated : p)
@@ -147,12 +160,20 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _editOffer(Product product, Offer offer) async {
-    final result =
-        await showOfferForm(context, offer: offer, unit: product.unit);
+    final result = await showOfferForm(
+      context,
+      offer: offer,
+      units: product.measureUnits,
+      preferredUnit: offer.unit,
+    );
     if (result == null) return;
     final offers =
         product.offers.map((o) => o.id == result.id ? result : o).toList();
-    final updated = product.copyWith(offers: offers);
+    final units = <String>[...product.units];
+    for (final m in result.measures) {
+      if (!units.contains(m.unit)) units.add(m.unit);
+    }
+    final updated = product.copyWith(units: units, offers: offers);
     setState(() {
       _products = _products
           .map((p) => p.id == updated.id ? updated : p)
@@ -266,7 +287,7 @@ class _WideLayout extends StatelessWidget {
   final VoidCallback onAddProduct;
   final ValueChanged<Product> onEditProduct;
   final ValueChanged<Product> onDeleteProduct;
-  final ValueChanged<Product> onAddOffer;
+  final void Function(Product, {String? preferredUnit}) onAddOffer;
   final void Function(Product, Offer) onEditOffer;
   final void Function(Product, Offer) onDeleteOffer;
 
@@ -292,10 +313,12 @@ class _WideLayout extends StatelessWidget {
           child: selected == null
               ? const _EmptyDetail()
               : _ProductDetailPane(
+                  key: ValueKey('detail-${selected!.id}'),
                   product: selected!,
                   onEditProduct: () => onEditProduct(selected!),
                   onDeleteProduct: () => onDeleteProduct(selected!),
-                  onAddOffer: () => onAddOffer(selected!),
+                  onAddOffer: (unit) =>
+                      onAddOffer(selected!, preferredUnit: unit),
                   onEditOffer: (o) => onEditOffer(selected!, o),
                   onDeleteOffer: (o) => onDeleteOffer(selected!, o),
                 ),
@@ -330,7 +353,7 @@ class _NarrowLayout extends StatelessWidget {
   final VoidCallback onAddProduct;
   final ValueChanged<Product> onEditProduct;
   final ValueChanged<Product> onDeleteProduct;
-  final ValueChanged<Product> onAddOffer;
+  final void Function(Product, {String? preferredUnit}) onAddOffer;
   final void Function(Product, Offer) onEditOffer;
   final void Function(Product, Offer) onDeleteOffer;
 
@@ -365,16 +388,17 @@ class _NarrowLayout extends StatelessWidget {
               selected!.name,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            subtitle: Text(s.unitLabel(selected!.unit)),
+            subtitle: Text(s.measureUnitsLabel(selected!.measureUnits.join(' / '))),
           ),
         ),
         const Divider(height: 1),
         Expanded(
           child: _ProductDetailPane(
+            key: ValueKey('detail-mobile-${selected!.id}'),
             product: selected!,
             onEditProduct: () => onEditProduct(selected!),
             onDeleteProduct: () => onDeleteProduct(selected!),
-            onAddOffer: () => onAddOffer(selected!),
+            onAddOffer: (unit) => onAddOffer(selected!, preferredUnit: unit),
             onEditOffer: (o) => onEditOffer(selected!, o),
             onDeleteOffer: (o) => onDeleteOffer(selected!, o),
             compact: true,
@@ -587,8 +611,9 @@ class _EmptyDetail extends StatelessWidget {
   }
 }
 
-class _ProductDetailPane extends StatelessWidget {
+class _ProductDetailPane extends StatefulWidget {
   const _ProductDetailPane({
+    super.key,
     required this.product,
     required this.onEditProduct,
     required this.onDeleteProduct,
@@ -601,23 +626,59 @@ class _ProductDetailPane extends StatelessWidget {
   final Product product;
   final VoidCallback onEditProduct;
   final VoidCallback onDeleteProduct;
-  final VoidCallback onAddOffer;
+  final ValueChanged<String?> onAddOffer;
   final ValueChanged<Offer> onEditOffer;
   final ValueChanged<Offer> onDeleteOffer;
   final bool compact;
 
   @override
+  State<_ProductDetailPane> createState() => _ProductDetailPaneState();
+}
+
+class _ProductDetailPaneState extends State<_ProductDetailPane> {
+  late String _selectedUnit;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedUnit = normalizeUnit(widget.product.unit);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProductDetailPane oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.product.id != widget.product.id) {
+      _selectedUnit = normalizeUnit(widget.product.unit);
+      return;
+    }
+    final units = widget.product.measureUnits;
+    if (!units.contains(_selectedUnit)) {
+      _selectedUnit = units.first;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final product = widget.product;
     final scheme = Theme.of(context).colorScheme;
     final s = AppStrings.of(context);
-    final offers = [...product.offers]
-      ..sort((a, b) => a.unitPrice.compareTo(b.unitPrice));
-    final best = offers.isEmpty ? null : offers.first;
+    final units = product.measureUnits;
+    final selectedUnit = units.contains(_selectedUnit)
+        ? _selectedUnit
+        : units.first;
+    final offers = [...product.offersFor(selectedUnit)]
+      ..sort((a, b) {
+        final pa = a.unitPriceFor(selectedUnit) ?? double.infinity;
+        final pb = b.unitPriceFor(selectedUnit) ?? double.infinity;
+        return pa.compareTo(pb);
+      });
+    final best = product.bestOfferFor(selectedUnit);
+    final bestPrice = best?.unitPriceFor(selectedUnit);
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(20, compact ? 8 : 20, 20, 32),
+      padding: EdgeInsets.fromLTRB(20, widget.compact ? 8 : 20, 20, 32),
       children: [
-        if (!compact) ...[
+        if (!widget.compact) ...[
           Row(
             children: [
               Expanded(
@@ -629,19 +690,19 @@ class _ProductDetailPane extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: onEditProduct,
+                onPressed: widget.onEditProduct,
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: s.editProduct,
               ),
               IconButton(
-                onPressed: onDeleteProduct,
+                onPressed: widget.onDeleteProduct,
                 icon: const Icon(Icons.delete_outline),
                 tooltip: s.deleteProduct,
               ),
             ],
           ),
           Text(
-            s.measureUnit(product.unit),
+            s.measureUnitsLabel(units.join(' / ')),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -656,17 +717,41 @@ class _ProductDetailPane extends StatelessWidget {
             children: [
               const Spacer(),
               TextButton.icon(
-                onPressed: onEditProduct,
+                onPressed: widget.onEditProduct,
                 icon: const Icon(Icons.edit_outlined, size: 18),
                 label: Text(s.edit),
               ),
               TextButton.icon(
-                onPressed: onDeleteProduct,
+                onPressed: widget.onDeleteProduct,
                 icon: const Icon(Icons.delete_outline, size: 18),
                 label: Text(s.delete),
               ),
             ],
           ),
+        ],
+        if (units.length > 1) ...[
+          Text(
+            s.compareByDimension,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final unit in units)
+                ChoiceChip(
+                  label: Text(
+                    '$unit${product.offersFor(unit).isEmpty ? '' : ' (${product.offersFor(unit).length})'}',
+                  ),
+                  selected: unit == selectedUnit,
+                  onSelected: (_) => setState(() => _selectedUnit = unit),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
         ],
         if (best != null)
           Card(
@@ -686,7 +771,7 @@ class _ProductDetailPane extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          s.bestValueNow,
+                          '${s.bestValueNow} · $selectedUnit',
                           style:
                               Theme.of(context).textTheme.labelLarge?.copyWith(
                                     color: scheme.onPrimaryContainer,
@@ -703,7 +788,7 @@ class _ProductDetailPane extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '¥${_currency.format(best.unitPrice)} / ${product.unit}',
+                    '¥${_currency.format(bestPrice ?? 0)} / $selectedUnit',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: scheme.primary,
                           fontWeight: FontWeight.w800,
@@ -717,14 +802,14 @@ class _ProductDetailPane extends StatelessWidget {
         Row(
           children: [
             Text(
-              s.brandCompare,
+              '${s.brandCompare} · $selectedUnit',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
             ),
             const Spacer(),
             FilledButton.icon(
-              onPressed: onAddOffer,
+              onPressed: () => widget.onAddOffer(selectedUnit),
               icon: const Icon(Icons.add),
               label: Text(s.addOffer),
             ),
@@ -762,12 +847,13 @@ class _ProductDetailPane extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: OfferTile(
+                key: ValueKey('offer-${offer.id}-$selectedUnit'),
                 offer: offer,
-                unit: product.unit,
+                unit: selectedUnit,
                 isBest: i == 0,
                 rank: i + 1,
-                onEdit: () => onEditOffer(offer),
-                onDelete: () => onDeleteOffer(offer),
+                onEdit: () => widget.onEditOffer(offer),
+                onDelete: () => widget.onDeleteOffer(offer),
               ),
             );
           }),

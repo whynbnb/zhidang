@@ -23,8 +23,14 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final best = product.bestOffer;
     final s = AppStrings.of(context);
+    final primaryUnit = product.unit;
+    final best = product.bestOfferFor(primaryUnit) ?? product.bestOffer;
+    final bestUnit = best == null
+        ? primaryUnit
+        : (best.hasUnit(primaryUnit) ? primaryUnit : best.unit);
+    final bestPrice = best?.unitPriceFor(bestUnit);
+    final units = product.measureUnits;
 
     return Card(
       elevation: selected ? 2 : 0,
@@ -76,6 +82,15 @@ class ProductCard extends StatelessWidget {
                     ),
                 ],
               ),
+              const SizedBox(height: 6),
+              Text(
+                units.length > 1
+                    ? s.dimensionCount(units.length)
+                    : s.unitLabel(primaryUnit),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
               const SizedBox(height: 8),
               if (best != null) ...[
                 Text(
@@ -84,7 +99,7 @@ class ProductCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '¥${_currency.format(best.unitPrice)} / ${product.unit}',
+                  '¥${_currency.format(bestPrice ?? 0)} / $bestUnit',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: scheme.primary,
                         fontWeight: FontWeight.w800,

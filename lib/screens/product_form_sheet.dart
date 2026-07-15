@@ -30,14 +30,14 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
   late final TextEditingController _note;
-  late String _unit;
+  late Set<String> _units;
 
   @override
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.product?.name ?? '');
     _note = TextEditingController(text: widget.product?.note ?? '');
-    _unit = widget.product?.unit ?? 'g';
+    _units = {...(widget.product?.units ?? const ['g'])};
   }
 
   @override
@@ -49,12 +49,18 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    if (_units.isEmpty) return;
+    final selected = _units.toList();
     final base = widget.product;
     final result = base == null
-        ? Product(name: _name.text.trim(), unit: _unit, note: _note.text.trim())
+        ? Product(
+            name: _name.text.trim(),
+            units: selected,
+            note: _note.text.trim(),
+          )
         : base.copyWith(
             name: _name.text.trim(),
-            unit: _unit,
+            units: selected,
             note: _note.text.trim(),
           );
     Navigator.of(context).pop(result);
@@ -65,64 +71,102 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final editing = widget.product != null;
     final s = AppStrings.of(context);
-    final units = {...s.unitOptions, if (!s.unitOptions.contains(_unit)) _unit}
-        .toList();
+    final options = {
+      ...s.unitOptions,
+      ..._units,
+      if (widget.product != null) ...widget.product!.measureUnits,
+    }.toList();
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
       child: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              editing ? s.editProduct : s.newProduct,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                editing ? s.editProduct : s.newProduct,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _name,
+                autofocus: !editing,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: s.productName,
+                  hintText: s.productNameHint,
+                  border: const OutlineInputBorder(),
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? s.productNameRequired
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                s.measureDimensions,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                s.measureDimensionsHint,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final unit in options)
+                    FilterChip(
+                      label: Text(unit),
+                      selected: _units.contains(unit),
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _units.add(unit);
+                          } else if (_units.length > 1) {
+                            _units.remove(unit);
+                          }
+                        });
+                      },
+                    ),
+                ],
+              ),
+              if (_units.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    s.measureDimensionRequired,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
                   ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _name,
-              autofocus: !editing,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: s.productName,
-                hintText: s.productNameHint,
-                border: const OutlineInputBorder(),
+                ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _note,
+                decoration: InputDecoration(
+                  labelText: s.noteOptional,
+                  border: const OutlineInputBorder(),
+                ),
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? s.productNameRequired : null,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _unit,
-              decoration: InputDecoration(
-                labelText: s.unitOfMeasure,
-                border: const OutlineInputBorder(),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: _units.isEmpty ? null : _submit,
+                child: Text(editing ? s.save : s.createAction),
               ),
-              items: units
-                  .map((u) => DropdownMenuItem(value: u, child: Text(u)))
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) setState(() => _unit = v);
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _note,
-              decoration: InputDecoration(
-                labelText: s.noteOptional,
-                border: const OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _submit,
-              child: Text(editing ? s.save : s.createAction),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -132,21 +176,31 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
 Future<Offer?> showOfferForm(
   BuildContext context, {
   Offer? offer,
-  required String unit,
+  required List<String> units,
+  String? preferredUnit,
 }) {
   return showModalBottomSheet<Offer>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (context) => _OfferFormSheet(offer: offer, unit: unit),
+    builder: (context) => _OfferFormSheet(
+      offer: offer,
+      units: units,
+      preferredUnit: preferredUnit,
+    ),
   );
 }
 
 class _OfferFormSheet extends StatefulWidget {
-  const _OfferFormSheet({this.offer, required this.unit});
+  const _OfferFormSheet({
+    this.offer,
+    required this.units,
+    this.preferredUnit,
+  });
 
   final Offer? offer;
-  final String unit;
+  final List<String> units;
+  final String? preferredUnit;
 
   @override
   State<_OfferFormSheet> createState() => _OfferFormSheetState();
@@ -156,21 +210,45 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _brand;
   late final TextEditingController _price;
-  late final TextEditingController _quantity;
   late final TextEditingController _shop;
   late final TextEditingController _note;
   late final TextEditingValue _shopInitial;
+  late final List<String> _availableUnits;
+  late final Map<String, TextEditingController> _qtyControllers;
+  String? _activePresetUnit;
+  String? _measureError;
 
   @override
   void initState() {
     super.initState();
     final o = widget.offer;
+    final baseUnits = widget.units.isNotEmpty
+        ? widget.units.map(normalizeUnit).toList()
+        : ['g'];
+    final fromOffer = o?.measureUnits ?? const <String>[];
+    _availableUnits = {
+      ...baseUnits,
+      ...fromOffer,
+      if (widget.preferredUnit != null) normalizeUnit(widget.preferredUnit),
+    }.toList();
+
+    _qtyControllers = {
+      for (final unit in _availableUnits)
+        unit: TextEditingController(
+          text: o == null ? '' : _fmtOptional(o.quantityFor(unit)),
+        ),
+    };
+
+    // Seed preferred unit empty field focus by ensuring map has it.
+    final preferred = normalizeUnit(
+      widget.preferredUnit ?? _availableUnits.first,
+      fallback: _availableUnits.first,
+    );
+    _activePresetUnit = preferred;
+
     _brand = TextEditingController(text: o?.brand ?? '');
     _price = TextEditingController(
       text: o == null ? '' : _fmt(o.price),
-    );
-    _quantity = TextEditingController(
-      text: o == null ? '' : _fmt(o.quantity),
     );
     final shopText = o?.shop ?? '';
     _shop = TextEditingController(text: shopText);
@@ -183,20 +261,47 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     return v.toString();
   }
 
+  String _fmtOptional(double? v) {
+    if (v == null) return '';
+    return _fmt(v);
+  }
+
   @override
   void dispose() {
     _brand.dispose();
     _price.dispose();
-    _quantity.dispose();
     _shop.dispose();
     _note.dispose();
+    for (final c in _qtyControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
+  List<OfferMeasure> _collectMeasures() {
+    final measures = <OfferMeasure>[];
+    for (final unit in _availableUnits) {
+      final raw = _qtyControllers[unit]?.text.trim() ?? '';
+      if (raw.isEmpty) continue;
+      final n = double.tryParse(raw);
+      if (n != null && n > 0) {
+        measures.add(OfferMeasure(unit: unit, quantity: n));
+      }
+    }
+    return measures;
+  }
+
   Future<void> _submit() async {
+    final s = AppStrings.of(context);
     if (!_formKey.currentState!.validate()) return;
+    final measures = _collectMeasures();
+    if (measures.isEmpty) {
+      setState(() => _measureError = s.measureAtLeastOneRequired);
+      return;
+    }
+    setState(() => _measureError = null);
+
     final price = double.parse(_price.text.trim());
-    final quantity = double.parse(_quantity.text.trim());
     final shop = _shop.text.trim();
     if (shop.isNotEmpty) {
       await SupplierStore.instance.ensureName(shop);
@@ -206,14 +311,14 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
         ? Offer(
             brand: _brand.text.trim(),
             price: price,
-            quantity: quantity,
+            measures: measures,
             shop: shop,
             note: _note.text.trim(),
           )
         : base.copyWith(
             brand: _brand.text.trim(),
             price: price,
-            quantity: quantity,
+            measures: measures,
             shop: shop,
             note: _note.text.trim(),
           );
@@ -229,188 +334,229 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     return null;
   }
 
+  String? _optionalPositiveNumber(String? v, AppStrings s) {
+    if (v == null || v.trim().isEmpty) return null;
+    final n = double.tryParse(v.trim());
+    if (n == null) return s.enterNumber;
+    if (n <= 0) return s.mustBePositive;
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final editing = widget.offer != null;
-    final unit = widget.unit;
     final s = AppStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final presetUnit = _activePresetUnit ?? _availableUnits.first;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
       child: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              editing ? s.editOffer : s.addOffer,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _brand,
-              autofocus: !editing,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: s.brandOrSpec,
-                hintText: s.brandHint,
-                border: const OutlineInputBorder(),
-              ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? s.brandRequired : null,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _price,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: s.totalPrice,
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: (v) => _positiveNumber(v, s),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _quantity,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: s.quantityLabel(unit),
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: (v) => _positiveNumber(v, s),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                s.quantityQuickPick,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                editing ? s.editOffer : s.addOffer,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final preset in quantityPresetsFor(unit))
-                  ActionChip(
-                    label: Text(preset.label),
-                    onPressed: () {
-                      final text = formatQuantityValue(preset.value);
-                      setState(() {
-                        _quantity.text = text;
-                        _quantity.selection = TextSelection.collapsed(
-                          offset: text.length,
-                        );
-                      });
-                    },
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _brand,
+                autofocus: !editing,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: s.brandOrSpec,
+                  hintText: s.brandHint,
+                  border: const OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? s.brandRequired : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _price,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: s.totalPrice,
+                  border: const OutlineInputBorder(),
+                ),
+                validator: (v) => _positiveNumber(v, s),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                s.offerMeasures,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                s.offerMeasuresHint,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 10),
+              for (final unit in _availableUnits) ...[
+                TextFormField(
+                  controller: _qtyControllers[unit],
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
                   ),
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: s.quantityLabel(unit),
+                    hintText: s.quantityOptionalHint,
+                    border: const OutlineInputBorder(),
+                    suffixText: unit,
+                  ),
+                  onTap: () => setState(() => _activePresetUnit = unit),
+                  onChanged: (_) {
+                    setState(() {
+                      _activePresetUnit = unit;
+                      if (_measureError != null) _measureError = null;
+                    });
+                  },
+                  validator: (v) => _optionalPositiveNumber(v, s),
+                ),
+                const SizedBox(height: 10),
               ],
-            ),
-            const SizedBox(height: 12),
-            Builder(
-              builder: (context) {
-                final options = SupplierStore.instance.names;
-                return RawAutocomplete<String>(
-                  initialValue: _shopInitial,
-                  optionsBuilder: (value) {
-                    final current = SupplierStore.instance.names;
-                    final q = value.text.trim().toLowerCase();
-                    if (q.isEmpty) return current;
-                    return current
-                        .where((name) => name.toLowerCase().contains(q));
-                  },
-                  onSelected: (value) {
-                    _shop.text = value;
-                  },
-                  displayStringForOption: (v) => v,
-                  fieldViewBuilder:
-                      (context, controller, focusNode, onFieldSubmitted) {
-                    return TextFormField(
-                      controller: controller,
-                      focusNode: focusNode,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: s.shopOptional,
-                        hintText:
-                            options.isEmpty ? s.shopHint : s.selectSupplier,
-                        border: const OutlineInputBorder(),
-                        suffixIcon: options.isEmpty
-                            ? null
-                            : const Icon(Icons.arrow_drop_down),
+              if (_measureError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    _measureError!,
+                    style: TextStyle(color: scheme.error, fontSize: 12),
+                  ),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${s.quantityQuickPick} · $presetUnit',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
                       ),
-                      onChanged: (v) => _shop.text = v,
-                      onFieldSubmitted: (_) => onFieldSubmitted(),
-                    );
-                  },
-                  optionsViewBuilder: (context, onSelected, opts) {
-                    final list = opts.toList();
-                    return Align(
-                      alignment: Alignment.topLeft,
-                      child: Material(
-                        elevation: 4,
-                        borderRadius: BorderRadius.circular(12),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxHeight: 200,
-                            maxWidth: 360,
-                          ),
-                          child: ListView.builder(
-                            padding: EdgeInsets.zero,
-                            shrinkWrap: true,
-                            itemCount: list.length,
-                            itemBuilder: (context, index) {
-                              final option = list[index];
-                              return ListTile(
-                                dense: true,
-                                leading: const Icon(
-                                  Icons.storefront_outlined,
-                                  size: 18,
-                                ),
-                                title: Text(option),
-                                onTap: () => onSelected(option),
-                              );
-                            },
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final preset in quantityPresetsFor(presetUnit))
+                    ActionChip(
+                      label: Text(preset.label),
+                      onPressed: () {
+                        final text = formatQuantityValue(preset.value);
+                        final controller = _qtyControllers[presetUnit];
+                        if (controller == null) return;
+                        setState(() {
+                          controller.text = text;
+                          controller.selection = TextSelection.collapsed(
+                            offset: text.length,
+                          );
+                          _measureError = null;
+                        });
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Builder(
+                builder: (context) {
+                  final options = SupplierStore.instance.names;
+                  return RawAutocomplete<String>(
+                    initialValue: _shopInitial,
+                    optionsBuilder: (value) {
+                      final current = SupplierStore.instance.names;
+                      final q = value.text.trim().toLowerCase();
+                      if (q.isEmpty) return current;
+                      return current
+                          .where((name) => name.toLowerCase().contains(q));
+                    },
+                    onSelected: (value) {
+                      _shop.text = value;
+                    },
+                    displayStringForOption: (v) => v,
+                    fieldViewBuilder:
+                        (context, controller, focusNode, onFieldSubmitted) {
+                      return TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: s.shopOptional,
+                          hintText:
+                              options.isEmpty ? s.shopHint : s.selectSupplier,
+                          border: const OutlineInputBorder(),
+                          suffixIcon: options.isEmpty
+                              ? null
+                              : const Icon(Icons.arrow_drop_down),
+                        ),
+                        onChanged: (v) => _shop.text = v,
+                        onFieldSubmitted: (_) => onFieldSubmitted(),
+                      );
+                    },
+                    optionsViewBuilder: (context, onSelected, opts) {
+                      final list = opts.toList();
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(12),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              maxHeight: 200,
+                              maxWidth: 360,
+                            ),
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: list.length,
+                              itemBuilder: (context, index) {
+                                final option = list[index];
+                                return ListTile(
+                                  dense: true,
+                                  leading: const Icon(
+                                    Icons.storefront_outlined,
+                                    size: 18,
+                                  ),
+                                  title: Text(option),
+                                  onTap: () => onSelected(option),
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _note,
-              decoration: InputDecoration(
-                labelText: s.noteOptional,
-                border: const OutlineInputBorder(),
+                      );
+                    },
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _submit,
-              child: Text(editing ? s.save : s.add),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _note,
+                decoration: InputDecoration(
+                  labelText: s.noteOptional,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: _submit,
+                child: Text(editing ? s.save : s.add),
+              ),
+            ],
+          ),
         ),
       ),
     );

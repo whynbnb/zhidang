@@ -139,6 +139,17 @@ class AppStrings {
   String get productNameRequired =>
       isZh ? '请填写商品名称' : 'Please enter a product name';
   String get unitOfMeasure => isZh ? '计量单位' : 'Unit of measure';
+  String get measureDimensions => isZh ? '度量维度' : 'Measure dimensions';
+  String get measureDimensionsHint => isZh
+      ? '可多选，如西红柿可按 g / 个 / 盒 分别比价'
+      : 'Select multiple, e.g. compare by g / piece / box';
+  String get measureDimensionRequired =>
+      isZh ? '请至少选择一个度量维度' : 'Select at least one dimension';
+  String measureUnitsLabel(String units) =>
+      isZh ? '度量维度：$units' : 'Dimensions: $units';
+  String dimensionCount(int n) =>
+      isZh ? '$n 个维度' : (n == 1 ? '1 dimension' : '$n dimensions');
+  String get compareByDimension => isZh ? '按维度比价' : 'Compare by dimension';
   String get noteOptional => isZh ? '备注（可选）' : 'Note (optional)';
 
   String get editOffer => isZh ? '编辑报价' : 'Edit offer';
@@ -147,6 +158,14 @@ class AppStrings {
       isZh ? '例如：伊利金典、蓝月亮' : 'e.g. Brand A, Value pack';
   String get brandRequired => isZh ? '请填写品牌' : 'Please enter a brand';
   String get totalPrice => isZh ? '总价（元）' : 'Total price';
+  String get offerMeasures => isZh ? '规格度量（可多填）' : 'Measures (multi)';
+  String get offerMeasuresHint => isZh
+      ? '同一报价可同时填写多个维度，例如 1.5kg + 6个 + 1盒'
+      : 'One offer can include multiple measures, e.g. 1.5kg + 6 pcs + 1 box';
+  String get measureAtLeastOneRequired => isZh
+      ? '请至少填写一个维度的数量'
+      : 'Enter quantity for at least one dimension';
+  String get quantityOptionalHint => isZh ? '可不填' : 'Optional';
   String quantityLabel(String unit) =>
       isZh ? '数量（$unit）' : 'Quantity ($unit)';
   String get quantityQuickPick => isZh ? '快速数量' : 'Quick quantity';
