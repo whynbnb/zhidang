@@ -51,10 +51,17 @@ class _HomePageState extends State<HomePage> {
       if (_selectedId != null && !_products.any((p) => p.id == _selectedId)) {
         _selectedId = null;
       }
-      if (_selectedId == null && _products.isNotEmpty) {
+      // Wide layout can preselect for split view; phone always starts on list.
+      final isWide = MediaQuery.sizeOf(context).width >= 840;
+      if (isWide && _selectedId == null && _products.isNotEmpty) {
         _selectedId = _products.first.id;
       }
     });
+  }
+
+  void _clearSelection() {
+    if (_selectedId == null) return;
+    setState(() => _selectedId = null);
   }
 
   Future<void> _persist() async {
@@ -126,7 +133,9 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _products = _products.where((p) => p.id != product.id).toList();
       if (_selectedId == product.id) {
-        _selectedId = _products.isEmpty ? null : _products.first.id;
+        final isWide = MediaQuery.sizeOf(context).width >= 840;
+        _selectedId =
+            isWide && _products.isNotEmpty ? _products.first.id : null;
       }
     });
     await _persist();
@@ -219,47 +228,55 @@ class _HomePageState extends State<HomePage> {
     final width = MediaQuery.sizeOf(context).width;
     final isWide = width >= 840;
     final s = AppStrings.of(context);
+    final inDetail = !isWide && _selected != null;
 
-    return Scaffold(
-      body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : isWide
-                ? _WideLayout(
-                    search: _search,
-                    products: _filtered,
-                    selected: _selected,
-                    onSelect: (id) => setState(() => _selectedId = id),
-                    onOpenSettings: _openSettings,
-                    onAddProduct: _addProduct,
-                    onEditProduct: _editProduct,
-                    onDeleteProduct: _deleteProduct,
-                    onAddOffer: _addOffer,
-                    onEditOffer: _editOffer,
-                    onDeleteOffer: _deleteOffer,
-                  )
-                : _NarrowLayout(
-                    search: _search,
-                    products: _filtered,
-                    selected: _selected,
-                    onSelect: (id) => setState(() => _selectedId = id),
-                    onBack: () => setState(() => _selectedId = null),
-                    onOpenSettings: _openSettings,
-                    onAddProduct: _addProduct,
-                    onEditProduct: _editProduct,
-                    onDeleteProduct: _deleteProduct,
-                    onAddOffer: _addOffer,
-                    onEditOffer: _editOffer,
-                    onDeleteOffer: _deleteOffer,
-                  ),
+    return PopScope(
+      canPop: !inDetail,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (inDetail) _clearSelection();
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : isWide
+                  ? _WideLayout(
+                      search: _search,
+                      products: _filtered,
+                      selected: _selected,
+                      onSelect: (id) => setState(() => _selectedId = id),
+                      onOpenSettings: _openSettings,
+                      onAddProduct: _addProduct,
+                      onEditProduct: _editProduct,
+                      onDeleteProduct: _deleteProduct,
+                      onAddOffer: _addOffer,
+                      onEditOffer: _editOffer,
+                      onDeleteOffer: _deleteOffer,
+                    )
+                  : _NarrowLayout(
+                      search: _search,
+                      products: _filtered,
+                      selected: _selected,
+                      onSelect: (id) => setState(() => _selectedId = id),
+                      onBack: _clearSelection,
+                      onOpenSettings: _openSettings,
+                      onAddProduct: _addProduct,
+                      onEditProduct: _editProduct,
+                      onDeleteProduct: _deleteProduct,
+                      onAddOffer: _addOffer,
+                      onEditOffer: _editOffer,
+                      onDeleteOffer: _deleteOffer,
+                    ),
+        ),
+        floatingActionButton: isWide || _selected != null
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: _addProduct,
+                icon: const Icon(Icons.add),
+                label: Text(s.newProduct),
+              ),
       ),
-      floatingActionButton: isWide || _selected != null
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: _addProduct,
-              icon: const Icon(Icons.add),
-              label: Text(s.newProduct),
-            ),
     );
   }
 }
