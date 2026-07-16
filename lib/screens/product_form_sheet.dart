@@ -5,6 +5,7 @@ import '../models/product.dart';
 import '../services/supplier_store.dart';
 import '../services/unit_store.dart';
 import '../utils/quantity_presets.dart';
+import '../widgets/tag_chips.dart';
 
 Future<Product?> showProductForm(
   BuildContext context, {
@@ -32,6 +33,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
   late final TextEditingController _name;
   late final TextEditingController _note;
   late Set<String> _units;
+  late Set<String> _tags;
   late List<UnitRelation> _relations;
 
   @override
@@ -40,6 +42,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
     _name = TextEditingController(text: widget.product?.name ?? '');
     _note = TextEditingController(text: widget.product?.note ?? '');
     _units = {...(widget.product?.units ?? const ['g'])};
+    _tags = {...(widget.product?.tags ?? const [])};
     _relations = [...(widget.product?.relations ?? const [])];
   }
 
@@ -59,18 +62,21 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
       if (!_units.contains(r.fromUnit)) selected.add(r.fromUnit);
       if (!_units.contains(r.toUnit)) selected.add(r.toUnit);
     }
+    final tags = _tags.toList();
     final base = widget.product;
     final result = base == null
         ? Product(
             name: _name.text.trim(),
             units: selected,
             relations: _relations,
+            tags: tags,
             note: _note.text.trim(),
           )
         : base.copyWith(
             name: _name.text.trim(),
             units: selected,
             relations: _relations,
+            tags: tags,
             note: _note.text.trim(),
           );
     Navigator.of(context).pop(result);
@@ -199,6 +205,11 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                     ),
                   ),
                 ),
+              const SizedBox(height: 16),
+              TagPicker(
+                selected: _tags,
+                onChanged: (next) => setState(() => _tags = next),
+              ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _note,
@@ -612,6 +623,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   late List<String> _availableUnits;
   late Map<String, TextEditingController> _qtyControllers;
   late List<UnitRelation> _offerRelations;
+  late Set<String> _tags;
   /// Quantities the user entered (or loaded from a saved offer). Never auto-overwritten.
   final Set<String> _manualUnits = {};
   /// Quantities filled by conversion from manual seeds. Safe to update/clear.
@@ -623,6 +635,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   void initState() {
     super.initState();
     final o = widget.offer;
+    _tags = {...(o?.tags ?? const [])};
     _offerRelations = o == null
         ? widget.defaultRelations
             .map(
@@ -865,6 +878,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     if (shop.isNotEmpty) {
       await SupplierStore.instance.ensureName(shop);
     }
+    final tags = _tags.toList();
     final base = widget.offer;
     final result = base == null
         ? Offer(
@@ -872,6 +886,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             price: price,
             measures: measures,
             relations: _offerRelations,
+            tags: tags,
             shop: shop,
             note: _note.text.trim(),
           )
@@ -880,6 +895,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             price: price,
             measures: measures,
             relations: _offerRelations,
+            tags: tags,
             shop: shop,
             note: _note.text.trim(),
           );
@@ -1113,6 +1129,11 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                     },
                   );
                 },
+              ),
+              const SizedBox(height: 16),
+              TagPicker(
+                selected: _tags,
+                onChanged: (next) => setState(() => _tags = next),
               ),
               const SizedBox(height: 12),
               TextFormField(

@@ -85,6 +85,7 @@ class Offer {
     required this.price,
     List<OfferMeasure>? measures,
     List<UnitRelation>? relations,
+    List<String>? tags,
     String? unit,
     double? quantity,
     this.shop = '',
@@ -93,6 +94,7 @@ class Offer {
   })  : id = id ?? _uuid.v4(),
         measures = _normalizeMeasures(measures, unit: unit, quantity: quantity),
         relations = List<UnitRelation>.from(relations ?? const []),
+        tags = _normalizeTags(tags),
         updatedAt = updatedAt ?? DateTime.now();
 
   final String id;
@@ -101,6 +103,7 @@ class Offer {
   List<OfferMeasure> measures;
   /// Per-offer conversion, e.g. brand A: 1 pack = 200 sheets.
   List<UnitRelation> relations;
+  List<String> tags;
   String shop;
   String note;
   DateTime updatedAt;
@@ -147,6 +150,7 @@ class Offer {
         'price': price,
         'measures': measures.map((e) => e.toJson()).toList(),
         'relations': relations.map((e) => e.toJson()).toList(),
+        'tags': tags,
         'unit': unit,
         'quantity': quantity,
         'shop': shop,
@@ -178,6 +182,7 @@ class Offer {
       price: (json['price'] as num?)?.toDouble() ?? 0,
       measures: measures,
       relations: relations,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
       unit: normalizeUnit(json['unit'] as String?, fallback: fallbackUnit),
       quantity: (json['quantity'] as num?)?.toDouble(),
       shop: json['shop'] as String? ?? '',
@@ -193,6 +198,7 @@ class Offer {
     double? price,
     List<OfferMeasure>? measures,
     List<UnitRelation>? relations,
+    List<String>? tags,
     String? shop,
     String? note,
   }) =>
@@ -202,6 +208,7 @@ class Offer {
         price: price ?? this.price,
         measures: measures ?? this.measures,
         relations: relations ?? this.relations,
+        tags: tags ?? this.tags,
         shop: shop ?? this.shop,
         note: note ?? this.note,
         updatedAt: DateTime.now(),
@@ -259,12 +266,14 @@ class Product {
     List<String>? units,
     String? unit,
     List<UnitRelation>? relations,
+    List<String>? tags,
     this.note = '',
     List<Offer>? offers,
     DateTime? updatedAt,
   })  : id = id ?? _uuid.v4(),
         units = _normalizeUnits(units, unit),
         relations = List<UnitRelation>.from(relations ?? const []),
+        tags = _normalizeTags(tags),
         offers = List<Offer>.from(offers ?? const []),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -273,6 +282,7 @@ class Product {
   List<String> units;
   /// Optional default template for new offers (not forced on existing offers).
   List<UnitRelation> relations;
+  List<String> tags;
   String note;
   List<Offer> offers;
   DateTime updatedAt;
@@ -379,6 +389,7 @@ class Product {
         'units': units,
         'unit': unit,
         'relations': relations.map((e) => e.toJson()).toList(),
+        'tags': tags,
         'note': note,
         'offers': offers.map((e) => e.toJson()).toList(),
         'updatedAt': updatedAt.toIso8601String(),
@@ -412,6 +423,7 @@ class Product {
       name: json['name'] as String? ?? '',
       units: units,
       relations: relations,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
       note: json['note'] as String? ?? '',
       offers: offers,
       updatedAt: json['updatedAt'] != null
@@ -424,6 +436,7 @@ class Product {
     String? name,
     List<String>? units,
     List<UnitRelation>? relations,
+    List<String>? tags,
     String? note,
     List<Offer>? offers,
   }) =>
@@ -432,6 +445,7 @@ class Product {
         name: name ?? this.name,
         units: units ?? this.units,
         relations: relations ?? this.relations,
+        tags: tags ?? this.tags,
         note: note ?? this.note,
         offers: offers ?? this.offers,
         updatedAt: DateTime.now(),
@@ -454,4 +468,22 @@ class Product {
     if (result.isEmpty) result.add('g');
     return result;
   }
+}
+
+const maxTagsPerEntity = 5;
+
+List<String> _normalizeTags(List<String>? tags) {
+  if (tags == null || tags.isEmpty) return const [];
+  final result = <String>[];
+  final seen = <String>{};
+  for (final raw in tags) {
+    if (result.length >= maxTagsPerEntity) break;
+    final name = raw.trim();
+    if (name.isEmpty) continue;
+    final key = name.toLowerCase();
+    if (seen.contains(key)) continue;
+    seen.add(key);
+    result.add(name);
+  }
+  return result;
 }

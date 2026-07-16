@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
+import 'tag_chips.dart';
 
 final _currency = NumberFormat('#,##0.##');
 
@@ -91,6 +92,10 @@ class ProductCard extends StatelessWidget {
                       color: scheme.onSurfaceVariant,
                     ),
               ),
+              if (product.tags.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                TagChipRow(tags: product.tags, dense: true),
+              ],
               const SizedBox(height: 8),
               if (best != null) ...[
                 Text(

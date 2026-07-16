@@ -8,6 +8,7 @@ import '../services/data_revision.dart';
 import '../services/storage_service.dart';
 import '../widgets/offer_tile.dart';
 import '../widgets/product_card.dart';
+import '../widgets/tag_chips.dart';
 import 'product_form_sheet.dart';
 
 final _currency = NumberFormat('#,##0.##');
@@ -93,7 +94,10 @@ class _HomePageState extends State<HomePage> {
         .where((p) =>
             p.name.toLowerCase().contains(_query) ||
             p.note.toLowerCase().contains(_query) ||
-            p.offers.any((o) => o.brand.toLowerCase().contains(_query)))
+            p.tags.any((t) => t.toLowerCase().contains(_query)) ||
+            p.offers.any((o) =>
+                o.brand.toLowerCase().contains(_query) ||
+                o.tags.any((t) => t.toLowerCase().contains(_query))))
         .toList();
   }
 
@@ -737,6 +741,10 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                   color: scheme.onSurfaceVariant,
                 ),
           ),
+          if (product.tags.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            TagChipRow(tags: product.tags),
+          ],
           if (product.note.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(product.note),
@@ -758,6 +766,10 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
               ),
             ],
           ),
+          if (product.tags.isNotEmpty) ...[
+            TagChipRow(tags: product.tags),
+            const SizedBox(height: 8),
+          ],
         ],
         if (units.length > 1) ...[
           Text(

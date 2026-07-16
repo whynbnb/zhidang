@@ -91,6 +91,16 @@ class AppStrings {
   String get noneOption => isZh ? '无' : 'None';
   String get customSupplier => isZh ? '其他（手动输入）' : 'Other (type manually)';
 
+  String get tags => isZh ? '标签' : 'Tags';
+  String get addTag => isZh ? '添加标签' : 'Add tag';
+  String get tagNameHint =>
+      isZh ? '例如：日用品、促销、会员价' : 'e.g. household, sale, member';
+  String tagsAssignHint(int max) => isZh
+      ? '最多 $max 个；输入添加，点击标签可移除'
+      : 'Up to $max; type to add, tap a tag to remove';
+  String tagsLimitReached(int max) =>
+      isZh ? '已达上限（$max 个）' : 'Limit reached ($max)';
+
   String get units => isZh ? '单位' : 'Units';
   String get unitsManage => isZh ? '管理单位' : 'Manage units';
   String get unitsManageHint => isZh
@@ -167,7 +177,8 @@ class AppStrings {
   String get newProduct => isZh ? '新建商品' : 'New product';
   String get create => isZh ? '新建' : 'New';
   String get addFirstProduct => isZh ? '添加第一个商品' : 'Add first product';
-  String get searchHint => isZh ? '搜索商品 / 品牌' : 'Search products / brands';
+  String get searchHint =>
+      isZh ? '搜索商品 / 品牌 / 标签' : 'Search products / brands / tags';
   String get noProducts => isZh ? '还没有商品' : 'No products yet';
   String productCount(int n) =>
       isZh ? '共 $n 个商品' : (n == 1 ? '1 product' : '$n products');

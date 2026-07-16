@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
 import '../utils/quantity_presets.dart';
+import 'tag_chips.dart';
 
 final _currency = NumberFormat('#,##0.##');
 
@@ -92,6 +93,10 @@ class OfferTile extends StatelessWidget {
                             color: scheme.primary,
                           ),
                     ),
+                  if (offer.tags.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    TagChipRow(tags: offer.tags, dense: true),
+                  ],
                   if (offer.note.isNotEmpty)
                     Text(
                       offer.note,
