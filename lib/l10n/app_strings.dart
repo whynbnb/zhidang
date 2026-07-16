@@ -221,6 +221,9 @@ class AppStrings {
       : 'Enter a valid relation (different units, amount > 0)';
   String get relationSameUnit =>
       isZh ? '两个单位不能相同' : 'Units must be different';
+  String get relationNeedTwoUnits => isZh
+      ? '至少选择两个不同维度后才能设置换算'
+      : 'Select at least two dimensions before adding a conversion';
   String get autoFilled => isZh ? '已按换算自动填入' : 'Auto-filled by relation';
   String get noteOptional => isZh ? '备注（可选）' : 'Note (optional)';
 

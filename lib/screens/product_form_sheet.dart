@@ -81,7 +81,6 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
       context,
       units: {
         ..._units,
-        ...UnitStore.instance.names,
         if (existing != null) existing.fromUnit,
         if (existing != null) existing.toUnit,
       }.toList(),
@@ -363,15 +362,44 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
   @override
   void initState() {
     super.initState();
-    final units = widget.units.isNotEmpty ? widget.units : ['g', '个'];
+    final units = _allUnits;
     _from = widget.relation?.fromUnit ?? units.first;
-    _to = widget.relation?.toUnit ??
-        (units.length > 1 ? units[1] : units.first);
+    _to = widget.relation?.toUnit ?? _otherThan(_from, units);
+    if (_from == _to && units.length > 1) {
+      _to = _otherThan(_from, units);
+    }
     _factor = TextEditingController(
       text: widget.relation == null
           ? ''
           : formatQuantityValue(widget.relation!.factor),
     );
+  }
+
+  List<String> get _allUnits {
+    final list = widget.units.where((u) => u.trim().isNotEmpty).toList();
+    return list.isNotEmpty ? list : const ['g', '个'];
+  }
+
+  String _otherThan(String exclude, List<String> units) {
+    for (final u in units) {
+      if (u != exclude) return u;
+    }
+    return exclude;
+  }
+
+  void _setFrom(String value) {
+    setState(() {
+      _from = value;
+      // Left is free; if right collides, move right to another unit.
+      if (_to == _from) {
+        _to = _otherThan(_from, _allUnits);
+      }
+    });
+  }
+
+  void _setTo(String value) {
+    if (value == _from) return;
+    setState(() => _to = value);
   }
 
   @override
@@ -402,11 +430,9 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final s = AppStrings.of(context);
     final editing = widget.relation != null;
-    final units = {
-      ...widget.units,
-      _from,
-      _to,
-    }.toList();
+    final units = _allUnits;
+    final toItems = units.where((u) => u != _from).toList();
+    final canPickPair = units.length >= 2;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
@@ -424,7 +450,7 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
             ),
             const SizedBox(height: 8),
             Text(
-              s.offerRelationsHint,
+              canPickPair ? s.offerRelationsHint : s.relationNeedTwoUnits,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -441,7 +467,8 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue: _from,
+                    key: ValueKey('from_$_from'),
+                    initialValue: units.contains(_from) ? _from : null,
                     decoration: InputDecoration(
                       labelText: s.relationFrom,
                       border: const OutlineInputBorder(),
@@ -451,9 +478,11 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
                           (u) => DropdownMenuItem(value: u, child: Text(u)),
                         )
                         .toList(),
-                    onChanged: (v) {
-                      if (v != null) setState(() => _from = v);
-                    },
+                    onChanged: canPickPair
+                        ? (v) {
+                            if (v != null) _setFrom(v);
+                          }
+                        : null,
                   ),
                 ),
                 Padding(
@@ -489,19 +518,22 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue: _to,
+                    key: ValueKey('to_$_to'),
+                    initialValue: toItems.contains(_to) ? _to : null,
                     decoration: InputDecoration(
                       labelText: s.relationTo,
                       border: const OutlineInputBorder(),
                     ),
-                    items: units
+                    items: toItems
                         .map(
                           (u) => DropdownMenuItem(value: u, child: Text(u)),
                         )
                         .toList(),
-                    onChanged: (v) {
-                      if (v != null) setState(() => _to = v);
-                    },
+                    onChanged: canPickPair
+                        ? (v) {
+                            if (v != null) _setTo(v);
+                          }
+                        : null,
                   ),
                 ),
               ],
@@ -521,7 +553,7 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
             ),
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: _submit,
+              onPressed: canPickPair && _from != _to ? _submit : null,
               child: Text(editing ? s.save : s.createAction),
             ),
           ],
@@ -673,8 +705,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     final result = await showUnitRelationForm(
       context,
       units: {
-        ..._availableUnits,
-        ...UnitStore.instance.names,
+        ...widget.units.map(normalizeUnit),
         if (existing != null) existing.fromUnit,
         if (existing != null) existing.toUnit,
       }.toList(),
