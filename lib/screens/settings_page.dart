@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../services/app_icon_service.dart';
 import '../settings/app_settings.dart';
+import 'data_manage_page.dart';
 import 'suppliers_page.dart';
 import 'units_page.dart';
 
@@ -243,6 +244,28 @@ class SettingsPage extends StatelessWidget {
                           name: UnitsPage.routeName,
                         ),
                         builder: (_) => const UnitsPage(),
+                      ),
+                    );
+                  },
+                ),
+                Divider(
+                  height: 1,
+                  indent: 56,
+                  color: scheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+                ListTile(
+                  leading:
+                      Icon(Icons.folder_special_outlined, color: scheme.primary),
+                  title: Text(s.dataManage),
+                  subtitle: Text(s.dataManageHint),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        settings: const RouteSettings(
+                          name: DataManagePage.routeName,
+                        ),
+                        builder: (_) => const DataManagePage(),
                       ),
                     );
                   },

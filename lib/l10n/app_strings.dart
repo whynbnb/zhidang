@@ -122,6 +122,42 @@ class AppStrings {
       : 'This will replace your unit list with the default presets. Continue?';
   String get unitsResetDone => isZh ? '已恢复默认单位' : 'Default units restored';
 
+  String get dataManage => isZh ? '数据管理' : 'Data management';
+  String get dataManageHint => isZh
+      ? '导入、导出或清空商品、供应商与单位数据'
+      : 'Import, export or clear products, suppliers and units';
+  String get exportData => isZh ? '导出数据' : 'Export data';
+  String get exportDataHint => isZh
+      ? '导出商品、供应商与单位为 JSON'
+      : 'Export products, suppliers and units as JSON';
+  String get importData => isZh ? '导入数据' : 'Import data';
+  String get importDataHint => isZh
+      ? '从备份恢复；将覆盖当前数据'
+      : 'Restore from backup; replaces current data';
+  String get importDataConfirm => isZh
+      ? '导入将覆盖现有商品、供应商和单位，是否继续？'
+      : 'Import will replace products, suppliers and units. Continue?';
+  String get clearData => isZh ? '清空全部数据' : 'Clear all data';
+  String get clearDataHint => isZh
+      ? '删除全部商品与供应商，并恢复默认单位'
+      : 'Delete all products and suppliers; reset units';
+  String get clearDataConfirm => isZh
+      ? '确定清空全部数据？此操作不可撤销。'
+      : 'Clear all data? This cannot be undone.';
+  String get exportDone => isZh ? '导出成功' : 'Export complete';
+  String get importDone => isZh ? '导入成功' : 'Import complete';
+  String get clearDataDone => isZh ? '已清空数据' : 'All data cleared';
+  String get exportFailed => isZh ? '导出失败' : 'Export failed';
+  String get importFailed =>
+      isZh ? '导入失败或文件无效' : 'Import failed or file invalid';
+  String get clearFailed => isZh ? '清空失败' : 'Clear failed';
+  String get importCancelled => isZh ? '已取消导入' : 'Import cancelled';
+  String get importAction => isZh ? '导入' : 'Import';
+  String get clearAction => isZh ? '清空' : 'Clear';
+  String importSummary(int products, int suppliers, int units) => isZh
+      ? '将导入 $products 个商品、$suppliers 个供应商、$units 个单位'
+      : 'Will import $products products, $suppliers suppliers, $units units';
+
   String get about => isZh ? '关于' : 'About';
   String get aboutBody => isZh
       ? '记录商品单价，比较不同品牌谁更值当。'

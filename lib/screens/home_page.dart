@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../app/app_navigator.dart';
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
+import '../services/data_revision.dart';
 import '../services/storage_service.dart';
 import '../widgets/offer_tile.dart';
 import '../widgets/product_card.dart';
@@ -26,6 +27,7 @@ class _HomePageState extends State<HomePage> {
   String? _selectedId;
   bool _loading = true;
   String _query = '';
+  int _seenRevision = DataRevision.notifier.value;
 
   @override
   void initState() {
@@ -34,10 +36,19 @@ class _HomePageState extends State<HomePage> {
     _search.addListener(() {
       setState(() => _query = _search.text.trim().toLowerCase());
     });
+    DataRevision.notifier.addListener(_onDataRevision);
+  }
+
+  void _onDataRevision() {
+    final rev = DataRevision.notifier.value;
+    if (rev == _seenRevision) return;
+    _seenRevision = rev;
+    _load();
   }
 
   @override
   void dispose() {
+    DataRevision.notifier.removeListener(_onDataRevision);
     _search.dispose();
     super.dispose();
   }

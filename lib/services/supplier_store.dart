@@ -78,6 +78,16 @@ class SupplierStore extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> replaceAll(List<Supplier> list) async {
+    _suppliers = [...list]
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _ready = true;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> clear() => replaceAll(const []);
+
   Supplier? findByName(String name) {
     final key = name.trim().toLowerCase();
     if (key.isEmpty) return null;

@@ -138,6 +138,21 @@ class UnitStore extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> replaceAll(List<CustomUnit> list) async {
+    _units = list
+        .map((e) => CustomUnit(
+              id: e.id,
+              name: e.name.trim(),
+              note: e.note,
+              updatedAt: e.updatedAt,
+            ))
+        .where((e) => e.name.isNotEmpty)
+        .toList();
+    _ready = true;
+    notifyListeners();
+    await _persist();
+  }
+
   CustomUnit? findByName(String name) {
     final key = name.trim().toLowerCase();
     if (key.isEmpty) return null;
