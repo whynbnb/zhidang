@@ -4,6 +4,7 @@ import '../l10n/app_strings.dart';
 import '../services/app_icon_service.dart';
 import '../settings/app_settings.dart';
 import 'suppliers_page.dart';
+import 'units_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -205,20 +206,48 @@ class SettingsPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(color: scheme.outlineVariant),
             ),
-            child: ListTile(
-              leading: Icon(Icons.storefront_outlined, color: scheme.primary),
-              title: Text(s.suppliersManage),
-              subtitle: Text(s.suppliersManageHint),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    settings:
-                        const RouteSettings(name: SuppliersPage.routeName),
-                    builder: (_) => const SuppliersPage(),
-                  ),
-                );
-              },
+            child: Column(
+              children: [
+                ListTile(
+                  leading:
+                      Icon(Icons.storefront_outlined, color: scheme.primary),
+                  title: Text(s.suppliersManage),
+                  subtitle: Text(s.suppliersManageHint),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        settings: const RouteSettings(
+                          name: SuppliersPage.routeName,
+                        ),
+                        builder: (_) => const SuppliersPage(),
+                      ),
+                    );
+                  },
+                ),
+                Divider(
+                  height: 1,
+                  indent: 56,
+                  color: scheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+                ListTile(
+                  leading:
+                      Icon(Icons.straighten_outlined, color: scheme.primary),
+                  title: Text(s.unitsManage),
+                  subtitle: Text(s.unitsManageHint),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        settings: const RouteSettings(
+                          name: UnitsPage.routeName,
+                        ),
+                        builder: (_) => const UnitsPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 20),

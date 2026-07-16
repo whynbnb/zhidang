@@ -2,28 +2,6 @@ import 'package:uuid/uuid.dart';
 
 const _uuid = Uuid();
 
-const unitOptions = [
-  'g',
-  'kg',
-  'ml',
-  'L',
-  '个',
-  '包',
-  '盒',
-  '瓶',
-  '袋',
-  '卷',
-  '张',
-  '片',
-  'pc',
-  'pack',
-  'box',
-  'bottle',
-  'bag',
-  'roll',
-  'sheet',
-];
-
 String normalizeUnit(String? unit, {String fallback = 'g'}) {
   final value = unit?.trim() ?? '';
   return value.isEmpty ? fallback : value;

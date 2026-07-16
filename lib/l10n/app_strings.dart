@@ -91,6 +91,37 @@ class AppStrings {
   String get noneOption => isZh ? '无' : 'None';
   String get customSupplier => isZh ? '其他（手动输入）' : 'Other (type manually)';
 
+  String get units => isZh ? '单位' : 'Units';
+  String get unitsManage => isZh ? '管理单位' : 'Manage units';
+  String get unitsManageHint => isZh
+      ? '维护可选计量单位，创建商品时从此列表选择'
+      : 'Manage measurement units used when creating products';
+  String get addUnit => isZh ? '添加单位' : 'Add unit';
+  String get editUnit => isZh ? '编辑单位' : 'Edit unit';
+  String get deleteUnit => isZh ? '删除单位' : 'Delete unit';
+  String deleteUnitConfirm(String name) =>
+      isZh ? '确定删除单位「$name」？' : 'Delete unit "$name"?';
+  String get unitName => isZh ? '单位名称' : 'Unit name';
+  String get unitNameHint =>
+      isZh ? '例如：听、箱、打、斤' : 'e.g. can, case, dozen';
+  String get unitNameRequired =>
+      isZh ? '请填写单位名称' : 'Please enter a unit name';
+  String get unitNameExists =>
+      isZh ? '该单位已存在' : 'This unit already exists';
+  String get searchUnits => isZh ? '搜索单位' : 'Search units';
+  String get noUnits => isZh ? '还没有单位' : 'No units yet';
+  String get noUnitResults => isZh ? '没有匹配的单位' : 'No matching units';
+  String get unitsHint => isZh
+      ? '这里的单位会出现在创建商品的维度选择中。'
+      : 'Units here appear when choosing product dimensions.';
+  String unitCount(int n) =>
+      isZh ? '共 $n 个单位' : (n == 1 ? '1 unit' : '$n units');
+  String get resetUnits => isZh ? '恢复默认单位' : 'Reset to defaults';
+  String get resetUnitsConfirm => isZh
+      ? '将清空当前单位列表，并恢复为默认预设单位。是否继续？'
+      : 'This will replace your unit list with the default presets. Continue?';
+  String get unitsResetDone => isZh ? '已恢复默认单位' : 'Default units restored';
+
   String get about => isZh ? '关于' : 'About';
   String get aboutBody => isZh
       ? '记录商品单价，比较不同品牌谁更值当。'
@@ -217,21 +248,6 @@ class AppStrings {
   String get enterNumber => isZh ? '请输入数字' : 'Enter a number';
   String get mustBePositive => isZh ? '需大于 0' : 'Must be greater than 0';
 
-  List<String> get unitOptions => isZh
-      ? const ['g', 'kg', 'ml', 'L', '个', '包', '盒', '瓶', '袋', '卷', '张', '片']
-      : const [
-          'g',
-          'kg',
-          'ml',
-          'L',
-          'pc',
-          'pack',
-          'box',
-          'bottle',
-          'bag',
-          'roll',
-          'sheet',
-        ];
 }
 
 class _StringsScope extends InheritedWidget {

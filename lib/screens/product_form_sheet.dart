@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
 import '../services/supplier_store.dart';
+import '../services/unit_store.dart';
 import '../utils/quantity_presets.dart';
 
 Future<Product?> showProductForm(
@@ -80,7 +81,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
       context,
       units: {
         ..._units,
-        ...AppStrings.of(context).unitOptions,
+        ...UnitStore.instance.names,
         if (existing != null) existing.fromUnit,
         if (existing != null) existing.toUnit,
       }.toList(),
@@ -112,12 +113,6 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
     final editing = widget.product != null;
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
-    final options = {
-      ...s.unitOptions,
-      ..._units,
-      if (widget.product != null) ...widget.product!.measureUnits,
-      for (final r in _relations) ...[r.fromUnit, r.toUnit],
-    }.toList();
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
@@ -163,25 +158,36 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                     ),
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final unit in options)
-                    FilterChip(
-                      label: Text(unit),
-                      selected: _units.contains(unit),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _units.add(unit);
-                          } else if (_units.length > 1) {
-                            _units.remove(unit);
-                          }
-                        });
-                      },
-                    ),
-                ],
+              ListenableBuilder(
+                listenable: UnitStore.instance,
+                builder: (context, _) {
+                  final unitOptions = {
+                    ...UnitStore.instance.names,
+                    ..._units,
+                    if (widget.product != null) ...widget.product!.measureUnits,
+                    for (final r in _relations) ...[r.fromUnit, r.toUnit],
+                  }.toList();
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final unit in unitOptions)
+                        FilterChip(
+                          label: Text(unit),
+                          selected: _units.contains(unit),
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                _units.add(unit);
+                              } else if (_units.length > 1) {
+                                _units.remove(unit);
+                              }
+                            });
+                          },
+                        ),
+                    ],
+                  );
+                },
               ),
               if (_units.isEmpty)
                 Padding(
@@ -668,7 +674,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
       context,
       units: {
         ..._availableUnits,
-        ...AppStrings.of(context).unitOptions,
+        ...UnitStore.instance.names,
         if (existing != null) existing.fromUnit,
         if (existing != null) existing.toUnit,
       }.toList(),

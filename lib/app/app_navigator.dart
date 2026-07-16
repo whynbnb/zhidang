@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../screens/settings_page.dart';
 import '../screens/suppliers_page.dart';
+import '../screens/units_page.dart';
 
 class AppNavigator {
   static final key = GlobalKey<NavigatorState>();
@@ -16,7 +17,8 @@ class AppNavigator {
       return true;
     });
     if (topName == SettingsPage.routeName ||
-        topName == SuppliersPage.routeName) {
+        topName == SuppliersPage.routeName ||
+        topName == UnitsPage.routeName) {
       return;
     }
 
