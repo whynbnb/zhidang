@@ -575,7 +575,17 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
 }
 
 
-Future<Offer?> showOfferForm(
+class OfferFormResult {
+  const OfferFormResult.saved(this.offer) : deleted = false;
+  const OfferFormResult.deleted()
+      : offer = null,
+        deleted = true;
+
+  final Offer? offer;
+  final bool deleted;
+}
+
+Future<OfferFormResult?> showOfferForm(
   BuildContext context, {
   Offer? offer,
   required List<String> units,
@@ -583,7 +593,7 @@ Future<Offer?> showOfferForm(
   List<UnitRelation> defaultRelations = const [],
   String? preferredUnit,
 }) {
-  return showModalBottomSheet<Offer>(
+  return showModalBottomSheet<OfferFormResult>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -904,7 +914,33 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             note: _note.text.trim(),
           );
     if (!mounted) return;
-    Navigator.of(context).pop(result);
+    Navigator.of(context).pop(OfferFormResult.saved(result));
+  }
+
+  Future<void> _deleteOffer() async {
+    final existing = widget.offer;
+    if (existing == null) return;
+    final s = AppStrings.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(s.deleteOffer),
+        content: Text(s.deleteOfferConfirm(existing.brand)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(s.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(s.delete),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      Navigator.of(context).pop(const OfferFormResult.deleted());
+    }
   }
 
   String? _positiveNumber(String? v, AppStrings s) {
@@ -1304,6 +1340,17 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                 onPressed: _submit,
                 child: Text(editing ? s.save : s.add),
               ),
+              if (editing) ...[
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: _deleteOffer,
+                  icon: Icon(Icons.delete_outline, color: scheme.error),
+                  label: Text(
+                    s.deleteOffer,
+                    style: TextStyle(color: scheme.error),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

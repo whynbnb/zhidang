@@ -166,14 +166,15 @@ class _HomePageState extends State<HomePage> {
       defaultRelations: product.relations,
       preferredUnit: unit,
     );
-    if (result == null) return;
+    final offer = result?.offer;
+    if (offer == null) return;
     final units = <String>[...product.units];
-    for (final m in result.measures) {
+    for (final m in offer.measures) {
       if (!units.contains(m.unit)) units.add(m.unit);
     }
     final updated = product.copyWith(
       units: units,
-      offers: [...product.offers, result],
+      offers: [...product.offers, offer],
     );
     setState(() {
       _products = _products
@@ -194,44 +195,27 @@ class _HomePageState extends State<HomePage> {
       preferredUnit: offer.unit,
     );
     if (result == null) return;
+    if (result.deleted) {
+      final offers = product.offers.where((o) => o.id != offer.id).toList();
+      final updated = product.copyWith(offers: offers);
+      setState(() {
+        _products = _products
+            .map((p) => p.id == updated.id ? updated : p)
+            .toList()
+          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      });
+      await _persist();
+      return;
+    }
+    final saved = result.offer;
+    if (saved == null) return;
     final offers =
-        product.offers.map((o) => o.id == result.id ? result : o).toList();
+        product.offers.map((o) => o.id == saved.id ? saved : o).toList();
     final units = <String>[...product.units];
-    for (final m in result.measures) {
+    for (final m in saved.measures) {
       if (!units.contains(m.unit)) units.add(m.unit);
     }
     final updated = product.copyWith(units: units, offers: offers);
-    setState(() {
-      _products = _products
-          .map((p) => p.id == updated.id ? updated : p)
-          .toList()
-        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    });
-    await _persist();
-  }
-
-  Future<void> _deleteOffer(Product product, Offer offer) async {
-    final s = AppStrings.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(s.deleteOffer),
-        content: Text(s.deleteOfferConfirm(offer.brand)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(s.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(s.delete),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    final offers = product.offers.where((o) => o.id != offer.id).toList();
-    final updated = product.copyWith(offers: offers);
     setState(() {
       _products = _products
           .map((p) => p.id == updated.id ? updated : p)
@@ -295,7 +279,6 @@ class _HomePageState extends State<HomePage> {
                       onDeleteProduct: _deleteProduct,
                       onAddOffer: _addOffer,
                       onEditOffer: _editOffer,
-                      onDeleteOffer: _deleteOffer,
                       onOfferCounter: _openOfferCounter,
                     )
                   : _NarrowLayout(
@@ -310,7 +293,6 @@ class _HomePageState extends State<HomePage> {
                       onDeleteProduct: _deleteProduct,
                       onAddOffer: _addOffer,
                       onEditOffer: _editOffer,
-                      onDeleteOffer: _deleteOffer,
                       onOfferCounter: _openOfferCounter,
                     ),
         ),
@@ -338,7 +320,6 @@ class _WideLayout extends StatelessWidget {
     required this.onDeleteProduct,
     required this.onAddOffer,
     required this.onEditOffer,
-    required this.onDeleteOffer,
     required this.onOfferCounter,
   });
 
@@ -352,7 +333,6 @@ class _WideLayout extends StatelessWidget {
   final ValueChanged<Product> onDeleteProduct;
   final void Function(Product, {String? preferredUnit}) onAddOffer;
   final void Function(Product, Offer) onEditOffer;
-  final void Function(Product, Offer) onDeleteOffer;
   final void Function(Product, Offer) onOfferCounter;
 
   @override
@@ -384,7 +364,6 @@ class _WideLayout extends StatelessWidget {
                   onAddOffer: (unit) =>
                       onAddOffer(selected!, preferredUnit: unit),
                   onEditOffer: (o) => onEditOffer(selected!, o),
-                  onDeleteOffer: (o) => onDeleteOffer(selected!, o),
                   onOfferCounter: (o) => onOfferCounter(selected!, o),
                 ),
         ),
@@ -406,7 +385,6 @@ class _NarrowLayout extends StatelessWidget {
     required this.onDeleteProduct,
     required this.onAddOffer,
     required this.onEditOffer,
-    required this.onDeleteOffer,
     required this.onOfferCounter,
   });
 
@@ -421,7 +399,6 @@ class _NarrowLayout extends StatelessWidget {
   final ValueChanged<Product> onDeleteProduct;
   final void Function(Product, {String? preferredUnit}) onAddOffer;
   final void Function(Product, Offer) onEditOffer;
-  final void Function(Product, Offer) onDeleteOffer;
   final void Function(Product, Offer) onOfferCounter;
 
   @override
@@ -467,7 +444,6 @@ class _NarrowLayout extends StatelessWidget {
             onDeleteProduct: () => onDeleteProduct(selected!),
             onAddOffer: (unit) => onAddOffer(selected!, preferredUnit: unit),
             onEditOffer: (o) => onEditOffer(selected!, o),
-            onDeleteOffer: (o) => onDeleteOffer(selected!, o),
             onOfferCounter: (o) => onOfferCounter(selected!, o),
             compact: true,
           ),
@@ -687,7 +663,6 @@ class _ProductDetailPane extends StatefulWidget {
     required this.onDeleteProduct,
     required this.onAddOffer,
     required this.onEditOffer,
-    required this.onDeleteOffer,
     required this.onOfferCounter,
     this.compact = false,
   });
@@ -697,7 +672,6 @@ class _ProductDetailPane extends StatefulWidget {
   final VoidCallback onDeleteProduct;
   final ValueChanged<String?> onAddOffer;
   final ValueChanged<Offer> onEditOffer;
-  final ValueChanged<Offer> onDeleteOffer;
   final ValueChanged<Offer> onOfferCounter;
   final bool compact;
 
@@ -931,7 +905,6 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                 isBest: i == 0,
                 rank: i + 1,
                 onEdit: () => widget.onEditOffer(offer),
-                onDelete: () => widget.onDeleteOffer(offer),
                 onCounterTap: offer.counterMode.enabled
                     ? () => widget.onOfferCounter(offer)
                     : null,
