@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../widgets/offer_tile.dart';
 import '../widgets/product_card.dart';
 import '../widgets/tag_chips.dart';
+import 'offer_counter_sheet.dart';
 import 'product_form_sheet.dart';
 
 final _currency = NumberFormat('#,##0.##');
@@ -240,6 +241,31 @@ class _HomePageState extends State<HomePage> {
     await _persist();
   }
 
+  Future<void> _openOfferCounter(Product product, Offer offer) async {
+    if (!offer.counterMode.enabled) return;
+    await showOfferCounterSheet(
+      context,
+      offer: offer,
+      onChanged: (updatedOffer) {
+        final current = _products.firstWhere(
+          (p) => p.id == product.id,
+          orElse: () => product,
+        );
+        final offers = current.offers
+            .map((o) => o.id == updatedOffer.id ? updatedOffer : o)
+            .toList();
+        final updated = current.copyWith(offers: offers);
+        setState(() {
+          _products = _products
+              .map((p) => p.id == updated.id ? updated : p)
+              .toList()
+            ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+        });
+        _persist();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
@@ -270,6 +296,7 @@ class _HomePageState extends State<HomePage> {
                       onAddOffer: _addOffer,
                       onEditOffer: _editOffer,
                       onDeleteOffer: _deleteOffer,
+                      onOfferCounter: _openOfferCounter,
                     )
                   : _NarrowLayout(
                       search: _search,
@@ -284,6 +311,7 @@ class _HomePageState extends State<HomePage> {
                       onAddOffer: _addOffer,
                       onEditOffer: _editOffer,
                       onDeleteOffer: _deleteOffer,
+                      onOfferCounter: _openOfferCounter,
                     ),
         ),
         floatingActionButton: isWide || _selected != null
@@ -311,6 +339,7 @@ class _WideLayout extends StatelessWidget {
     required this.onAddOffer,
     required this.onEditOffer,
     required this.onDeleteOffer,
+    required this.onOfferCounter,
   });
 
   final TextEditingController search;
@@ -324,6 +353,7 @@ class _WideLayout extends StatelessWidget {
   final void Function(Product, {String? preferredUnit}) onAddOffer;
   final void Function(Product, Offer) onEditOffer;
   final void Function(Product, Offer) onDeleteOffer;
+  final void Function(Product, Offer) onOfferCounter;
 
   @override
   Widget build(BuildContext context) {
@@ -355,6 +385,7 @@ class _WideLayout extends StatelessWidget {
                       onAddOffer(selected!, preferredUnit: unit),
                   onEditOffer: (o) => onEditOffer(selected!, o),
                   onDeleteOffer: (o) => onDeleteOffer(selected!, o),
+                  onOfferCounter: (o) => onOfferCounter(selected!, o),
                 ),
         ),
       ],
@@ -376,6 +407,7 @@ class _NarrowLayout extends StatelessWidget {
     required this.onAddOffer,
     required this.onEditOffer,
     required this.onDeleteOffer,
+    required this.onOfferCounter,
   });
 
   final TextEditingController search;
@@ -390,6 +422,7 @@ class _NarrowLayout extends StatelessWidget {
   final void Function(Product, {String? preferredUnit}) onAddOffer;
   final void Function(Product, Offer) onEditOffer;
   final void Function(Product, Offer) onDeleteOffer;
+  final void Function(Product, Offer) onOfferCounter;
 
   @override
   Widget build(BuildContext context) {
@@ -435,6 +468,7 @@ class _NarrowLayout extends StatelessWidget {
             onAddOffer: (unit) => onAddOffer(selected!, preferredUnit: unit),
             onEditOffer: (o) => onEditOffer(selected!, o),
             onDeleteOffer: (o) => onDeleteOffer(selected!, o),
+            onOfferCounter: (o) => onOfferCounter(selected!, o),
             compact: true,
           ),
         ),
@@ -654,6 +688,7 @@ class _ProductDetailPane extends StatefulWidget {
     required this.onAddOffer,
     required this.onEditOffer,
     required this.onDeleteOffer,
+    required this.onOfferCounter,
     this.compact = false,
   });
 
@@ -663,6 +698,7 @@ class _ProductDetailPane extends StatefulWidget {
   final ValueChanged<String?> onAddOffer;
   final ValueChanged<Offer> onEditOffer;
   final ValueChanged<Offer> onDeleteOffer;
+  final ValueChanged<Offer> onOfferCounter;
   final bool compact;
 
   @override
@@ -896,6 +932,9 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                 rank: i + 1,
                 onEdit: () => widget.onEditOffer(offer),
                 onDelete: () => widget.onDeleteOffer(offer),
+                onCounterTap: offer.counterMode.enabled
+                    ? () => widget.onOfferCounter(offer)
+                    : null,
               ),
             );
           }),

@@ -624,6 +624,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   late Map<String, TextEditingController> _qtyControllers;
   late List<UnitRelation> _offerRelations;
   late Set<String> _tags;
+  late OfferCounterMode _counterMode;
   /// Quantities the user entered (or loaded from a saved offer). Never auto-overwritten.
   final Set<String> _manualUnits = {};
   /// Quantities filled by conversion from manual seeds. Safe to update/clear.
@@ -636,6 +637,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     super.initState();
     final o = widget.offer;
     _tags = {...(o?.tags ?? const [])};
+    _counterMode = o?.counterMode ?? OfferCounterMode.none;
     _offerRelations = o == null
         ? widget.defaultRelations
             .map(
@@ -887,6 +889,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             measures: measures,
             relations: _offerRelations,
             tags: tags,
+            counterMode: _counterMode,
             shop: shop,
             note: _note.text.trim(),
           )
@@ -896,6 +899,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             measures: measures,
             relations: _offerRelations,
             tags: tags,
+            counterMode: _counterMode,
             shop: shop,
             note: _note.text.trim(),
           );
@@ -1129,6 +1133,47 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                     },
                   );
                 },
+              ),
+              const SizedBox(height: 16),
+              Text(
+                s.counter,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                s.counterHint,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: Text(s.counterModeNone),
+                    selected: _counterMode == OfferCounterMode.none,
+                    onSelected: (_) =>
+                        setState(() => _counterMode = OfferCounterMode.none),
+                  ),
+                  ChoiceChip(
+                    label: Text(s.counterModeCount),
+                    selected: _counterMode == OfferCounterMode.countOnly,
+                    onSelected: (_) => setState(
+                      () => _counterMode = OfferCounterMode.countOnly,
+                    ),
+                  ),
+                  ChoiceChip(
+                    label: Text(s.counterModeLog),
+                    selected: _counterMode == OfferCounterMode.withLog,
+                    onSelected: (_) => setState(
+                      () => _counterMode = OfferCounterMode.withLog,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               TagPicker(

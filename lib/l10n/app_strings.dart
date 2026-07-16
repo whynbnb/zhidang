@@ -298,6 +298,31 @@ class AppStrings {
   String get enterNumber => isZh ? '请输入数字' : 'Enter a number';
   String get mustBePositive => isZh ? '需大于 0' : 'Must be greater than 0';
 
+  String get counter => isZh ? '计数器' : 'Counter';
+  String get counterHint => isZh
+      ? '默认关闭；次数计数只记数字，时间记录会保存每次时间与备注'
+      : 'Off by default; count mode stores a number, log mode stores each time and note';
+  String get counterModeNone => isZh ? '关闭' : 'Off';
+  String get counterModeCount => isZh ? '次数' : 'Count';
+  String get counterModeLog => isZh ? '时间记录' : 'Timeline';
+  String get counterModeCountLabel => isZh ? '次数计数' : 'Count only';
+  String get counterModeLogLabel => isZh ? '时间记录' : 'Time log';
+  String counterTimes(int n) => isZh ? '$n 次' : (n == 1 ? '1 time' : '$n times');
+  String counterLogEntries(int n) =>
+      isZh ? '$n 条记录' : (n == 1 ? '1 entry' : '$n entries');
+  String get counterIncrement => isZh ? '加一' : 'Add';
+  String get counterDecrement => isZh ? '减一' : 'Minus';
+  String get counterReset => isZh ? '清零' : 'Reset';
+  String get counterResetConfirm => isZh
+      ? '确定清零该报价的计数？'
+      : 'Reset this offer counter?';
+  String get counterLogs => isZh ? '时间记录' : 'Time log';
+  String get counterAddLog => isZh ? '添加记录' : 'Add entry';
+  String get counterLogNoteOptional =>
+      isZh ? '本次备注（可选）' : 'Note for this entry (optional)';
+  String get counterNoLogs => isZh ? '还没有记录' : 'No log entries yet';
+  String get counterDeleteLog => isZh ? '删除记录' : 'Delete entry';
+  String get counterViewLogs => isZh ? '查看记录' : 'View log';
 }
 
 class _StringsScope extends InheritedWidget {

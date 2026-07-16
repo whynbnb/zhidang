@@ -17,6 +17,7 @@ class OfferTile extends StatelessWidget {
     required this.rank,
     required this.onEdit,
     required this.onDelete,
+    this.onCounterTap,
   });
 
   final Offer offer;
@@ -25,6 +26,7 @@ class OfferTile extends StatelessWidget {
   final int rank;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onCounterTap;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +38,7 @@ class OfferTile extends StatelessWidget {
         .where((m) => m.quantity > 0)
         .map((m) => '${formatQuantityValue(m.quantity)}${m.unit}')
         .join(' · ');
+    final counterEnabled = offer.counterMode.enabled;
 
     return Card(
       elevation: 0,
@@ -93,6 +96,13 @@ class OfferTile extends StatelessWidget {
                             color: scheme.primary,
                           ),
                     ),
+                  if (counterEnabled) ...[
+                    const SizedBox(height: 4),
+                    _CounterBadge(
+                      offer: offer,
+                      onTap: onCounterTap,
+                    ),
+                  ],
                   if (offer.tags.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     TagChipRow(tags: offer.tags, dense: true),
@@ -129,11 +139,72 @@ class OfferTile extends StatelessWidget {
               onSelected: (v) {
                 if (v == 'edit') onEdit();
                 if (v == 'delete') onDelete();
+                if (v == 'counter' && onCounterTap != null) onCounterTap!();
               },
               itemBuilder: (_) => [
                 PopupMenuItem(value: 'edit', child: Text(s.edit)),
+                if (counterEnabled)
+                  PopupMenuItem(
+                    value: 'counter',
+                    child: Text(
+                      offer.counterMode == OfferCounterMode.withLog
+                          ? s.counterViewLogs
+                          : s.counterModeCountLabel,
+                    ),
+                  ),
                 PopupMenuItem(value: 'delete', child: Text(s.delete)),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CounterBadge extends StatelessWidget {
+  const _CounterBadge({
+    required this.offer,
+    this.onTap,
+  });
+
+  final Offer offer;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final s = AppStrings.of(context);
+    final isLog = offer.counterMode == OfferCounterMode.withLog;
+    final bg = isLog
+        ? scheme.tertiaryContainer.withValues(alpha: 0.85)
+        : scheme.secondaryContainer.withValues(alpha: 0.85);
+    final fg = isLog ? scheme.onTertiaryContainer : scheme.onSecondaryContainer;
+    final icon = isLog ? Icons.schedule : Icons.tag;
+    final label = isLog
+        ? s.counterLogEntries(offer.displayCount)
+        : '${offer.displayCount}';
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: fg),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: fg,
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
           ],
         ),

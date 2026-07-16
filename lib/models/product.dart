@@ -78,6 +78,61 @@ class OfferMeasure {
       );
 }
 
+enum OfferCounterMode {
+  none,
+  countOnly,
+  withLog;
+
+  static OfferCounterMode fromJson(Object? raw) {
+    switch (raw?.toString()) {
+      case 'countOnly':
+        return OfferCounterMode.countOnly;
+      case 'withLog':
+        return OfferCounterMode.withLog;
+      default:
+        return OfferCounterMode.none;
+    }
+  }
+
+  String toJson() => name;
+
+  bool get enabled => this != OfferCounterMode.none;
+}
+
+class OfferCounterLog {
+  OfferCounterLog({
+    String? id,
+    DateTime? at,
+    this.note = '',
+  })  : id = id ?? _uuid.v4(),
+        at = at ?? DateTime.now();
+
+  final String id;
+  final DateTime at;
+  final String note;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'at': at.toIso8601String(),
+        'note': note,
+      };
+
+  factory OfferCounterLog.fromJson(Map<String, dynamic> json) =>
+      OfferCounterLog(
+        id: json['id'] as String?,
+        at: json['at'] != null
+            ? DateTime.tryParse(json['at'] as String)
+            : null,
+        note: json['note'] as String? ?? '',
+      );
+
+  OfferCounterLog copyWith({String? note, DateTime? at}) => OfferCounterLog(
+        id: id,
+        at: at ?? this.at,
+        note: note ?? this.note,
+      );
+}
+
 class Offer {
   Offer({
     String? id,
@@ -86,6 +141,9 @@ class Offer {
     List<OfferMeasure>? measures,
     List<UnitRelation>? relations,
     List<String>? tags,
+    this.counterMode = OfferCounterMode.none,
+    int counterValue = 0,
+    List<OfferCounterLog>? counterLogs,
     String? unit,
     double? quantity,
     this.shop = '',
@@ -95,6 +153,8 @@ class Offer {
         measures = _normalizeMeasures(measures, unit: unit, quantity: quantity),
         relations = List<UnitRelation>.from(relations ?? const []),
         tags = _normalizeTags(tags),
+        counterValue = counterValue < 0 ? 0 : counterValue,
+        counterLogs = List<OfferCounterLog>.from(counterLogs ?? const []),
         updatedAt = updatedAt ?? DateTime.now();
 
   final String id;
@@ -104,9 +164,23 @@ class Offer {
   /// Per-offer conversion, e.g. brand A: 1 pack = 200 sheets.
   List<UnitRelation> relations;
   List<String> tags;
+  OfferCounterMode counterMode;
+  int counterValue;
+  List<OfferCounterLog> counterLogs;
   String shop;
   String note;
   DateTime updatedAt;
+
+  int get displayCount {
+    switch (counterMode) {
+      case OfferCounterMode.none:
+        return 0;
+      case OfferCounterMode.countOnly:
+        return counterValue;
+      case OfferCounterMode.withLog:
+        return counterLogs.length;
+    }
+  }
 
   String get unit => measures.isNotEmpty ? measures.first.unit : 'g';
 
@@ -151,6 +225,9 @@ class Offer {
         'measures': measures.map((e) => e.toJson()).toList(),
         'relations': relations.map((e) => e.toJson()).toList(),
         'tags': tags,
+        'counterMode': counterMode.toJson(),
+        'counterValue': counterValue,
+        'counterLogs': counterLogs.map((e) => e.toJson()).toList(),
         'unit': unit,
         'quantity': quantity,
         'shop': shop,
@@ -175,6 +252,10 @@ class Offer {
             .where((r) => r.factor > 0 && r.fromUnit != r.toUnit)
             .toList() ??
         <UnitRelation>[];
+    final logs = (json['counterLogs'] as List<dynamic>?)
+            ?.map((e) => OfferCounterLog.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        <OfferCounterLog>[];
 
     return Offer(
       id: json['id'] as String?,
@@ -183,6 +264,9 @@ class Offer {
       measures: measures,
       relations: relations,
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+      counterMode: OfferCounterMode.fromJson(json['counterMode']),
+      counterValue: (json['counterValue'] as num?)?.toInt() ?? 0,
+      counterLogs: logs,
       unit: normalizeUnit(json['unit'] as String?, fallback: fallbackUnit),
       quantity: (json['quantity'] as num?)?.toDouble(),
       shop: json['shop'] as String? ?? '',
@@ -199,6 +283,9 @@ class Offer {
     List<OfferMeasure>? measures,
     List<UnitRelation>? relations,
     List<String>? tags,
+    OfferCounterMode? counterMode,
+    int? counterValue,
+    List<OfferCounterLog>? counterLogs,
     String? shop,
     String? note,
   }) =>
@@ -209,10 +296,52 @@ class Offer {
         measures: measures ?? this.measures,
         relations: relations ?? this.relations,
         tags: tags ?? this.tags,
+        counterMode: counterMode ?? this.counterMode,
+        counterValue: counterValue ?? this.counterValue,
+        counterLogs: counterLogs ?? this.counterLogs,
         shop: shop ?? this.shop,
         note: note ?? this.note,
         updatedAt: DateTime.now(),
       );
+
+  Offer incrementCount({String note = ''}) {
+    switch (counterMode) {
+      case OfferCounterMode.none:
+        return this;
+      case OfferCounterMode.countOnly:
+        return copyWith(counterValue: counterValue + 1);
+      case OfferCounterMode.withLog:
+        return copyWith(
+          counterLogs: [
+            OfferCounterLog(note: note.trim()),
+            ...counterLogs,
+          ],
+        );
+    }
+  }
+
+  Offer decrementCount() {
+    if (counterMode != OfferCounterMode.countOnly) return this;
+    if (counterValue <= 0) return this;
+    return copyWith(counterValue: counterValue - 1);
+  }
+
+  Offer resetCount() {
+    switch (counterMode) {
+      case OfferCounterMode.none:
+        return this;
+      case OfferCounterMode.countOnly:
+        return copyWith(counterValue: 0);
+      case OfferCounterMode.withLog:
+        return copyWith(counterLogs: const []);
+    }
+  }
+
+  Offer removeCounterLog(String logId) {
+    return copyWith(
+      counterLogs: counterLogs.where((e) => e.id != logId).toList(),
+    );
+  }
 
   static List<OfferMeasure> _normalizeMeasures(
     List<OfferMeasure>? measures, {
