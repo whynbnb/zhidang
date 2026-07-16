@@ -612,7 +612,10 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   late List<String> _availableUnits;
   late Map<String, TextEditingController> _qtyControllers;
   late List<UnitRelation> _offerRelations;
+  /// Quantities the user entered (or loaded from a saved offer). Never auto-overwritten.
   final Set<String> _manualUnits = {};
+  /// Quantities filled by conversion from manual seeds. Safe to update/clear.
+  final Set<String> _autoFilledUnits = {};
   String? _activePresetUnit;
   String? _measureError;
 
@@ -653,6 +656,17 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
           text: o == null ? '' : _fmtOptional(o.quantityFor(unit)),
         ),
     };
+
+    // Treat existing offer quantities as owned so editing one unit
+    // cannot wipe unrelated dimensions via auto-fill.
+    if (o != null) {
+      for (final unit in _availableUnits) {
+        final q = o.quantityFor(unit);
+        if (q != null && q > 0) {
+          _manualUnits.add(unit);
+        }
+      }
+    }
 
     final preferred = normalizeUnit(
       widget.preferredUnit ?? _availableUnits.first,
@@ -781,11 +795,12 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     }
 
     if (seeded.isEmpty) {
-      for (final unit in _availableUnits) {
-        if (!_manualUnits.contains(unit)) {
-          _qtyControllers[unit]?.text = '';
-        }
+      // Only clear previous auto-filled values; leave other fields alone.
+      for (final unit in {..._autoFilledUnits}) {
+        if (_manualUnits.contains(unit)) continue;
+        _qtyControllers[unit]?.text = '';
       }
+      _autoFilledUnits.clear();
       setState(() {});
       return;
     }
@@ -794,20 +809,31 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
       seeded,
       relations: _offerRelations,
     );
+
+    // Only touch units derived by conversion, never wipe unrelated manual data.
+    final nextAuto = <String>{};
     for (final unit in _availableUnits) {
       if (_manualUnits.contains(unit)) continue;
+      if (seeded.containsKey(unit)) continue;
       final controller = _qtyControllers[unit];
       if (controller == null) continue;
       final value = expanded[unit];
       if (value == null) {
-        controller.text = '';
+        if (_autoFilledUnits.contains(unit)) {
+          controller.text = '';
+        }
         continue;
       }
       final text = formatQuantityValue(value);
       if (controller.text != text) {
         controller.text = text;
       }
+      nextAuto.add(unit);
     }
+
+    _autoFilledUnits
+      ..clear()
+      ..addAll(nextAuto);
     setState(() {});
   }
 
@@ -954,9 +980,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                     hintText: s.quantityOptionalHint,
                     border: const OutlineInputBorder(),
                     suffixText: unit,
-                    helperText: !_manualUnits.contains(unit) &&
-                            (_qtyControllers[unit]?.text.isNotEmpty ?? false) &&
-                            hasRelations
+                    helperText: _autoFilledUnits.contains(unit)
                         ? s.autoFilled
                         : null,
                   ),
@@ -965,8 +989,10 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                     _activePresetUnit = unit;
                     if (value.trim().isEmpty) {
                       _manualUnits.remove(unit);
+                      _autoFilledUnits.remove(unit);
                     } else {
                       _manualUnits.add(unit);
+                      _autoFilledUnits.remove(unit);
                     }
                     _measureError = null;
                     _applyAutoFill(sourceUnit: unit);
@@ -1005,6 +1031,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                         final controller = _qtyControllers[presetUnit];
                         if (controller == null) return;
                         _manualUnits.add(presetUnit);
+                        _autoFilledUnits.remove(presetUnit);
                         controller.text = text;
                         controller.selection = TextSelection.collapsed(
                           offset: text.length,
