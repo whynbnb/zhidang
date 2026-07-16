@@ -54,8 +54,8 @@ class AppStrings {
   String get appIconDefault => isZh ? '默认' : 'Default';
   String get appIconClassic => isZh ? '经典' : 'Classic';
   String get appIconChanged => isZh
-      ? '图标已切换，部分设备可能稍后生效'
-      : 'Icon updated; some devices apply it shortly';
+      ? '图标已切换；若桌面未更新，请下拉刷新或稍候'
+      : 'Icon updated; pull to refresh home screen if needed';
   String get appIconUnsupported => isZh
       ? '当前平台不支持切换桌面图标'
       : 'This platform cannot change the launcher icon';
