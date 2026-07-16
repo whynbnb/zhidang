@@ -43,7 +43,7 @@ class AppStrings {
   String get languageEn => isZh ? 'English' : 'English';
   String get appearance => isZh ? '外观' : 'Appearance';
   String get themeMode => isZh ? '主题模式' : 'Theme mode';
-  String get themeSystem => isZh ? '跟随系统' : 'System';
+  String get themeSystem => isZh ? '系统' : 'System';
   String get themeLight => isZh ? '浅色' : 'Light';
   String get themeDark => isZh ? '深色' : 'Dark';
   String get themeColor => isZh ? '主题色' : 'Theme color';
