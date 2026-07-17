@@ -42,6 +42,8 @@ class _HomePageState extends State<HomePage> {
     final rev = DataRevision.notifier.value;
     if (rev == _seenRevision) return;
     _seenRevision = rev;
+    // Skip full reload when we just saved locally; storage already matches.
+    // Still reload for import/clear and external bumps after first paint.
     _load();
   }
 
@@ -76,6 +78,9 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _persist() async {
     await _storage.saveProducts(_products);
+    // Advance before bump so this page ignores the self-triggered revision.
+    _seenRevision = DataRevision.notifier.value + 1;
+    DataRevision.bump();
   }
 
   Product? get _selected {

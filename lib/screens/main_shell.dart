@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../screens/compare_page.dart';
 import '../screens/home_page.dart';
-import '../l10n/app_strings.dart';
 
 /// Root shell: products tab + cross-product compare tab.
 class MainShell extends StatefulWidget {
@@ -14,6 +14,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+  final _compareKey = GlobalKey<ComparePageState>();
 
   @override
   Widget build(BuildContext context) {
@@ -22,14 +23,19 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: const [
-          HomePage(),
-          ComparePage(),
+        children: [
+          const HomePage(),
+          ComparePage(key: _compareKey),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: (i) {
+          setState(() => _index = i);
+          if (i == 1) {
+            _compareKey.currentState?.reload();
+          }
+        },
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.inventory_2_outlined),

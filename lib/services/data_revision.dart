@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// Bumped after import/clear so HomePage can reload products.
+/// Bumped after product data changes (save/import/clear) so tabs can reload.
 class DataRevision {
   DataRevision._();
 

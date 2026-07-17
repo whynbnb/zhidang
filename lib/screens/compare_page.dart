@@ -16,10 +16,10 @@ class ComparePage extends StatefulWidget {
   const ComparePage({super.key});
 
   @override
-  State<ComparePage> createState() => _ComparePageState();
+  State<ComparePage> createState() => ComparePageState();
 }
 
-class _ComparePageState extends State<ComparePage> {
+class ComparePageState extends State<ComparePage> {
   final _storage = StorageService();
   List<Product> _products = [];
   bool _loading = true;
@@ -43,6 +43,9 @@ class _ComparePageState extends State<ComparePage> {
     _seenRevision = DataRevision.notifier.value;
     _load();
   }
+
+  /// Called when the compare tab becomes visible.
+  Future<void> reload() => _load();
 
   Future<void> _load() async {
     final products = await _storage.loadProducts();
