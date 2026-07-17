@@ -17,6 +17,8 @@ class OfferTile extends StatelessWidget {
     required this.rank,
     required this.onEdit,
     this.onCounterTap,
+    this.onToggleFavorite,
+    this.isPreferred = false,
   });
 
   final Offer offer;
@@ -25,6 +27,8 @@ class OfferTile extends StatelessWidget {
   final int rank;
   final VoidCallback onEdit;
   final VoidCallback? onCounterTap;
+  final VoidCallback? onToggleFavorite;
+  final bool isPreferred;
 
   @override
   Widget build(BuildContext context) {
@@ -38,17 +42,18 @@ class OfferTile extends StatelessWidget {
         .join(' · ');
     final counterEnabled = offer.counterMode.enabled;
     final isLog = offer.counterMode == OfferCounterMode.withLog;
+    final highlight = isPreferred || isBest;
 
     return Card(
       elevation: 0,
-      color: isBest
+      color: highlight
           ? scheme.primaryContainer.withValues(alpha: 0.55)
           : scheme.surfaceContainerHighest.withValues(alpha: 0.45),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
-          color: isBest ? scheme.primary : scheme.outlineVariant,
-          width: isBest ? 1.5 : 1,
+          color: highlight ? scheme.primary : scheme.outlineVariant,
+          width: highlight ? 1.5 : 1,
         ),
       ),
       child: Padding(
@@ -58,11 +63,13 @@ class OfferTile extends StatelessWidget {
             CircleAvatar(
               radius: 18,
               backgroundColor:
-                  isBest ? scheme.primary : scheme.surfaceContainerHighest,
+                  highlight ? scheme.primary : scheme.surfaceContainerHighest,
               foregroundColor:
-                  isBest ? scheme.onPrimary : scheme.onSurfaceVariant,
+                  highlight ? scheme.onPrimary : scheme.onSurfaceVariant,
               child: Text(
-                isBest ? s.bestBadge : '$rank',
+                isPreferred && offer.favorite
+                    ? s.favoriteBadge
+                    : (isBest ? s.bestBadge : '$rank'),
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: isBest && !s.isZh ? 10 : null,
@@ -74,11 +81,24 @@ class OfferTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    offer.brand,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          offer.brand,
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                         ),
+                      ),
+                      if (offer.favorite)
+                        Icon(
+                          Icons.star_rounded,
+                          size: 18,
+                          color: scheme.tertiary,
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -119,7 +139,7 @@ class OfferTile extends StatelessWidget {
                 Text(
                   '¥${_currency.format(unitPrice)}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: isBest ? scheme.primary : scheme.onSurface,
+                        color: highlight ? scheme.primary : scheme.onSurface,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
@@ -131,6 +151,16 @@ class OfferTile extends StatelessWidget {
                 ),
               ],
             ),
+            if (onToggleFavorite != null)
+              IconButton(
+                tooltip:
+                    offer.favorite ? s.unfavoriteOffer : s.favoriteOffer,
+                onPressed: onToggleFavorite,
+                icon: Icon(
+                  offer.favorite ? Icons.star_rounded : Icons.star_outline,
+                  color: offer.favorite ? scheme.tertiary : null,
+                ),
+              ),
             if (counterEnabled)
               IconButton(
                 tooltip: isLog ? s.counterViewLogs : s.counterModeCountLabel,

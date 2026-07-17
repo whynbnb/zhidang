@@ -427,6 +427,7 @@ class CompareSessionPage extends StatefulWidget {
 
 class _CompareSessionPageState extends State<CompareSessionPage> {
   late String _unit;
+  CompareViewMode _viewMode = CompareViewMode.all;
 
   @override
   void initState() {
@@ -460,8 +461,14 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
     final scheme = Theme.of(context).colorScheme;
     final unitOptions = _unitOptions;
     final unit = _activeUnit;
-    final rows = ComparisonLogic.rank(widget.products, unit: unit);
+    final rows = ComparisonLogic.rank(
+      widget.products,
+      unit: unit,
+      mode: _viewMode,
+    );
     final best = rows.where((r) => r.hasPrice).firstOrNull;
+    final showPreferredBadge =
+        best?.offer?.favorite == true && _viewMode != CompareViewMode.cheapest;
 
     return Scaffold(
       appBar: AppBar(
@@ -510,6 +517,38 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
             ),
             const SizedBox(height: 16),
           ],
+          Text(
+            s.offerViewMode,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: Text(s.offerViewAll),
+                selected: _viewMode == CompareViewMode.all,
+                onSelected: (_) =>
+                    setState(() => _viewMode = CompareViewMode.all),
+              ),
+              ChoiceChip(
+                label: Text(s.offerViewFavorites),
+                selected: _viewMode == CompareViewMode.favorites,
+                onSelected: (_) =>
+                    setState(() => _viewMode = CompareViewMode.favorites),
+              ),
+              ChoiceChip(
+                label: Text(s.offerViewCheapest),
+                selected: _viewMode == CompareViewMode.cheapest,
+                onSelected: (_) =>
+                    setState(() => _viewMode = CompareViewMode.cheapest),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           if (best != null)
             Card(
               elevation: 0,
@@ -523,7 +562,9 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      s.bestValueNow,
+                      showPreferredBadge
+                          ? s.preferredOfferNow
+                          : s.bestValueNow,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: scheme.onPrimaryContainer,
                             fontWeight: FontWeight.w700,
@@ -561,80 +602,126 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
                 ),
           ),
           const SizedBox(height: 8),
-          ...List.generate(rows.length, (i) {
-            final row = rows[i];
-            final isBest = i == 0 && row.hasPrice;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Card(
-                elevation: 0,
-                color: isBest
-                    ? scheme.primaryContainer.withValues(alpha: 0.45)
-                    : scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(
-                    color: isBest ? scheme.primary : scheme.outlineVariant,
-                    width: isBest ? 1.5 : 1,
+          if (rows.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Column(
+                children: [
+                  Icon(
+                    _viewMode == CompareViewMode.favorites
+                        ? Icons.star_outline
+                        : Icons.balance_outlined,
+                    size: 48,
+                    color: scheme.onSurfaceVariant,
                   ),
-                ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor:
-                        isBest ? scheme.primary : scheme.surfaceContainerHighest,
-                    foregroundColor:
-                        isBest ? scheme.onPrimary : scheme.onSurfaceVariant,
-                    child: Text(
-                      isBest ? s.bestBadge : '${i + 1}',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                  const SizedBox(height: 8),
+                  Text(
+                    _viewMode == CompareViewMode.favorites
+                        ? s.noFavoriteOffers
+                        : s.noOffers,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _viewMode == CompareViewMode.favorites
+                        ? s.noFavoriteOffersHint
+                        : s.noOffersHint,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...List.generate(rows.length, (i) {
+              final row = rows[i];
+              final isBest = i == 0 && row.hasPrice;
+              final isFav = row.offer?.favorite == true;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Card(
+                  elevation: 0,
+                  color: isBest
+                      ? scheme.primaryContainer.withValues(alpha: 0.45)
+                      : scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(
+                      color: isBest ? scheme.primary : scheme.outlineVariant,
+                      width: isBest ? 1.5 : 1,
                     ),
                   ),
-                  title: Text(
-                    row.product.name,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: isBest
+                          ? scheme.primary
+                          : scheme.surfaceContainerHighest,
+                      foregroundColor: isBest
+                          ? scheme.onPrimary
+                          : scheme.onSurfaceVariant,
+                      child: Text(
+                        isBest
+                            ? (isFav ? s.favoriteBadge : s.bestBadge)
+                            : '${i + 1}',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    title: Text(
+                      row.offer == null
+                          ? row.product.name
+                          : '${row.product.name} · ${row.offer!.brand}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      () {
+                        if (row.offer == null) return s.noOfferForUnit(unit);
+                        final parts = <String>[
+                          if (row.offer!.shop.isNotEmpty) row.offer!.shop,
+                          if (isFav) '★',
+                        ];
+                        return parts.isEmpty
+                            ? s.unitLabel(unit)
+                            : parts.join(' · ');
+                      }(),
+                    ),
+                    trailing: row.hasPrice
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '¥${_currency.format(row.unitPrice)}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      color: isBest
+                                          ? scheme.primary
+                                          : scheme.onSurface,
+                                    ),
+                              ),
+                              Text(
+                                '/ $unit',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            '—',
+                            style: TextStyle(color: scheme.onSurfaceVariant),
+                          ),
                   ),
-                  subtitle: Text(
-                    row.offer == null
-                        ? s.noOfferForUnit(unit)
-                        : '${row.offer!.brand}'
-                            '${row.offer!.shop.isNotEmpty ? ' · ${row.offer!.shop}' : ''}',
-                  ),
-                  trailing: row.hasPrice
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '¥${_currency.format(row.unitPrice)}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: isBest
-                                        ? scheme.primary
-                                        : scheme.onSurface,
-                                  ),
-                            ),
-                            Text(
-                              '/ $unit',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        )
-                      : Text(
-                          '—',
-                          style: TextStyle(color: scheme.onSurfaceVariant),
-                        ),
                 ),
-              ),
-            );
-          }),
+              );
+            }),
         ],
       ),
     );

@@ -148,6 +148,7 @@ class Offer {
     double? quantity,
     this.shop = '',
     this.note = '',
+    this.favorite = false,
     DateTime? updatedAt,
   })  : id = id ?? _uuid.v4(),
         measures = _normalizeMeasures(measures, unit: unit, quantity: quantity),
@@ -169,6 +170,7 @@ class Offer {
   List<OfferCounterLog> counterLogs;
   String shop;
   String note;
+  bool favorite;
   DateTime updatedAt;
 
   int get displayCount {
@@ -232,6 +234,7 @@ class Offer {
         'quantity': quantity,
         'shop': shop,
         'note': note,
+        'favorite': favorite,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -271,6 +274,7 @@ class Offer {
       quantity: (json['quantity'] as num?)?.toDouble(),
       shop: json['shop'] as String? ?? '',
       note: json['note'] as String? ?? '',
+      favorite: json['favorite'] as bool? ?? false,
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'] as String)
           : null,
@@ -288,6 +292,7 @@ class Offer {
     List<OfferCounterLog>? counterLogs,
     String? shop,
     String? note,
+    bool? favorite,
   }) =>
       Offer(
         id: id,
@@ -301,6 +306,7 @@ class Offer {
         counterLogs: counterLogs ?? this.counterLogs,
         shop: shop ?? this.shop,
         note: note ?? this.note,
+        favorite: favorite ?? this.favorite,
         updatedAt: DateTime.now(),
       );
 
@@ -514,7 +520,28 @@ class Product {
     return sorted.first;
   }
 
+  /// Favorite offers that have this unit, cheapest first.
+  List<Offer> favoriteOffersFor(String unit) {
+    final target = normalizeUnit(unit, fallback: this.unit);
+    final list = offersFor(target).where((o) => o.favorite).toList()
+      ..sort((a, b) {
+        final pa = a.unitPriceFor(target) ?? double.infinity;
+        final pb = b.unitPriceFor(target) ?? double.infinity;
+        return pa.compareTo(pb);
+      });
+    return list;
+  }
+
+  /// Preferred highlight: cheapest favorite for unit, else cheapest overall.
+  Offer? preferredOfferFor(String unit) {
+    final favs = favoriteOffersFor(unit);
+    if (favs.isNotEmpty) return favs.first;
+    return bestOfferFor(unit);
+  }
+
   Offer? get bestOffer => bestOfferFor(unit);
+
+  Offer? get preferredOffer => preferredOfferFor(unit);
 
   Map<String, dynamic> toJson() => {
         'id': id,

@@ -294,8 +294,20 @@ class AppStrings {
       isZh ? '确定删除「$brand」？' : 'Delete "$brand"?';
 
   String get bestValueNow => isZh ? '当前最值当' : 'Best value now';
+  String get preferredOfferNow => isZh ? '当前关注' : 'Preferred';
   String get brandCompare => isZh ? '品牌比价' : 'Brand comparison';
   String get addOffer => isZh ? '添加报价' : 'Add offer';
+  String get offerViewAll => isZh ? '全部' : 'All';
+  String get offerViewFavorites => isZh ? '收藏' : 'Favorites';
+  String get offerViewCheapest => isZh ? '最便宜' : 'Cheapest';
+  String get offerViewMode => isZh ? '显示方式' : 'Show';
+  String get favoriteOffer => isZh ? '收藏报价' : 'Favorite offer';
+  String get unfavoriteOffer => isZh ? '取消收藏' : 'Remove favorite';
+  String get noFavoriteOffers => isZh ? '还没有收藏报价' : 'No favorite offers yet';
+  String get noFavoriteOffersHint => isZh
+      ? '点报价上的星标收藏；没有收藏时「当前关注」会显示最便宜的'
+      : 'Tap the star on an offer; preferred falls back to cheapest';
+  String get favoriteBadge => isZh ? '藏' : '★';
   String get noOffers => isZh ? '还没有报价' : 'No offers yet';
   String get noOffersHint => isZh
       ? '添加不同品牌的总价和规格，自动换算单价'

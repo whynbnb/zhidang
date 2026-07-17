@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../app/app_navigator.dart';
 import '../l10n/app_strings.dart';
@@ -11,8 +10,6 @@ import '../widgets/product_card.dart';
 import '../widgets/tag_chips.dart';
 import 'offer_counter_sheet.dart';
 import 'product_form_sheet.dart';
-
-final _currency = NumberFormat('#,##0.##');
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -250,6 +247,22 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _toggleOfferFavorite(Product product, Offer offer) async {
+    final offers = product.offers
+        .map(
+          (o) => o.id == offer.id ? o.copyWith(favorite: !o.favorite) : o,
+        )
+        .toList();
+    final updated = product.copyWith(offers: offers);
+    setState(() {
+      _products = _products
+          .map((p) => p.id == updated.id ? updated : p)
+          .toList()
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    });
+    await _persist();
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
@@ -280,6 +293,7 @@ class _HomePageState extends State<HomePage> {
                       onAddOffer: _addOffer,
                       onEditOffer: _editOffer,
                       onOfferCounter: _openOfferCounter,
+                      onToggleFavorite: _toggleOfferFavorite,
                     )
                   : _NarrowLayout(
                       search: _search,
@@ -294,6 +308,7 @@ class _HomePageState extends State<HomePage> {
                       onAddOffer: _addOffer,
                       onEditOffer: _editOffer,
                       onOfferCounter: _openOfferCounter,
+                      onToggleFavorite: _toggleOfferFavorite,
                     ),
         ),
         floatingActionButton: isWide || _selected != null
@@ -322,6 +337,7 @@ class _WideLayout extends StatelessWidget {
     required this.onAddOffer,
     required this.onEditOffer,
     required this.onOfferCounter,
+    required this.onToggleFavorite,
   });
 
   final TextEditingController search;
@@ -335,6 +351,7 @@ class _WideLayout extends StatelessWidget {
   final void Function(Product, {String? preferredUnit}) onAddOffer;
   final void Function(Product, Offer) onEditOffer;
   final void Function(Product, Offer) onOfferCounter;
+  final void Function(Product, Offer) onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -366,6 +383,7 @@ class _WideLayout extends StatelessWidget {
                       onAddOffer(selected!, preferredUnit: unit),
                   onEditOffer: (o) => onEditOffer(selected!, o),
                   onOfferCounter: (o) => onOfferCounter(selected!, o),
+                  onToggleFavorite: (o) => onToggleFavorite(selected!, o),
                 ),
         ),
       ],
@@ -387,6 +405,7 @@ class _NarrowLayout extends StatelessWidget {
     required this.onAddOffer,
     required this.onEditOffer,
     required this.onOfferCounter,
+    required this.onToggleFavorite,
   });
 
   final TextEditingController search;
@@ -401,6 +420,7 @@ class _NarrowLayout extends StatelessWidget {
   final void Function(Product, {String? preferredUnit}) onAddOffer;
   final void Function(Product, Offer) onEditOffer;
   final void Function(Product, Offer) onOfferCounter;
+  final void Function(Product, Offer) onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -446,6 +466,7 @@ class _NarrowLayout extends StatelessWidget {
             onAddOffer: (unit) => onAddOffer(selected!, preferredUnit: unit),
             onEditOffer: (o) => onEditOffer(selected!, o),
             onOfferCounter: (o) => onOfferCounter(selected!, o),
+            onToggleFavorite: (o) => onToggleFavorite(selected!, o),
             compact: true,
           ),
         ),
@@ -665,6 +686,7 @@ class _ProductDetailPane extends StatefulWidget {
     required this.onAddOffer,
     required this.onEditOffer,
     required this.onOfferCounter,
+    required this.onToggleFavorite,
     this.compact = false,
   });
 
@@ -674,14 +696,18 @@ class _ProductDetailPane extends StatefulWidget {
   final ValueChanged<String?> onAddOffer;
   final ValueChanged<Offer> onEditOffer;
   final ValueChanged<Offer> onOfferCounter;
+  final ValueChanged<Offer> onToggleFavorite;
   final bool compact;
 
   @override
   State<_ProductDetailPane> createState() => _ProductDetailPaneState();
 }
 
+enum _OfferViewMode { all, favorites }
+
 class _ProductDetailPaneState extends State<_ProductDetailPane> {
   late String _selectedUnit;
+  _OfferViewMode _viewMode = _OfferViewMode.all;
 
   @override
   void initState() {
@@ -694,11 +720,27 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.product.id != widget.product.id) {
       _selectedUnit = normalizeUnit(widget.product.unit);
+      _viewMode = _OfferViewMode.all;
       return;
     }
     final units = widget.product.measureUnits;
     if (!units.contains(_selectedUnit)) {
       _selectedUnit = units.first;
+    }
+  }
+
+  List<Offer> _visibleOffers(String unit) {
+    final product = widget.product;
+    switch (_viewMode) {
+      case _OfferViewMode.all:
+        return [...product.offersFor(unit)]
+          ..sort((a, b) {
+            final pa = a.unitPriceFor(unit) ?? double.infinity;
+            final pb = b.unitPriceFor(unit) ?? double.infinity;
+            return pa.compareTo(pb);
+          });
+      case _OfferViewMode.favorites:
+        return product.favoriteOffersFor(unit);
     }
   }
 
@@ -711,14 +753,9 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
     final selectedUnit = units.contains(_selectedUnit)
         ? _selectedUnit
         : units.first;
-    final offers = [...product.offersFor(selectedUnit)]
-      ..sort((a, b) {
-        final pa = a.unitPriceFor(selectedUnit) ?? double.infinity;
-        final pb = b.unitPriceFor(selectedUnit) ?? double.infinity;
-        return pa.compareTo(pb);
-      });
+    final offers = _visibleOffers(selectedUnit);
+    final preferred = product.preferredOfferFor(selectedUnit);
     final best = product.bestOfferFor(selectedUnit);
-    final bestPrice = best?.unitPriceFor(selectedUnit);
 
     return ListView(
       padding: EdgeInsets.fromLTRB(20, widget.compact ? 8 : 20, 20, 32),
@@ -806,61 +843,16 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
           ),
           const SizedBox(height: 16),
         ],
-        if (best != null)
-          Card(
-            elevation: 0,
-            color: scheme.primaryContainer.withValues(alpha: 0.55),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Icon(Icons.emoji_events_outlined, color: scheme.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${s.bestValueNow} · $selectedUnit',
-                          style:
-                              Theme.of(context).textTheme.labelLarge?.copyWith(
-                                    color: scheme.onPrimaryContainer,
-                                  ),
-                        ),
-                        Text(
-                          best.brand,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '¥${_currency.format(bestPrice ?? 0)} / $selectedUnit',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: scheme.primary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        const SizedBox(height: 16),
         Row(
           children: [
-            Text(
-              '${s.brandCompare} · $selectedUnit',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+            Expanded(
+              child: Text(
+                '${s.brandCompare} · $selectedUnit',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
             ),
-            const Spacer(),
             FilledButton.icon(
               onPressed: () => widget.onAddOffer(selectedUnit),
               icon: const Icon(Icons.add),
@@ -868,25 +860,51 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              label: Text(s.offerViewAll),
+              selected: _viewMode == _OfferViewMode.all,
+              onSelected: (_) =>
+                  setState(() => _viewMode = _OfferViewMode.all),
+            ),
+            ChoiceChip(
+              label: Text(s.offerViewFavorites),
+              selected: _viewMode == _OfferViewMode.favorites,
+              onSelected: (_) =>
+                  setState(() => _viewMode = _OfferViewMode.favorites),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
         if (offers.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Column(
               children: [
                 Icon(
-                  Icons.price_change_outlined,
+                  _viewMode == _OfferViewMode.favorites
+                      ? Icons.star_outline
+                      : Icons.price_change_outlined,
                   size: 48,
                   color: scheme.onSurfaceVariant,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  s.noOffers,
+                  _viewMode == _OfferViewMode.favorites
+                      ? s.noFavoriteOffers
+                      : s.noOffers,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  s.noOffersHint,
+                  _viewMode == _OfferViewMode.favorites
+                      ? s.noFavoriteOffersHint
+                      : s.noOffersHint,
+                  textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
@@ -897,15 +915,22 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
         else
           ...List.generate(offers.length, (i) {
             final offer = offers[i];
+            final isBest = best != null && offer.id == best.id;
+            final isPreferred =
+                preferred != null && offer.id == preferred.id;
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: OfferTile(
-                key: ValueKey('offer-${offer.id}-$selectedUnit'),
+                key: ValueKey(
+                  'offer-${offer.id}-$selectedUnit-$_viewMode',
+                ),
                 offer: offer,
                 unit: selectedUnit,
-                isBest: i == 0,
+                isBest: isBest && !isPreferred,
+                isPreferred: isPreferred,
                 rank: i + 1,
                 onEdit: () => widget.onEditOffer(offer),
+                onToggleFavorite: () => widget.onToggleFavorite(offer),
                 onCounterTap: offer.counterMode.enabled
                     ? () => widget.onOfferCounter(offer)
                     : null,
