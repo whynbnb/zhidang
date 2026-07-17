@@ -132,18 +132,23 @@ class SettingsPage extends StatelessWidget {
                         ),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      for (final option in themeColorOptions)
-                        _ColorChoice(
-                          option: option,
-                          selected: option.id == settings.colorId,
-                          label: option.label(s.isZh),
-                          onTap: () => settings.setColorId(option.id),
-                        ),
-                    ],
+                  SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
+                      runAlignment: WrapAlignment.center,
+                      children: [
+                        for (final option in themeColorOptions)
+                          _ColorChoice(
+                            option: option,
+                            selected: option.id == settings.colorId,
+                            label: option.label(s.isZh),
+                            onTap: () => settings.setColorId(option.id),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               ),
