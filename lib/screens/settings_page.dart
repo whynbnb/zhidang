@@ -292,7 +292,7 @@ class SettingsPage extends StatelessWidget {
               title: Text(s.appName),
               subtitle: Text(s.aboutBody),
               trailing: Text(
-                '${s.version} 0.6',
+                '${s.version} 0.7',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
