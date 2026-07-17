@@ -43,16 +43,40 @@ class SupplierStore extends ChangeNotifier {
     await prefs.setString(_key, raw);
   }
 
-  Future<Supplier> add({required String name, String note = ''}) async {
+  Future<Supplier> add({
+    required String name,
+    List<SupplierType> types = const [],
+    String address = '',
+    String note = '',
+  }) async {
     final trimmed = name.trim();
     final existing = findByName(trimmed);
     if (existing != null) {
-      if (note.trim().isNotEmpty && existing.note != note.trim()) {
-        return update(existing.copyWith(note: note.trim()));
+      // ensureName / quick create should not wipe richer fields.
+      final nextNote =
+          note.trim().isNotEmpty ? note.trim() : existing.note;
+      final nextTypes = types.isNotEmpty ? types : existing.types;
+      final nextAddress =
+          address.trim().isNotEmpty ? address.trim() : existing.address;
+      if (nextNote == existing.note &&
+          nextTypes == existing.types &&
+          nextAddress == existing.address) {
+        return existing;
       }
-      return existing;
+      return update(
+        existing.copyWith(
+          types: nextTypes,
+          address: nextAddress,
+          note: nextNote,
+        ),
+      );
     }
-    final supplier = Supplier(name: trimmed, note: note.trim());
+    final supplier = Supplier(
+      name: trimmed,
+      types: types,
+      address: address.trim(),
+      note: note.trim(),
+    );
     _suppliers = [..._suppliers, supplier]
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     notifyListeners();
@@ -62,7 +86,13 @@ class SupplierStore extends ChangeNotifier {
 
   Future<Supplier> update(Supplier supplier) async {
     final trimmed = supplier.name.trim();
-    final updated = supplier.copyWith(name: trimmed, note: supplier.note);
+    final hasStore = supplier.types.contains(SupplierType.store);
+    final updated = supplier.copyWith(
+      name: trimmed,
+      types: supplier.types,
+      address: hasStore ? supplier.address.trim() : '',
+      note: supplier.note.trim(),
+    );
     _suppliers = _suppliers
         .map((e) => e.id == updated.id ? updated : e)
         .toList()

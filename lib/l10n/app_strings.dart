@@ -90,6 +90,18 @@ class AppStrings {
   String get selectSupplier => isZh ? '选择供应商' : 'Select supplier';
   String get noneOption => isZh ? '无' : 'None';
   String get customSupplier => isZh ? '其他（手动输入）' : 'Other (type manually)';
+  String get supplierTypes => isZh ? '供应商类型' : 'Supplier types';
+  String get supplierTypesHint => isZh
+      ? '可多选：电商、外卖、实体店'
+      : 'Select one or more: online, delivery, store';
+  String get supplierTypeEcommerce => isZh ? '电商' : 'Online';
+  String get supplierTypeDelivery => isZh ? '外卖' : 'Delivery';
+  String get supplierTypeStore => isZh ? '实体店' : 'Store';
+  String get supplierAddress => isZh ? '门店地址' : 'Store address';
+  String get supplierAddressHint =>
+      isZh ? '实体店可选填地址' : 'Optional for physical stores';
+  String get supplierAddressOptional =>
+      isZh ? '门店地址（可选）' : 'Store address (optional)';
 
   String get tags => isZh ? '标签' : 'Tags';
   String get addTag => isZh ? '添加标签' : 'Add tag';
