@@ -127,6 +127,7 @@ class _UnitsPageState extends State<UnitsPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab-units-add',
         onPressed: () => _addOrEdit(),
         icon: const Icon(Icons.add),
         label: Text(s.addUnit),

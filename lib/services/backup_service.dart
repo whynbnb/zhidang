@@ -7,10 +7,12 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../models/comparison_group.dart';
 import '../models/custom_unit.dart';
 import '../models/product.dart';
 import '../models/supplier.dart';
 import '../settings/app_settings.dart';
+import 'comparison_store.dart';
 import 'data_revision.dart';
 import 'storage_service.dart';
 import 'supplier_store.dart';
@@ -21,6 +23,7 @@ class BackupPayload {
     required this.products,
     required this.suppliers,
     required this.units,
+    required this.comparisons,
     this.exportedAt,
     this.version = 1,
   });
@@ -30,6 +33,7 @@ class BackupPayload {
   final List<Product> products;
   final List<Supplier> suppliers;
   final List<CustomUnit> units;
+  final List<ComparisonGroup> comparisons;
 }
 
 class BackupService {
@@ -50,6 +54,8 @@ class BackupService {
       'suppliers':
           SupplierStore.instance.suppliers.map((e) => e.toJson()).toList(),
       'units': UnitStore.instance.units.map((e) => e.toJson()).toList(),
+      'comparisons':
+          ComparisonStore.instance.groups.map((e) => e.toJson()).toList(),
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
   }
@@ -95,6 +101,9 @@ class BackupService {
     if (productsRaw is! List || suppliersRaw is! List || unitsRaw is! List) {
       throw const FormatException('Missing products/suppliers/units');
     }
+    final comparisonsRaw = map['comparisons'];
+    final comparisonsList =
+        comparisonsRaw is List ? comparisonsRaw : const [];
 
     final products = productsRaw
         .map((e) => Product.fromJson(Map<String, dynamic>.from(e as Map)))
@@ -106,6 +115,13 @@ class BackupService {
         .map((e) => CustomUnit.fromJson(Map<String, dynamic>.from(e as Map)))
         .where((u) => u.name.trim().isNotEmpty)
         .toList();
+    final comparisons = comparisonsList
+        .map(
+          (e) =>
+              ComparisonGroup.fromJson(Map<String, dynamic>.from(e as Map)),
+        )
+        .where((g) => g.name.trim().isNotEmpty)
+        .toList();
 
     return BackupPayload(
       version: (map['version'] as num?)?.toInt() ?? 1,
@@ -115,6 +131,7 @@ class BackupService {
       products: products,
       suppliers: suppliers,
       units: units,
+      comparisons: comparisons,
     );
   }
 
@@ -145,12 +162,14 @@ class BackupService {
     } else {
       await UnitStore.instance.replaceAll(payload.units);
     }
+    await ComparisonStore.instance.replaceAll(payload.comparisons);
     DataRevision.bump();
   }
 
   Future<void> clearAll() async {
     await _storage.saveProducts([]);
     await SupplierStore.instance.clear();
+    await ComparisonStore.instance.clear();
     await UnitStore.instance.resetToDefaults(AppSettings.instance.locale);
     DataRevision.bump();
   }

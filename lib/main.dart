@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'app/app_navigator.dart';
 import 'l10n/app_strings.dart';
-import 'screens/home_page.dart';
+import 'screens/main_shell.dart';
 import 'services/app_icon_service.dart';
+import 'services/comparison_store.dart';
 import 'services/supplier_store.dart';
 import 'services/unit_store.dart';
 import 'settings/app_settings.dart';
@@ -15,6 +16,7 @@ Future<void> main() async {
   await Future.wait([
     SupplierStore.instance.load(),
     UnitStore.instance.load(locale: AppSettings.instance.locale),
+    ComparisonStore.instance.load(),
     AppIconService.instance.load(),
   ]);
   runApp(const ZhidangApp());
@@ -68,7 +70,7 @@ class ZhidangApp extends StatelessWidget {
               ),
             );
           },
-          home: const HomePage(),
+          home: const MainShell(),
         );
       },
     );

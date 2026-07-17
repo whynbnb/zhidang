@@ -299,6 +299,7 @@ class _HomePageState extends State<HomePage> {
         floatingActionButton: isWide || _selected != null
             ? null
             : FloatingActionButton.extended(
+                heroTag: 'fab-home-new-product',
                 onPressed: _addProduct,
                 icon: const Icon(Icons.add),
                 label: Text(s.newProduct),

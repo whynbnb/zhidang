@@ -128,6 +128,7 @@ class _SuppliersPageState extends State<SuppliersPage> {
         title: Text(s.suppliers),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab-suppliers-add',
         onPressed: () => _addOrEdit(),
         icon: const Icon(Icons.add),
         label: Text(s.addSupplier),

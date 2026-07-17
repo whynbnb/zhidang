@@ -146,23 +146,23 @@ class AppStrings {
 
   String get dataManage => isZh ? '数据管理' : 'Data management';
   String get dataManageHint => isZh
-      ? '导入、导出或清空商品、供应商与单位数据'
-      : 'Import, export or clear products, suppliers and units';
+      ? '导入、导出或清空商品、供应商、单位与比价组'
+      : 'Import, export or clear products, suppliers, units and compare groups';
   String get exportData => isZh ? '导出数据' : 'Export data';
   String get exportDataHint => isZh
-      ? '导出商品、供应商与单位为 JSON'
-      : 'Export products, suppliers and units as JSON';
+      ? '导出商品、供应商、单位与比价组为 JSON'
+      : 'Export products, suppliers, units and compare groups as JSON';
   String get importData => isZh ? '导入数据' : 'Import data';
   String get importDataHint => isZh
       ? '从备份恢复；将覆盖当前数据'
       : 'Restore from backup; replaces current data';
   String get importDataConfirm => isZh
-      ? '导入将覆盖现有商品、供应商和单位，是否继续？'
-      : 'Import will replace products, suppliers and units. Continue?';
+      ? '导入将覆盖现有商品、供应商、单位和比价组，是否继续？'
+      : 'Import will replace products, suppliers, units and compare groups. Continue?';
   String get clearData => isZh ? '清空全部数据' : 'Clear all data';
   String get clearDataHint => isZh
-      ? '删除全部商品与供应商，并恢复默认单位'
-      : 'Delete all products and suppliers; reset units';
+      ? '删除全部商品、供应商与比价组，并恢复默认单位'
+      : 'Delete all products, suppliers and compare groups; reset units';
   String get clearDataConfirm => isZh
       ? '确定清空全部数据？此操作不可撤销。'
       : 'Clear all data? This cannot be undone.';
@@ -176,15 +176,86 @@ class AppStrings {
   String get importCancelled => isZh ? '已取消导入' : 'Import cancelled';
   String get importAction => isZh ? '导入' : 'Import';
   String get clearAction => isZh ? '清空' : 'Clear';
-  String importSummary(int products, int suppliers, int units) => isZh
-      ? '将导入 $products 个商品、$suppliers 个供应商、$units 个单位'
-      : 'Will import $products products, $suppliers suppliers, $units units';
+  String importSummary(
+    int products,
+    int suppliers,
+    int units,
+    int comparisons,
+  ) =>
+      isZh
+          ? '将导入 $products 个商品、$suppliers 个供应商、$units 个单位、$comparisons 个比价组'
+          : 'Will import $products products, $suppliers suppliers, $units units, $comparisons groups';
 
   String get about => isZh ? '关于' : 'About';
   String get aboutBody => isZh
       ? '记录商品单价，比较不同品牌谁更值当。'
       : 'Track unit prices and compare brands for the best value.';
   String get version => isZh ? '版本' : 'Version';
+
+  String get tabProducts => isZh ? '商品' : 'Products';
+  String get tabCompare => isZh ? '比价' : 'Compare';
+  String get tempCompare => isZh ? '临时比价' : 'Quick compare';
+  String get tempCompareHint => isZh
+      ? '立刻挑选商品，按单价排出高低，不保存关系'
+      : 'Pick products now and rank by unit price — not saved';
+  String get tempCompareNeedProducts => isZh
+      ? '至少需要 2 个商品才能比价'
+      : 'Add at least 2 products to compare';
+  String get tempSessionHint => isZh
+      ? '本次为临时比价，关闭后不会保留'
+      : 'Temporary session — not saved when you leave';
+  String get fixedCompare => isZh ? '固定比价' : 'Saved groups';
+  String get fixedCompareHint => isZh
+      ? '把常对比的商品固定成一组，随时打开'
+      : 'Pin products you often compare into a reusable group';
+  String get addFixedGroup => isZh ? '新建固定比价' : 'New group';
+  String get editFixedGroup => isZh ? '编辑固定比价' : 'Edit group';
+  String get deleteGroup => isZh ? '删除比价组' : 'Delete group';
+  String deleteGroupConfirm(String name) =>
+      isZh ? '确定删除比价组「$name」？' : 'Delete comparison group "$name"?';
+  String get noFixedGroups => isZh ? '还没有固定比价' : 'No saved groups yet';
+  String get noFixedGroupsHint => isZh
+      ? '例如把猪肉、牛肉、羊肉放进一组，分开记商品也能一起比'
+      : 'e.g. pork, beef, lamb — separate products, one ranking';
+  String get groupName => isZh ? '组名称' : 'Group name';
+  String get groupNameHint =>
+      isZh ? '例如：红肉对比、纸品对比' : 'e.g. red meat, paper goods';
+  String get groupNameRequired =>
+      isZh ? '请填写组名称' : 'Please enter a group name';
+  String get groupProducts => isZh ? '参与比价的商品' : 'Products in group';
+  String get groupProductsHint => isZh
+      ? '至少选 2 个，且必须有共同计量单位'
+      : 'Pick at least 2 with a shared measurement unit';
+  String get groupNeedTwoProducts => isZh
+      ? '请至少选择 2 个商品'
+      : 'Select at least 2 products';
+  String get compareNeedCommonUnit => isZh
+      ? '所选商品没有共同单位，无法比价'
+      : 'Selected products share no common unit';
+  String commonUnitsReady(String units) => isZh
+      ? '可比单位：$units'
+      : 'Shared units: $units';
+  String get groupNoProducts => isZh ? '组内商品已失效' : 'Products missing';
+  String groupProductSummary(int n, String preview) => isZh
+      ? '$n 个商品：$preview'
+      : '$n products: $preview';
+  String get groupPreferredUnit => isZh ? '默认比价单位' : 'Default unit';
+  String get groupPreferredUnitHint => isZh
+      ? '仅列出所选商品的共同单位；可自动选择'
+      : 'Only shared units among selected products; or auto';
+  String get autoUnit => isZh ? '自动' : 'Auto';
+  String get openCompare => isZh ? '打开比价' : 'Open';
+  String get groupSaved => isZh ? '已创建固定比价' : 'Group created';
+  String get groupUpdated => isZh ? '已更新固定比价' : 'Group updated';
+  String get compareByUnit => isZh ? '按单位比价' : 'Compare by unit';
+  String get compareRanking => isZh ? '单价排名' : 'Unit price ranking';
+  String noOfferForUnit(String unit) =>
+      isZh ? '暂无 $unit 报价' : 'No offer for $unit';
+  String get pickProductsHint => isZh
+      ? '勾选要对比的商品（至少 2 个，且须有共同单位）'
+      : 'Check products to compare (at least 2, shared unit required)';
+  String confirmPick(int n) =>
+      isZh ? '开始比价（$n）' : 'Compare ($n)';
 
   String get newProduct => isZh ? '新建商品' : 'New product';
   String get create => isZh ? '新建' : 'New';
