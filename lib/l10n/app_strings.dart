@@ -236,6 +236,21 @@ class AppStrings {
       ? '可比单位：$units'
       : 'Shared units: $units';
   String get groupNoProducts => isZh ? '组内商品已失效' : 'Products missing';
+  String get groupInvalidTitle => isZh ? '无法打开比价' : 'Cannot open compare';
+  String get groupInvalidMissing => isZh
+      ? '组内部分商品已删除或不可用，有效商品不足 2 个。'
+      : 'Some products in this group are missing; fewer than 2 remain.';
+  String groupInvalidMissingPartial(int missing, int remain) => isZh
+      ? '有 $missing 个商品已删除；当前仅剩 $remain 个有效商品（至少需要 2 个）。'
+      : '$missing product(s) missing; only $remain left (need at least 2).';
+  String get groupInvalidNoCommonUnit => isZh
+      ? '组内商品的计量单位已变更，当前没有共同单位，无法比价。请编辑组或调整商品单位。'
+      : 'Product units changed; there is no shared unit left. Edit the group or product units.';
+  String get groupInvalidPreferredUnit => isZh
+      ? '组内默认比价单位已不再适用（商品单位可能已变更），将自动改用可用单位。'
+      : 'Default unit no longer applies (units may have changed); a shared unit will be used.';
+  String get groupEditAction => isZh ? '去编辑' : 'Edit group';
+  String get groupStatusInvalid => isZh ? '需调整后才能比价' : 'Needs fix before compare';
   String groupProductSummary(int n, String preview) => isZh
       ? '$n 个商品：$preview'
       : '$n products: $preview';

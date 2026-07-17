@@ -132,30 +132,79 @@ class _ComparePageState extends State<ComparePage> {
     }
   }
 
-  Future<void> _openGroup(ComparisonGroup group) async {
-    final s = AppStrings.of(context);
+  _GroupOpenIssue? _validateGroup(ComparisonGroup group) {
+    final missing = group.productIds.where((id) => !_byId.containsKey(id)).length;
     final products = group.productIds
         .map((id) => _byId[id])
         .whereType<Product>()
         .toList();
     if (products.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.groupNeedTwoProducts)),
+      return _GroupOpenIssue.missing(
+        missing: missing,
+        remain: products.length,
       );
+    }
+    final common = ComparisonLogic.commonUnits(products);
+    if (common.isEmpty) {
+      return const _GroupOpenIssue.noCommonUnit();
+    }
+    return null;
+  }
+
+  Future<void> _showGroupInvalid(
+    ComparisonGroup group,
+    _GroupOpenIssue issue,
+  ) async {
+    final s = AppStrings.of(context);
+    final message = switch (issue.kind) {
+      _GroupOpenIssueKind.missing when issue.missing > 0 =>
+        s.groupInvalidMissingPartial(issue.missing, issue.remain),
+      _GroupOpenIssueKind.missing => s.groupInvalidMissing,
+      _GroupOpenIssueKind.noCommonUnit => s.groupInvalidNoCommonUnit,
+    };
+    final action = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(s.groupInvalidTitle),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'cancel'),
+            child: Text(s.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'edit'),
+            child: Text(s.groupEditAction),
+          ),
+        ],
+      ),
+    );
+    if (action == 'edit' && mounted) {
+      await _addOrEditGroup(group);
+    }
+  }
+
+  Future<void> _openGroup(ComparisonGroup group) async {
+    final issue = _validateGroup(group);
+    if (issue != null) {
+      await _showGroupInvalid(group, issue);
       return;
     }
-    if (ComparisonLogic.commonUnits(products).isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.compareNeedCommonUnit)),
-      );
-      return;
+    final products = group.productIds
+        .map((id) => _byId[id])
+        .whereType<Product>()
+        .toList();
+    final common = ComparisonLogic.commonUnits(products);
+    var preferred = group.preferredUnit.trim();
+    if (preferred.isNotEmpty && !common.contains(preferred)) {
+      preferred = '';
     }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => CompareSessionPage(
           title: group.name,
           products: products,
-          preferredUnit: group.preferredUnit,
+          preferredUnit: preferred,
           temporary: false,
           group: group,
           onEditGroup: () => _addOrEditGroup(group),
@@ -227,19 +276,32 @@ class _ComparePageState extends State<ComparePage> {
                             .map((id) => _byId[id]?.name)
                             .whereType<String>()
                             .toList();
+                        final invalid = _validateGroup(g) != null;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Card(
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
-                              side: BorderSide(color: scheme.outlineVariant),
+                              side: BorderSide(
+                                color: invalid
+                                    ? scheme.error.withValues(alpha: 0.45)
+                                    : scheme.outlineVariant,
+                              ),
                             ),
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: scheme.secondaryContainer,
-                                foregroundColor: scheme.onSecondaryContainer,
-                                child: const Icon(Icons.balance),
+                                backgroundColor: invalid
+                                    ? scheme.errorContainer
+                                    : scheme.secondaryContainer,
+                                foregroundColor: invalid
+                                    ? scheme.onErrorContainer
+                                    : scheme.onSecondaryContainer,
+                                child: Icon(
+                                  invalid
+                                      ? Icons.warning_amber_rounded
+                                      : Icons.balance,
+                                ),
                               ),
                               title: Text(
                                 g.name,
@@ -248,12 +310,14 @@ class _ComparePageState extends State<ComparePage> {
                                 ),
                               ),
                               subtitle: Text(
-                                names.isEmpty
-                                    ? s.groupNoProducts
-                                    : s.groupProductSummary(
-                                        names.length,
-                                        names.take(3).join(' · '),
-                                      ),
+                                invalid
+                                    ? s.groupStatusInvalid
+                                    : names.isEmpty
+                                        ? s.groupNoProducts
+                                        : s.groupProductSummary(
+                                            names.length,
+                                            names.take(3).join(' · '),
+                                          ),
                               ),
                               trailing: PopupMenuButton<String>(
                                 onSelected: (v) {
@@ -287,6 +351,24 @@ class _ComparePageState extends State<ComparePage> {
             ),
     );
   }
+}
+
+enum _GroupOpenIssueKind { missing, noCommonUnit }
+
+class _GroupOpenIssue {
+  const _GroupOpenIssue.missing({
+    required this.missing,
+    required this.remain,
+  }) : kind = _GroupOpenIssueKind.missing;
+
+  const _GroupOpenIssue.noCommonUnit()
+      : kind = _GroupOpenIssueKind.noCommonUnit,
+        missing = 0,
+        remain = 0;
+
+  final _GroupOpenIssueKind kind;
+  final int missing;
+  final int remain;
 }
 
 class _QuickCompareCard extends StatelessWidget {
