@@ -416,7 +416,11 @@ class Product {
   List<Offer> offers;
   DateTime updatedAt;
 
+  /// List-card / default compare unit (always `units.first`).
   String get unit => units.isNotEmpty ? units.first : 'g';
+
+  /// Alias for the unit shown on the product list.
+  String get displayUnit => unit;
 
   List<String> get measureUnits {
     final result = <String>[...units];
@@ -551,6 +555,7 @@ class Product {
       id: json['id'] as String?,
       name: json['name'] as String? ?? '',
       units: units,
+      unit: fallback,
       relations: relations,
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
       note: json['note'] as String? ?? '',
@@ -564,6 +569,7 @@ class Product {
   Product copyWith({
     String? name,
     List<String>? units,
+    String? unit,
     List<UnitRelation>? relations,
     List<String>? tags,
     String? note,
@@ -573,6 +579,7 @@ class Product {
         id: id,
         name: name ?? this.name,
         units: units ?? this.units,
+        unit: unit ?? this.unit,
         relations: relations ?? this.relations,
         tags: tags ?? this.tags,
         note: note ?? this.note,
@@ -580,7 +587,7 @@ class Product {
         updatedAt: DateTime.now(),
       );
 
-  static List<String> _normalizeUnits(List<String>? units, String? unit) {
+  static List<String> _normalizeUnits(List<String>? units, String? preferred) {
     final result = <String>[];
     void add(String? value) {
       final v = normalizeUnit(value, fallback: '');
@@ -588,12 +595,13 @@ class Product {
       if (!result.contains(v)) result.add(v);
     }
 
+    // Preferred display unit first so list cards and default compare use it.
+    add(preferred);
     if (units != null) {
       for (final u in units) {
         add(u);
       }
     }
-    add(unit);
     if (result.isEmpty) result.add('g');
     return result;
   }

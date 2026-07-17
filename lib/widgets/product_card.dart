@@ -25,7 +25,7 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final s = AppStrings.of(context);
-    final primaryUnit = product.unit;
+    final primaryUnit = product.displayUnit;
     final best = product.bestOfferFor(primaryUnit) ?? product.bestOffer;
     final bestUnit = best == null
         ? primaryUnit

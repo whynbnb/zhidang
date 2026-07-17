@@ -35,6 +35,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
   late Set<String> _units;
   late Set<String> _tags;
   late List<UnitRelation> _relations;
+  late String _displayUnit;
 
   @override
   void initState() {
@@ -44,6 +45,29 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
     _units = {...(widget.product?.units ?? const ['g'])};
     _tags = {...(widget.product?.tags ?? const [])};
     _relations = [...(widget.product?.relations ?? const [])];
+    final current = widget.product?.displayUnit;
+    _displayUnit = (current != null && _units.contains(current))
+        ? current
+        : (_units.isNotEmpty ? _units.first : 'g');
+  }
+
+  void _setDisplayUnit(String unit) {
+    if (!_units.contains(unit)) return;
+    setState(() => _displayUnit = unit);
+  }
+
+  void _toggleUnit(String unit, bool selected) {
+    setState(() {
+      if (selected) {
+        _units.add(unit);
+        _displayUnit = _units.contains(_displayUnit) ? _displayUnit : unit;
+      } else if (_units.length > 1) {
+        _units.remove(unit);
+        if (_displayUnit == unit) {
+          _displayUnit = _units.first;
+        }
+      }
+    });
   }
 
   @override
@@ -62,12 +86,15 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
       if (!_units.contains(r.fromUnit)) selected.add(r.fromUnit);
       if (!_units.contains(r.toUnit)) selected.add(r.toUnit);
     }
+    final display =
+        selected.contains(_displayUnit) ? _displayUnit : selected.first;
     final tags = _tags.toList();
     final base = widget.product;
     final result = base == null
         ? Product(
             name: _name.text.trim(),
             units: selected,
+            unit: display,
             relations: _relations,
             tags: tags,
             note: _note.text.trim(),
@@ -75,6 +102,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
         : base.copyWith(
             name: _name.text.trim(),
             units: selected,
+            unit: display,
             relations: _relations,
             tags: tags,
             note: _note.text.trim(),
@@ -180,15 +208,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                         FilterChip(
                           label: Text(unit),
                           selected: _units.contains(unit),
-                          onSelected: (selected) {
-                            setState(() {
-                              if (selected) {
-                                _units.add(unit);
-                              } else if (_units.length > 1) {
-                                _units.remove(unit);
-                              }
-                            });
-                          },
+                          onSelected: (selected) => _toggleUnit(unit, selected),
                         ),
                     ],
                   );
@@ -205,6 +225,35 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                     ),
                   ),
                 ),
+              if (_units.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  s.listDisplayUnit,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  s.listDisplayUnitHint,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final unit in _units)
+                      ChoiceChip(
+                        label: Text(unit),
+                        selected: unit == _displayUnit,
+                        onSelected: (_) => _setDisplayUnit(unit),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 16),
               TagPicker(
                 selected: _tags,

@@ -236,6 +236,10 @@ class AppStrings {
       : 'Select multiple, e.g. pack / sheet';
   String get measureDimensionRequired =>
       isZh ? '请至少选择一个度量维度' : 'Select at least one dimension';
+  String get listDisplayUnit => isZh ? '主单位' : 'Primary unit';
+  String get listDisplayUnitHint => isZh
+      ? '商品卡片上的最优单价按此单位显示'
+      : 'Best unit price on product cards uses this unit';
   String measureUnitsLabel(String units) =>
       isZh ? '度量维度：$units' : 'Dimensions: $units';
   String dimensionCount(int n) =>
