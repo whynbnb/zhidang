@@ -109,10 +109,11 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _addProduct() async {
     final result = await showProductForm(context);
-    if (result == null) return;
+    final product = result?.product;
+    if (product == null) return;
     setState(() {
-      _products = [result, ..._products];
-      _selectedId = result.id;
+      _products = [product, ..._products];
+      _selectedId = product.id;
     });
     await _persist();
   }
@@ -120,42 +121,25 @@ class _HomePageState extends State<HomePage> {
   Future<void> _editProduct(Product product) async {
     final result = await showProductForm(context, product: product);
     if (result == null) return;
+    if (result.deleted) {
+      setState(() {
+        _products = _products.where((p) => p.id != product.id).toList();
+        if (_selectedId == product.id) {
+          final isWide = MediaQuery.sizeOf(context).width >= 840;
+          _selectedId =
+              isWide && _products.isNotEmpty ? _products.first.id : null;
+        }
+      });
+      await _persist();
+      return;
+    }
+    final saved = result.product;
+    if (saved == null) return;
     setState(() {
       _products = _products
-          .map((p) => p.id == result.id ? result : p)
+          .map((p) => p.id == saved.id ? saved : p)
           .toList()
         ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    });
-    await _persist();
-  }
-
-  Future<void> _deleteProduct(Product product) async {
-    final s = AppStrings.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(s.deleteProduct),
-        content: Text(s.deleteProductConfirm(product.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(s.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(s.delete),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    setState(() {
-      _products = _products.where((p) => p.id != product.id).toList();
-      if (_selectedId == product.id) {
-        final isWide = MediaQuery.sizeOf(context).width >= 840;
-        _selectedId =
-            isWide && _products.isNotEmpty ? _products.first.id : null;
-      }
     });
     await _persist();
   }
@@ -295,7 +279,6 @@ class _HomePageState extends State<HomePage> {
                       onOpenSettings: _openSettings,
                       onAddProduct: _addProduct,
                       onEditProduct: _editProduct,
-                      onDeleteProduct: _deleteProduct,
                       onAddOffer: _addOffer,
                       onEditOffer: _editOffer,
                       onOfferCounter: _openOfferCounter,
@@ -310,7 +293,6 @@ class _HomePageState extends State<HomePage> {
                       onOpenSettings: _openSettings,
                       onAddProduct: _addProduct,
                       onEditProduct: _editProduct,
-                      onDeleteProduct: _deleteProduct,
                       onAddOffer: _addOffer,
                       onEditOffer: _editOffer,
                       onOfferCounter: _openOfferCounter,
@@ -339,7 +321,6 @@ class _WideLayout extends StatelessWidget {
     required this.onOpenSettings,
     required this.onAddProduct,
     required this.onEditProduct,
-    required this.onDeleteProduct,
     required this.onAddOffer,
     required this.onEditOffer,
     required this.onOfferCounter,
@@ -353,7 +334,6 @@ class _WideLayout extends StatelessWidget {
   final VoidCallback onOpenSettings;
   final VoidCallback onAddProduct;
   final ValueChanged<Product> onEditProduct;
-  final ValueChanged<Product> onDeleteProduct;
   final void Function(Product, {String? preferredUnit}) onAddOffer;
   final void Function(Product, Offer) onEditOffer;
   final void Function(Product, Offer) onOfferCounter;
@@ -373,7 +353,6 @@ class _WideLayout extends StatelessWidget {
             onOpenSettings: onOpenSettings,
             onAddProduct: onAddProduct,
             onEditProduct: onEditProduct,
-            onDeleteProduct: onDeleteProduct,
           ),
         ),
         const VerticalDivider(width: 1),
@@ -384,7 +363,6 @@ class _WideLayout extends StatelessWidget {
                   key: ValueKey('detail-${selected!.id}'),
                   product: selected!,
                   onEditProduct: () => onEditProduct(selected!),
-                  onDeleteProduct: () => onDeleteProduct(selected!),
                   onAddOffer: (unit) =>
                       onAddOffer(selected!, preferredUnit: unit),
                   onEditOffer: (o) => onEditOffer(selected!, o),
@@ -407,7 +385,6 @@ class _NarrowLayout extends StatelessWidget {
     required this.onOpenSettings,
     required this.onAddProduct,
     required this.onEditProduct,
-    required this.onDeleteProduct,
     required this.onAddOffer,
     required this.onEditOffer,
     required this.onOfferCounter,
@@ -422,7 +399,6 @@ class _NarrowLayout extends StatelessWidget {
   final VoidCallback onOpenSettings;
   final VoidCallback onAddProduct;
   final ValueChanged<Product> onEditProduct;
-  final ValueChanged<Product> onDeleteProduct;
   final void Function(Product, {String? preferredUnit}) onAddOffer;
   final void Function(Product, Offer) onEditOffer;
   final void Function(Product, Offer) onOfferCounter;
@@ -441,7 +417,6 @@ class _NarrowLayout extends StatelessWidget {
         onOpenSettings: onOpenSettings,
         onAddProduct: onAddProduct,
         onEditProduct: onEditProduct,
-        onDeleteProduct: onDeleteProduct,
       );
     }
 
@@ -468,7 +443,6 @@ class _NarrowLayout extends StatelessWidget {
             key: ValueKey('detail-mobile-${selected!.id}'),
             product: selected!,
             onEditProduct: () => onEditProduct(selected!),
-            onDeleteProduct: () => onDeleteProduct(selected!),
             onAddOffer: (unit) => onAddOffer(selected!, preferredUnit: unit),
             onEditOffer: (o) => onEditOffer(selected!, o),
             onOfferCounter: (o) => onOfferCounter(selected!, o),
@@ -490,7 +464,6 @@ class _ProductListPane extends StatelessWidget {
     required this.onOpenSettings,
     required this.onAddProduct,
     required this.onEditProduct,
-    required this.onDeleteProduct,
   });
 
   final TextEditingController search;
@@ -500,7 +473,6 @@ class _ProductListPane extends StatelessWidget {
   final VoidCallback onOpenSettings;
   final VoidCallback onAddProduct;
   final ValueChanged<Product> onEditProduct;
-  final ValueChanged<Product> onDeleteProduct;
 
   @override
   Widget build(BuildContext context) {
@@ -617,60 +589,13 @@ class _ProductListPane extends StatelessWidget {
                         product: product,
                         selected: product.id == selectedId,
                         onTap: () => onSelect(product.id),
-                        onLongPress: () => _showProductMenu(
-                          context,
-                          product,
-                          onEditProduct,
-                          onDeleteProduct,
-                        ),
+                        onLongPress: () => onEditProduct(product),
                       ),
                     );
                   },
                 ),
         ),
       ],
-    );
-  }
-
-  void _showProductMenu(
-    BuildContext context,
-    Product product,
-    ValueChanged<Product> onEdit,
-    ValueChanged<Product> onDelete,
-  ) {
-    final s = AppStrings.of(context);
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: Text(s.editProduct),
-              onTap: () {
-                Navigator.pop(context);
-                onEdit(product);
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.delete_outline,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              title: Text(
-                s.deleteProduct,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                onDelete(product);
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -697,7 +622,6 @@ class _ProductDetailPane extends StatefulWidget {
     super.key,
     required this.product,
     required this.onEditProduct,
-    required this.onDeleteProduct,
     required this.onAddOffer,
     required this.onEditOffer,
     required this.onOfferCounter,
@@ -707,7 +631,6 @@ class _ProductDetailPane extends StatefulWidget {
 
   final Product product;
   final VoidCallback onEditProduct;
-  final VoidCallback onDeleteProduct;
   final ValueChanged<String?> onAddOffer;
   final ValueChanged<Offer> onEditOffer;
   final ValueChanged<Offer> onOfferCounter;
@@ -791,11 +714,6 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: s.editProduct,
               ),
-              IconButton(
-                onPressed: widget.onDeleteProduct,
-                icon: const Icon(Icons.delete_outline),
-                tooltip: s.deleteProduct,
-              ),
             ],
           ),
           Text(
@@ -806,7 +724,7 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
           ),
           if (product.tags.isNotEmpty) ...[
             const SizedBox(height: 8),
-            TagChipRow(tags: product.tags),
+            TagChipRow(tags: product.tags, dense: true),
           ],
           if (product.note.isNotEmpty) ...[
             const SizedBox(height: 4),
@@ -815,24 +733,21 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
           const SizedBox(height: 16),
         ] else ...[
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Spacer(),
+              Expanded(
+                child: product.tags.isEmpty
+                    ? const SizedBox.shrink()
+                    : TagChipRow(tags: product.tags, dense: true),
+              ),
               TextButton.icon(
                 onPressed: widget.onEditProduct,
                 icon: const Icon(Icons.edit_outlined, size: 18),
                 label: Text(s.edit),
               ),
-              TextButton.icon(
-                onPressed: widget.onDeleteProduct,
-                icon: const Icon(Icons.delete_outline, size: 18),
-                label: Text(s.delete),
-              ),
             ],
           ),
-          if (product.tags.isNotEmpty) ...[
-            TagChipRow(tags: product.tags),
-            const SizedBox(height: 8),
-          ],
+          const SizedBox(height: 8),
         ],
         if (units.length > 1) ...[
           Text(

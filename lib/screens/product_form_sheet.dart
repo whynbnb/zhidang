@@ -7,11 +7,21 @@ import '../services/unit_store.dart';
 import '../utils/quantity_presets.dart';
 import '../widgets/tag_chips.dart';
 
-Future<Product?> showProductForm(
+class ProductFormResult {
+  const ProductFormResult.saved(this.product) : deleted = false;
+  const ProductFormResult.deleted()
+      : product = null,
+        deleted = true;
+
+  final Product? product;
+  final bool deleted;
+}
+
+Future<ProductFormResult?> showProductForm(
   BuildContext context, {
   Product? product,
 }) {
-  return showModalBottomSheet<Product>(
+  return showModalBottomSheet<ProductFormResult>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -107,7 +117,33 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
             tags: tags,
             note: _note.text.trim(),
           );
-    Navigator.of(context).pop(result);
+    Navigator.of(context).pop(ProductFormResult.saved(result));
+  }
+
+  Future<void> _deleteProduct() async {
+    final existing = widget.product;
+    if (existing == null) return;
+    final s = AppStrings.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(s.deleteProduct),
+        content: Text(s.deleteProductConfirm(existing.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(s.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(s.delete),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      Navigator.of(context).pop(const ProductFormResult.deleted());
+    }
   }
 
   Future<void> _addOrEditRelation([UnitRelation? existing]) async {
@@ -376,6 +412,17 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                 onPressed: _units.isEmpty ? null : _submit,
                 child: Text(editing ? s.save : s.createAction),
               ),
+              if (editing) ...[
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: _deleteProduct,
+                  icon: Icon(Icons.delete_outline, color: scheme.error),
+                  label: Text(
+                    s.deleteProduct,
+                    style: TextStyle(color: scheme.error),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -92,10 +92,6 @@ class ProductCard extends StatelessWidget {
                       color: scheme.onSurfaceVariant,
                     ),
               ),
-              if (product.tags.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                TagChipRow(tags: product.tags, dense: true),
-              ],
               const SizedBox(height: 8),
               if (best != null) ...[
                 Text(
@@ -117,6 +113,10 @@ class ProductCard extends StatelessWidget {
                         color: scheme.onSurfaceVariant,
                       ),
                 ),
+              if (product.tags.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                TagChipRow(tags: product.tags, dense: true),
+              ],
               if (product.note.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(

@@ -140,20 +140,21 @@ class TagChipRow extends StatelessWidget {
     if (tags.isEmpty) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
 
-    return Wrap(
-      spacing: 6,
-      runSpacing: 4,
-      children: [
-        for (final tag in tags)
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: dense ? 110 : 140),
-            child: Container(
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        alignment: WrapAlignment.start,
+        children: [
+          for (final tag in tags)
+            Container(
               padding: EdgeInsets.symmetric(
-                horizontal: dense ? 6 : 8,
+                horizontal: dense ? 7 : 8,
                 vertical: dense ? 2 : 3,
               ),
               decoration: BoxDecoration(
-                color: scheme.tertiaryContainer.withValues(alpha: 0.7),
+                color: scheme.secondaryContainer.withValues(alpha: 0.75),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
@@ -161,14 +162,14 @@ class TagChipRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: scheme.onTertiaryContainer,
-                      fontSize: dense ? 10 : null,
+                      color: scheme.onSecondaryContainer,
+                      fontSize: dense ? 11 : 12,
                       fontWeight: FontWeight.w600,
                     ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
