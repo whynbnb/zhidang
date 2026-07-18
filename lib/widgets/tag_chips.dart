@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
+import '../utils/tag_display.dart';
 
 /// Free-text tags: add by typing, remove by tapping chip.
 class TagPicker extends StatefulWidget {
@@ -144,21 +145,27 @@ class TagChipRow extends StatelessWidget {
       runSpacing: 4,
       children: [
         for (final tag in tags)
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: dense ? 6 : 8,
-              vertical: dense ? 1 : 2,
-            ),
-            decoration: BoxDecoration(
-              color: scheme.tertiaryContainer.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              tag,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: scheme.onTertiaryContainer,
-                    fontSize: dense ? 10 : null,
-                  ),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: dense ? 110 : 140),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: dense ? 6 : 8,
+                vertical: dense ? 2 : 3,
+              ),
+              decoration: BoxDecoration(
+                color: scheme.tertiaryContainer.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                TagDisplay.ellipsize(tag),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: scheme.onTertiaryContainer,
+                      fontSize: dense ? 10 : null,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
             ),
           ),
       ],

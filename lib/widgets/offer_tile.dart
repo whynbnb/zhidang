@@ -43,6 +43,16 @@ class OfferTile extends StatelessWidget {
     final counterEnabled = offer.counterMode.enabled;
     final isLog = offer.counterMode == OfferCounterMode.withLog;
     final highlight = isPreferred || isBest;
+    final hasMeta = counterEnabled || offer.tags.isNotEmpty;
+
+    final actions = _OfferActions(
+      offer: offer,
+      counterEnabled: counterEnabled,
+      isLog: isLog,
+      onToggleFavorite: onToggleFavorite,
+      onCounterTap: onCounterTap,
+      onEdit: onEdit,
+    );
 
     return Card(
       elevation: 0,
@@ -57,127 +67,218 @@ class OfferTile extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(12, 10, 6, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor:
-                  highlight ? scheme.primary : scheme.surfaceContainerHighest,
-              foregroundColor:
-                  highlight ? scheme.onPrimary : scheme.onSurfaceVariant,
-              child: Text(
-                isPreferred && offer.favorite
-                    ? s.favoriteBadge
-                    : (isBest ? s.bestBadge : '$rank'),
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: isBest && !s.isZh ? 10 : null,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: highlight
+                      ? scheme.primary
+                      : scheme.surfaceContainerHighest,
+                  foregroundColor: highlight
+                      ? scheme.onPrimary
+                      : scheme.onSurfaceVariant,
+                  child: Text(
+                    isPreferred && offer.favorite
+                        ? s.favoriteBadge
+                        : (isBest ? s.bestBadge : '$rank'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: isBest && !s.isZh ? 10 : null,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          offer.brand,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              offer.brand,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          if (offer.favorite)
+                            Icon(
+                              Icons.star_rounded,
+                              size: 18,
+                              color: scheme.tertiary,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '¥${_currency.format(offer.price)} / ${_currency.format(qty)}$unit'
+                        '${offer.shop.isNotEmpty ? ' · ${offer.shop}' : ''}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                      ),
+                      if (offer.measures.length > 1)
+                        Text(
+                          allMeasures,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: scheme.primary,
                                   ),
                         ),
-                      ),
-                      if (offer.favorite)
-                        Icon(
-                          Icons.star_rounded,
-                          size: 18,
-                          color: scheme.tertiary,
+                      if (offer.note.isNotEmpty)
+                        Text(
+                          offer.note,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '¥${_currency.format(offer.price)} / ${_currency.format(qty)}$unit'
-                    '${offer.shop.isNotEmpty ? ' · ${offer.shop}' : ''}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
-                  if (offer.measures.length > 1)
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
                     Text(
-                      allMeasures,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: scheme.primary,
+                      '¥${_currency.format(unitPrice)}',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color:
+                                highlight ? scheme.primary : scheme.onSurface,
+                            fontWeight: FontWeight.w800,
                           ),
                     ),
-                  if (counterEnabled) ...[
-                    const SizedBox(height: 4),
-                    _CounterBadge(offer: offer),
-                  ],
-                  if (offer.tags.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    TagChipRow(tags: offer.tags, dense: true),
-                  ],
-                  if (offer.note.isNotEmpty)
                     Text(
-                      offer.note,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      '/ $unit',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
                     ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '¥${_currency.format(unitPrice)}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: highlight ? scheme.primary : scheme.onSurface,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                Text(
-                  '/ $unit',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                  ],
                 ),
               ],
             ),
-            if (onToggleFavorite != null)
-              IconButton(
-                tooltip:
-                    offer.favorite ? s.unfavoriteOffer : s.favoriteOffer,
-                onPressed: onToggleFavorite,
-                icon: Icon(
-                  offer.favorite ? Icons.star_rounded : Icons.star_outline,
-                  color: offer.favorite ? scheme.tertiary : null,
+            if (hasMeta) ...[
+              const SizedBox(height: 8),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (counterEnabled) _CounterBadge(offer: offer),
+                          if (counterEnabled && offer.tags.isNotEmpty)
+                            const SizedBox(height: 6),
+                          if (offer.tags.isNotEmpty)
+                            TagChipRow(tags: offer.tags, dense: true),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    actions,
+                  ],
                 ),
               ),
-            if (counterEnabled)
-              IconButton(
-                tooltip: isLog ? s.counterViewLogs : s.counterModeCountLabel,
-                onPressed: onCounterTap,
-                icon: Icon(
-                  isLog ? Icons.schedule : Icons.tag,
-                  color: isLog ? scheme.tertiary : scheme.secondary,
-                ),
+            ] else ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerRight,
+                child: actions,
               ),
-            IconButton(
-              tooltip: s.edit,
-              onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined),
-            ),
+            ],
           ],
         ),
       ),
+    );
+  }
+}
+
+class _OfferActions extends StatelessWidget {
+  const _OfferActions({
+    required this.offer,
+    required this.counterEnabled,
+    required this.isLog,
+    required this.onEdit,
+    this.onToggleFavorite,
+    this.onCounterTap,
+  });
+
+  final Offer offer;
+  final bool counterEnabled;
+  final bool isLog;
+  final VoidCallback onEdit;
+  final VoidCallback? onToggleFavorite;
+  final VoidCallback? onCounterTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final s = AppStrings.of(context);
+
+    Widget btn({
+      required String tooltip,
+      required VoidCallback? onPressed,
+      required IconData icon,
+      Color? color,
+    }) {
+      return IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        visualDensity: VisualDensity.standard,
+        constraints: const BoxConstraints(minWidth: 42, minHeight: 42),
+        padding: const EdgeInsets.all(8),
+        icon: Icon(icon, size: 24, color: color),
+      );
+    }
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onToggleFavorite != null)
+              btn(
+                tooltip:
+                    offer.favorite ? s.unfavoriteOffer : s.favoriteOffer,
+                onPressed: onToggleFavorite,
+                icon: offer.favorite ? Icons.star_rounded : Icons.star_outline,
+                color: offer.favorite ? scheme.tertiary : null,
+              ),
+            if (counterEnabled)
+              btn(
+                tooltip:
+                    isLog ? s.counterViewLogs : s.counterModeCountLabel,
+                onPressed: onCounterTap,
+                icon: isLog ? Icons.schedule : Icons.tag,
+                color: isLog ? scheme.tertiary : scheme.secondary,
+              ),
+            btn(
+              tooltip: s.edit,
+              onPressed: onEdit,
+              icon: Icons.edit_outlined,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -201,25 +302,32 @@ class _CounterBadge extends StatelessWidget {
         ? s.counterLogEntries(offer.displayCount)
         : '${offer.displayCount}';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: fg),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: fg,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-        ],
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: fg),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: fg,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
