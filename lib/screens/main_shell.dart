@@ -5,7 +5,7 @@ import '../screens/compare_page.dart';
 import '../screens/home_page.dart';
 import '../settings/app_settings.dart';
 
-/// Root shell: products + optional compare entry (bottom / header / off).
+/// Root shell: products + optional compare entry (bottom / side / header / off).
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -38,43 +38,75 @@ class _MainShellState extends State<MainShell> {
     }
   }
 
+  void _select(int i) {
+    setState(() => _index = i);
+    if (i == 1) {
+      _compareKey.currentState?.reload();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final mode = AppSettings.instance.compareNavMode;
-    final useBottom = mode == CompareNavMode.bottomNav;
+    final settings = AppSettings.instance;
+    final mode = settings.compareNavMode;
+    final useNav = mode == CompareNavMode.bottomNav;
+    final useSidebar = useNav && settings.useSidebarNav(context);
+
+    final destinations = [
+      NavigationDestination(
+        icon: const Icon(Icons.inventory_2_outlined),
+        selectedIcon: const Icon(Icons.inventory_2),
+        label: s.tabProducts,
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.balance_outlined),
+        selectedIcon: const Icon(Icons.balance),
+        label: s.tabCompare,
+      ),
+    ];
+
+    final body = useNav
+        ? IndexedStack(
+            index: _index,
+            children: [
+              const HomePage(),
+              ComparePage(key: _compareKey),
+            ],
+          )
+        : const HomePage();
+
+    if (useSidebar) {
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: _index,
+              onDestinationSelected: _select,
+              labelType: NavigationRailLabelType.all,
+              destinations: [
+                for (final d in destinations)
+                  NavigationRailDestination(
+                    icon: d.icon,
+                    selectedIcon: d.selectedIcon,
+                    label: Text(d.label),
+                  ),
+              ],
+            ),
+            const VerticalDivider(width: 1, thickness: 1),
+            Expanded(child: body),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
-      body: useBottom
-          ? IndexedStack(
-              index: _index,
-              children: [
-                const HomePage(),
-                ComparePage(key: _compareKey),
-              ],
-            )
-          : const HomePage(),
-      bottomNavigationBar: useBottom
+      body: body,
+      bottomNavigationBar: useNav
           ? NavigationBar(
               selectedIndex: _index,
-              onDestinationSelected: (i) {
-                setState(() => _index = i);
-                if (i == 1) {
-                  _compareKey.currentState?.reload();
-                }
-              },
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.inventory_2_outlined),
-                  selectedIcon: const Icon(Icons.inventory_2),
-                  label: s.tabProducts,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.balance_outlined),
-                  selectedIcon: const Icon(Icons.balance),
-                  label: s.tabCompare,
-                ),
-              ],
+              onDestinationSelected: _select,
+              destinations: destinations,
             )
           : null,
     );

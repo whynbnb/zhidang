@@ -42,14 +42,14 @@ class AppStrings {
   String get languageZh => isZh ? '中文' : 'Chinese';
   String get languageEn => isZh ? 'English' : 'English';
   String get appearance => isZh ? '外观' : 'Appearance';
-  String get compareEntry => isZh ? '比价入口' : 'Compare entry';
+  String get compareEntry => isZh ? '导航栏模式' : 'Navigation mode';
   String get compareEntryHint => isZh
       ? '选择如何进入跨商品比价'
       : 'Choose how to open cross-product compare';
-  String get compareNavBottom => isZh ? '底部导航' : 'Bottom tabs';
+  String get compareNavBottom => isZh ? '导航栏' : 'Nav bar';
   String get compareNavBottomHint => isZh
-      ? '底部显示「商品 / 比价」标签'
-      : 'Show Products / Compare in the bottom bar';
+      ? '显示「商品 / 比价」导航（底栏或侧栏）'
+      : 'Show Products / Compare navigation (bottom or side)';
   String get compareNavHeader => isZh ? '顶部图标' : 'Header icon';
   String get compareNavHeaderHint => isZh
       ? '在设置左侧显示比价图标（安卓默认）'
@@ -58,6 +58,12 @@ class AppStrings {
   String get compareNavDisabledHint => isZh
       ? '隐藏所有比价入口'
       : 'Hide all compare entry points';
+  String get sidebarNav => isZh ? '侧边栏导航' : 'Sidebar navigation';
+  String get sidebarNavHint => isZh
+      ? '桌面与平板横屏时使用侧边栏；关闭则始终底边栏'
+      : 'Use a side rail on desktop and tablet landscape; off keeps the bottom bar';
+  String get sidebarNavBottom => isZh ? '底边栏' : 'Bottom bar';
+  String get sidebarNavSide => isZh ? '侧边栏' : 'Sidebar';
   String get themeMode => isZh ? '主题模式' : 'Theme mode';
   String get themeSystem => isZh ? '系统' : 'System';
   String get themeLight => isZh ? '浅色' : 'Light';

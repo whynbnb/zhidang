@@ -208,6 +208,21 @@ class SettingsPage extends StatelessWidget {
                   onTap: () =>
                       settings.setCompareNavMode(CompareNavMode.disabled),
                 ),
+                if (LayoutCapability.showSidebarSetting(context) &&
+                    settings.compareNavMode == CompareNavMode.bottomNav) ...[
+                  Divider(
+                    height: 1,
+                    indent: 56,
+                    color: scheme.outlineVariant.withValues(alpha: 0.6),
+                  ),
+                  SwitchListTile(
+                    secondary: Icon(Icons.view_sidebar_outlined, color: scheme.primary),
+                    title: Text(s.sidebarNav),
+                    subtitle: Text(s.sidebarNavHint),
+                    value: settings.sidebarNavEnabled,
+                    onChanged: (v) => settings.setSidebarNavEnabled(v),
+                  ),
+                ],
               ],
             ),
           ),
