@@ -5,6 +5,7 @@ import '../l10n/app_strings.dart';
 import '../models/product.dart';
 import '../services/data_revision.dart';
 import '../services/storage_service.dart';
+import '../settings/app_settings.dart';
 import '../widgets/offer_tile.dart';
 import '../widgets/product_card.dart';
 import '../widgets/tag_chips.dart';
@@ -523,15 +524,24 @@ class _ProductListPane extends StatelessWidget {
                       ),
                 ),
               ),
+              ListenableBuilder(
+                listenable: AppSettings.instance,
+                builder: (context, _) {
+                  final mode = AppSettings.instance.compareNavMode;
+                  if (mode != CompareNavMode.headerIcon) {
+                    return const SizedBox.shrink();
+                  }
+                  return IconButton(
+                    onPressed: () => AppNavigator.openCompare(),
+                    icon: const Icon(Icons.balance_outlined),
+                    tooltip: s.tabCompare,
+                  );
+                },
+              ),
               IconButton(
                 onPressed: onOpenSettings,
                 icon: const Icon(Icons.settings_outlined),
                 tooltip: s.settings,
-              ),
-              FilledButton.tonalIcon(
-                onPressed: onAddProduct,
-                icon: const Icon(Icons.add),
-                label: Text(s.create),
               ),
             ],
           ),

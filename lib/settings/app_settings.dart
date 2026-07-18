@@ -1,5 +1,40 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// How the compare feature is exposed in the main UI.
+enum CompareNavMode {
+  /// Bottom tab bar (current desktop/default style).
+  bottomNav,
+
+  /// Header icon left of settings (Android default).
+  headerIcon,
+
+  /// No entry points; compare feature hidden.
+  disabled;
+
+  static CompareNavMode fromJson(Object? raw) {
+    switch (raw?.toString()) {
+      case 'headerIcon':
+        return CompareNavMode.headerIcon;
+      case 'disabled':
+        return CompareNavMode.disabled;
+      case 'bottomNav':
+        return CompareNavMode.bottomNav;
+      default:
+        return defaultForPlatform();
+    }
+  }
+
+  String toJson() => name;
+
+  static CompareNavMode defaultForPlatform() {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return CompareNavMode.headerIcon;
+    }
+    return CompareNavMode.bottomNav;
+  }
+}
 
 class ThemeColorOption {
   const ThemeColorOption({
@@ -88,15 +123,18 @@ class AppSettings extends ChangeNotifier {
   static const _localeKey = 'settings_locale';
   static const _themeModeKey = 'settings_theme_mode';
   static const _colorKey = 'settings_theme_color';
+  static const _compareNavKey = 'settings_compare_nav_mode';
 
   Locale _locale = const Locale('zh');
   ThemeMode _themeMode = ThemeMode.system;
   String _colorId = 'teal';
+  CompareNavMode _compareNavMode = CompareNavMode.defaultForPlatform();
   bool _ready = false;
 
   Locale get locale => _locale;
   ThemeMode get themeMode => _themeMode;
   String get colorId => _colorId;
+  CompareNavMode get compareNavMode => _compareNavMode;
   bool get ready => _ready;
   bool get isZh => _locale.languageCode == 'zh';
 
@@ -112,6 +150,7 @@ class AppSettings extends ChangeNotifier {
     final localeCode = prefs.getString(_localeKey);
     final themeModeName = prefs.getString(_themeModeKey);
     final colorId = prefs.getString(_colorKey);
+    final compareNavRaw = prefs.getString(_compareNavKey);
 
     if (localeCode == 'en' || localeCode == 'zh') {
       _locale = Locale(localeCode!);
@@ -124,6 +163,11 @@ class AppSettings extends ChangeNotifier {
     }
     if (colorId != null && themeColorOptions.any((e) => e.id == colorId)) {
       _colorId = colorId;
+    }
+    if (compareNavRaw != null) {
+      _compareNavMode = CompareNavMode.fromJson(compareNavRaw);
+    } else {
+      _compareNavMode = CompareNavMode.defaultForPlatform();
     }
     _ready = true;
     notifyListeners();
@@ -152,5 +196,13 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_colorKey, id);
+  }
+
+  Future<void> setCompareNavMode(CompareNavMode mode) async {
+    if (_compareNavMode == mode) return;
+    _compareNavMode = mode;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_compareNavKey, mode.toJson());
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../screens/compare_page.dart';
 import '../screens/data_manage_page.dart';
 import '../screens/settings_page.dart';
 import '../screens/suppliers_page.dart';
@@ -28,6 +29,17 @@ class AppNavigator {
       MaterialPageRoute<void>(
         settings: const RouteSettings(name: SettingsPage.routeName),
         builder: (_) => const SettingsPage(),
+      ),
+    );
+  }
+
+  static Future<void> openCompare() async {
+    final navigator = key.currentState;
+    if (navigator == null) return;
+    await navigator.push(
+      MaterialPageRoute<void>(
+        settings: const RouteSettings(name: ComparePage.routeName),
+        builder: (_) => const ComparePage(),
       ),
     );
   }

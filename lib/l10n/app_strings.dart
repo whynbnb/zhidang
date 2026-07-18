@@ -42,6 +42,22 @@ class AppStrings {
   String get languageZh => isZh ? '中文' : 'Chinese';
   String get languageEn => isZh ? 'English' : 'English';
   String get appearance => isZh ? '外观' : 'Appearance';
+  String get compareEntry => isZh ? '比价入口' : 'Compare entry';
+  String get compareEntryHint => isZh
+      ? '选择如何进入跨商品比价'
+      : 'Choose how to open cross-product compare';
+  String get compareNavBottom => isZh ? '底部导航' : 'Bottom tabs';
+  String get compareNavBottomHint => isZh
+      ? '底部显示「商品 / 比价」标签'
+      : 'Show Products / Compare in the bottom bar';
+  String get compareNavHeader => isZh ? '顶部图标' : 'Header icon';
+  String get compareNavHeaderHint => isZh
+      ? '在设置左侧显示比价图标（安卓默认）'
+      : 'Show compare icon left of settings (Android default)';
+  String get compareNavDisabled => isZh ? '关闭入口' : 'Hidden';
+  String get compareNavDisabledHint => isZh
+      ? '隐藏所有比价入口'
+      : 'Hide all compare entry points';
   String get themeMode => isZh ? '主题模式' : 'Theme mode';
   String get themeSystem => isZh ? '系统' : 'System';
   String get themeLight => isZh ? '浅色' : 'Light';

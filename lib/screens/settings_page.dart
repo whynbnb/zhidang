@@ -29,14 +29,17 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final settings = AppSettings.instance;
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(s.settings),
       ),
-      body: ListView(
+      body: ListenableBuilder(
+        listenable: AppSettings.instance,
+        builder: (context, _) {
+          final settings = AppSettings.instance;
+          return ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           _SectionTitle(s.language),
@@ -152,6 +155,60 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _SectionTitle(s.compareEntry),
+          Card(
+            elevation: 0,
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: scheme.outlineVariant),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(Icons.view_agenda_outlined, color: scheme.primary),
+                  title: Text(s.compareNavBottom),
+                  subtitle: Text(s.compareNavBottomHint),
+                  trailing: settings.compareNavMode == CompareNavMode.bottomNav
+                      ? Icon(Icons.check_circle, color: scheme.primary)
+                      : null,
+                  onTap: () =>
+                      settings.setCompareNavMode(CompareNavMode.bottomNav),
+                ),
+                Divider(
+                  height: 1,
+                  indent: 56,
+                  color: scheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+                ListTile(
+                  leading: Icon(Icons.balance_outlined, color: scheme.primary),
+                  title: Text(s.compareNavHeader),
+                  subtitle: Text(s.compareNavHeaderHint),
+                  trailing: settings.compareNavMode == CompareNavMode.headerIcon
+                      ? Icon(Icons.check_circle, color: scheme.primary)
+                      : null,
+                  onTap: () =>
+                      settings.setCompareNavMode(CompareNavMode.headerIcon),
+                ),
+                Divider(
+                  height: 1,
+                  indent: 56,
+                  color: scheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+                ListTile(
+                  leading: Icon(Icons.visibility_off_outlined, color: scheme.primary),
+                  title: Text(s.compareNavDisabled),
+                  subtitle: Text(s.compareNavDisabledHint),
+                  trailing: settings.compareNavMode == CompareNavMode.disabled
+                      ? Icon(Icons.check_circle, color: scheme.primary)
+                      : null,
+                  onTap: () =>
+                      settings.setCompareNavMode(CompareNavMode.disabled),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 20),
@@ -300,6 +357,8 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
         ],
+          );
+        },
       ),
     );
   }

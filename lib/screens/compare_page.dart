@@ -15,6 +15,8 @@ final _currency = NumberFormat('#,##0.##');
 class ComparePage extends StatefulWidget {
   const ComparePage({super.key});
 
+  static const routeName = '/compare';
+
   @override
   State<ComparePage> createState() => ComparePageState();
 }
