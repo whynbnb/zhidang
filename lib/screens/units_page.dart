@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../models/custom_unit.dart';
 import '../services/unit_store.dart';
+import '../utils/ime_focus.dart';
 import '../settings/app_settings.dart';
 
 class UnitsPage extends StatefulWidget {
@@ -291,6 +292,7 @@ class _UnitFormSheet extends StatefulWidget {
 
 class _UnitFormSheetState extends State<_UnitFormSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _nameFocus = FocusNode();
   late final TextEditingController _name;
   late final TextEditingController _note;
 
@@ -299,10 +301,14 @@ class _UnitFormSheetState extends State<_UnitFormSheet> {
     super.initState();
     _name = TextEditingController(text: widget.unit?.name ?? '');
     _note = TextEditingController(text: widget.unit?.note ?? '');
+    if (widget.unit == null) {
+      scheduleTextFocus(_nameFocus);
+    }
   }
 
   @override
   void dispose() {
+    _nameFocus.dispose();
     _name.dispose();
     _note.dispose();
     super.dispose();
@@ -341,7 +347,8 @@ class _UnitFormSheetState extends State<_UnitFormSheet> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _name,
-              autofocus: !editing,
+              focusNode: _nameFocus,
+              autofocus: !editing && !prefersDelayedTextFocus,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: s.unitName,

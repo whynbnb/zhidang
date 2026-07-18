@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../models/supplier.dart';
 import '../services/supplier_store.dart';
+import '../utils/ime_focus.dart';
 
 class SuppliersPage extends StatefulWidget {
   const SuppliersPage({super.key});
@@ -311,6 +312,7 @@ class _SupplierFormSheet extends StatefulWidget {
 
 class _SupplierFormSheetState extends State<_SupplierFormSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _nameFocus = FocusNode();
   late final TextEditingController _name;
   late final TextEditingController _note;
   late final TextEditingController _address;
@@ -323,10 +325,14 @@ class _SupplierFormSheetState extends State<_SupplierFormSheet> {
     _note = TextEditingController(text: widget.supplier?.note ?? '');
     _address = TextEditingController(text: widget.supplier?.address ?? '');
     _types = {...(widget.supplier?.types ?? const [])};
+    if (widget.supplier == null) {
+      scheduleTextFocus(_nameFocus);
+    }
   }
 
   @override
   void dispose() {
+    _nameFocus.dispose();
     _name.dispose();
     _note.dispose();
     _address.dispose();
@@ -385,7 +391,8 @@ class _SupplierFormSheetState extends State<_SupplierFormSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _name,
-                autofocus: !editing,
+                focusNode: _nameFocus,
+                autofocus: !editing && !prefersDelayedTextFocus,
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: s.supplierName,

@@ -107,6 +107,47 @@ class AppStrings {
   String get suppliersManageHint => isZh
       ? '预先维护超市、电商等购买渠道'
       : 'Predefine stores and purchase channels';
+  String get categories => isZh ? '商品大类' : 'Categories';
+  String get categoriesManage => isZh ? '管理商品大类' : 'Manage categories';
+  String get categoriesManageHint => isZh
+      ? '如肉类、纸品；大类内商品共享单位并可自动比价'
+      : 'e.g. meat, paper; shared units and auto compare';
+  String get addCategory => isZh ? '添加大类' : 'Add category';
+  String get editCategory => isZh ? '编辑大类' : 'Edit category';
+  String get deleteCategory => isZh ? '删除大类' : 'Delete category';
+  String deleteCategoryConfirm(String name) =>
+      isZh ? '确定删除大类「$name」？成员商品将解除关联。' : 'Delete category "$name"? Products will be unlinked.';
+  String get categoryName => isZh ? '大类名称' : 'Category name';
+  String get categoryNameHint =>
+      isZh ? '例如：肉类、乳品、纸品' : 'e.g. meat, dairy, paper';
+  String get categoryNameRequired =>
+      isZh ? '请填写大类名称' : 'Please enter a category name';
+  String get categoryNameExists =>
+      isZh ? '该大类已存在' : 'This category already exists';
+  String get categoryUnit => isZh ? '大类单位' : 'Category units';
+  String get categoryUnitHint => isZh
+      ? '可多选；加入该大类的商品会继承这些单位；移除时若无相关报价数据可自动去掉'
+      : 'Multi-select; member products inherit these units; unused ones can drop when leaving';
+  String get searchCategories =>
+      isZh ? '搜索大类' : 'Search categories';
+  String get noCategories => isZh ? '还没有商品大类' : 'No categories yet';
+  String get noCategoryResults => isZh ? '没有匹配的大类' : 'No matching categories';
+  String get categoriesHint => isZh
+      ? '把同类商品归到大类后，可共享单位并在比价页自动成组。'
+      : 'Group related products to share a unit and auto-compare.';
+  String categoryCount(int n) =>
+      isZh ? '共 $n 个大类' : (n == 1 ? '1 category' : '$n categories');
+  String get productCategory => isZh ? '所属大类' : 'Category';
+  String get productCategoryHint => isZh
+      ? '可选；加入后继承大类单位'
+      : 'Optional; inherits the category unit';
+  String get categoryCompare => isZh ? '大类比价' : 'Category compare';
+  String get categoryCompareHint => isZh
+      ? '同大类商品已对齐单位，可直接打开比价'
+      : 'Same-category products share a unit — open to compare';
+  String get categoryNeedTwoProducts => isZh
+      ? '该大类至少需要 2 个商品'
+      : 'Need at least 2 products in this category';
   String get addSupplier => isZh ? '添加供应商' : 'Add supplier';
   String get editSupplier => isZh ? '编辑供应商' : 'Edit supplier';
   String get deleteSupplier => isZh ? '删除供应商' : 'Delete supplier';
@@ -187,23 +228,23 @@ class AppStrings {
 
   String get dataManage => isZh ? '数据管理' : 'Data management';
   String get dataManageHint => isZh
-      ? '导入、导出或清空商品、供应商、单位与比价组'
-      : 'Import, export or clear products, suppliers, units and compare groups';
+      ? '导入、导出或清空商品、供应商、大类、单位与比价组'
+      : 'Import, export or clear products, suppliers, categories, units and compare groups';
   String get exportData => isZh ? '导出数据' : 'Export data';
   String get exportDataHint => isZh
-      ? '导出商品、供应商、单位与比价组为 JSON'
-      : 'Export products, suppliers, units and compare groups as JSON';
+      ? '导出商品、供应商、大类、单位与比价组为 JSON'
+      : 'Export products, suppliers, categories, units and compare groups as JSON';
   String get importData => isZh ? '导入数据' : 'Import data';
   String get importDataHint => isZh
       ? '从备份恢复；将覆盖当前数据'
       : 'Restore from backup; replaces current data';
   String get importDataConfirm => isZh
-      ? '导入将覆盖现有商品、供应商、单位和比价组，是否继续？'
-      : 'Import will replace products, suppliers, units and compare groups. Continue?';
+      ? '导入将覆盖现有商品、供应商、大类、单位和比价组，是否继续？'
+      : 'Import will replace products, suppliers, categories, units and compare groups. Continue?';
   String get clearData => isZh ? '清空全部数据' : 'Clear all data';
   String get clearDataHint => isZh
-      ? '删除全部商品、供应商与比价组，并恢复默认单位'
-      : 'Delete all products, suppliers and compare groups; reset units';
+      ? '删除全部商品、供应商、大类与比价组，并恢复默认单位'
+      : 'Delete all products, suppliers, categories and compare groups; reset units';
   String get clearDataConfirm => isZh
       ? '确定清空全部数据？此操作不可撤销。'
       : 'Clear all data? This cannot be undone.';
@@ -221,11 +262,12 @@ class AppStrings {
     int products,
     int suppliers,
     int units,
-    int comparisons,
-  ) =>
+    int comparisons, {
+    int categories = 0,
+  }) =>
       isZh
-          ? '将导入 $products 个商品、$suppliers 个供应商、$units 个单位、$comparisons 个比价组'
-          : 'Will import $products products, $suppliers suppliers, $units units, $comparisons groups';
+          ? '将导入 $products 个商品、$suppliers 个供应商、$categories 个大类、$units 个单位、$comparisons 个比价组'
+          : 'Will import $products products, $suppliers suppliers, $categories categories, $units units, $comparisons groups';
 
   String get about => isZh ? '关于' : 'About';
   String get aboutBody => isZh

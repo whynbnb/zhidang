@@ -402,6 +402,7 @@ class Product {
     String? unit,
     List<UnitRelation>? relations,
     List<String>? tags,
+    this.categoryId,
     this.note = '',
     List<Offer>? offers,
     DateTime? updatedAt,
@@ -418,6 +419,8 @@ class Product {
   /// Optional default template for new offers (not forced on existing offers).
   List<UnitRelation> relations;
   List<String> tags;
+  /// Optional product category (大类) id.
+  String? categoryId;
   String note;
   List<Offer> offers;
   DateTime updatedAt;
@@ -550,6 +553,8 @@ class Product {
         'unit': unit,
         'relations': relations.map((e) => e.toJson()).toList(),
         'tags': tags,
+        if (categoryId != null && categoryId!.isNotEmpty)
+          'categoryId': categoryId,
         'note': note,
         'offers': offers.map((e) => e.toJson()).toList(),
         'updatedAt': updatedAt.toIso8601String(),
@@ -577,6 +582,7 @@ class Product {
           ),
         )
         .toList();
+    final categoryId = (json['categoryId'] as String?)?.trim();
 
     return Product(
       id: json['id'] as String?,
@@ -585,6 +591,7 @@ class Product {
       unit: fallback,
       relations: relations,
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+      categoryId: (categoryId == null || categoryId.isEmpty) ? null : categoryId,
       note: json['note'] as String? ?? '',
       offers: offers,
       updatedAt: json['updatedAt'] != null
@@ -599,6 +606,8 @@ class Product {
     String? unit,
     List<UnitRelation>? relations,
     List<String>? tags,
+    String? categoryId,
+    bool clearCategory = false,
     String? note,
     List<Offer>? offers,
   }) =>
@@ -609,6 +618,7 @@ class Product {
         unit: unit ?? this.unit,
         relations: relations ?? this.relations,
         tags: tags ?? this.tags,
+        categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
         note: note ?? this.note,
         offers: offers ?? this.offers,
         updatedAt: DateTime.now(),

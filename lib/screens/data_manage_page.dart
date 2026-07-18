@@ -45,6 +45,7 @@ class DataManagePage extends StatelessWidget {
                   payload.suppliers.length,
                   payload.units.length,
                   payload.comparisons.length,
+                  categories: payload.categories.length,
                 ),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,

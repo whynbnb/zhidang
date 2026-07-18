@@ -10,8 +10,10 @@ import 'package:share_plus/share_plus.dart';
 import '../models/comparison_group.dart';
 import '../models/custom_unit.dart';
 import '../models/product.dart';
+import '../models/product_category.dart';
 import '../models/supplier.dart';
 import '../settings/app_settings.dart';
+import 'category_store.dart';
 import 'comparison_store.dart';
 import 'data_revision.dart';
 import 'storage_service.dart';
@@ -24,6 +26,7 @@ class BackupPayload {
     required this.suppliers,
     required this.units,
     required this.comparisons,
+    this.categories = const [],
     this.exportedAt,
     this.version = 1,
   });
@@ -32,6 +35,7 @@ class BackupPayload {
   final DateTime? exportedAt;
   final List<Product> products;
   final List<Supplier> suppliers;
+  final List<ProductCategory> categories;
   final List<CustomUnit> units;
   final List<ComparisonGroup> comparisons;
 }
@@ -53,6 +57,8 @@ class BackupService {
       'products': products.map((e) => e.toJson()).toList(),
       'suppliers':
           SupplierStore.instance.suppliers.map((e) => e.toJson()).toList(),
+      'categories':
+          CategoryStore.instance.categories.map((e) => e.toJson()).toList(),
       'units': UnitStore.instance.units.map((e) => e.toJson()).toList(),
       'comparisons':
           ComparisonStore.instance.groups.map((e) => e.toJson()).toList(),
@@ -104,12 +110,21 @@ class BackupService {
     final comparisonsRaw = map['comparisons'];
     final comparisonsList =
         comparisonsRaw is List ? comparisonsRaw : const [];
+    final categoriesRaw = map['categories'];
+    final categoriesList = categoriesRaw is List ? categoriesRaw : const [];
 
     final products = productsRaw
         .map((e) => Product.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
     final suppliers = suppliersRaw
         .map((e) => Supplier.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+    final categories = categoriesList
+        .map(
+          (e) =>
+              ProductCategory.fromJson(Map<String, dynamic>.from(e as Map)),
+        )
+        .where((c) => c.name.trim().isNotEmpty)
         .toList();
     final units = unitsRaw
         .map((e) => CustomUnit.fromJson(Map<String, dynamic>.from(e as Map)))
@@ -130,6 +145,7 @@ class BackupService {
           : null,
       products: products,
       suppliers: suppliers,
+      categories: categories,
       units: units,
       comparisons: comparisons,
     );
@@ -157,6 +173,7 @@ class BackupService {
   Future<void> apply(BackupPayload payload) async {
     await _storage.saveProducts(payload.products);
     await SupplierStore.instance.replaceAll(payload.suppliers);
+    await CategoryStore.instance.replaceAll(payload.categories);
     if (payload.units.isEmpty) {
       await UnitStore.instance.resetToDefaults(AppSettings.instance.locale);
     } else {
@@ -169,6 +186,7 @@ class BackupService {
   Future<void> clearAll() async {
     await _storage.saveProducts([]);
     await SupplierStore.instance.clear();
+    await CategoryStore.instance.clear();
     await ComparisonStore.instance.clear();
     await UnitStore.instance.resetToDefaults(AppSettings.instance.locale);
     DataRevision.bump();

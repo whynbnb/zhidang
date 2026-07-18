@@ -5,10 +5,13 @@ import '../app/app_navigator.dart';
 import '../l10n/app_strings.dart';
 import '../models/comparison_group.dart';
 import '../models/product.dart';
+import '../models/product_category.dart';
+import '../services/category_store.dart';
 import '../services/comparison_store.dart';
 import '../services/data_revision.dart';
 import '../services/storage_service.dart';
 import '../utils/comparison_logic.dart';
+import '../utils/ime_focus.dart';
 import '../utils/layout.dart';
 import '../widgets/app_header_actions.dart';
 
@@ -29,8 +32,10 @@ class ComparePageState extends State<ComparePage> {
   bool _loading = true;
   int _seenRevision = DataRevision.notifier.value;
 
-  /// Wide split: selected fixed group id (null = none / temp session).
+  /// Wide split: selected fixed group id (null = none / temp / category).
   String? _selectedGroupId;
+  /// Wide split: selected auto category id.
+  String? _selectedCategoryId;
   /// Wide split temporary session.
   List<Product>? _tempProducts;
   String? _tempTitle;
@@ -94,6 +99,7 @@ class ComparePageState extends State<ComparePage> {
     if (AppLayout.isWide(context)) {
       setState(() {
         _selectedGroupId = null;
+        _selectedCategoryId = null;
         _tempProducts = selected;
         _tempTitle = s.tempCompare;
       });
@@ -224,6 +230,7 @@ class ComparePageState extends State<ComparePage> {
       setState(() {
         _tempProducts = null;
         _tempTitle = null;
+        _selectedCategoryId = null;
         _selectedGroupId = group.id;
       });
       return;
@@ -237,6 +244,44 @@ class ComparePageState extends State<ComparePage> {
           temporary: false,
           group: group,
           onEditGroup: () => _addOrEditGroup(group),
+        ),
+      ),
+    );
+  }
+
+  List<Product> _productsInCategory(ProductCategory category) {
+    return _products
+        .where((p) => p.categoryId == category.id)
+        .toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  }
+
+  Future<void> _openCategory(ProductCategory category) async {
+    final s = AppStrings.of(context);
+    final products = _productsInCategory(category);
+    if (products.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.categoryNeedTwoProducts)),
+      );
+      return;
+    }
+    final preferred = category.unit;
+    if (AppLayout.isWide(context)) {
+      setState(() {
+        _tempProducts = null;
+        _tempTitle = null;
+        _selectedGroupId = null;
+        _selectedCategoryId = category.id;
+      });
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CompareSessionPage(
+          title: category.name,
+          products: products,
+          preferredUnit: preferred,
+          temporary: true,
         ),
       ),
     );
@@ -262,6 +307,24 @@ class ComparePageState extends State<ComparePage> {
         temporary: true,
         embedded: true,
       );
+    }
+    if (_selectedCategoryId != null) {
+      final cat = CategoryStore.instance.byId(_selectedCategoryId);
+      if (cat != null) {
+        final products = _productsInCategory(cat);
+        if (products.length >= 2) {
+          return CompareSessionPage(
+            key: ValueKey(
+              'cat-${cat.id}-${products.map((p) => p.id).join(',')}',
+            ),
+            title: cat.name,
+            products: products,
+            preferredUnit: cat.unit,
+            temporary: true,
+            embedded: true,
+          );
+        }
+      }
     }
     final group = _groupById(_selectedGroupId);
     if (group != null) {
@@ -302,14 +365,26 @@ class ComparePageState extends State<ComparePage> {
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
     return ListenableBuilder(
-      listenable: ComparisonStore.instance,
+      listenable: Listenable.merge([
+        ComparisonStore.instance,
+        CategoryStore.instance,
+      ]),
       builder: (context, _) {
         final groups = ComparisonStore.instance.groups;
+        final categories = CategoryStore.instance.categories
+            .where((c) => _productsInCategory(c).length >= 2)
+            .toList();
         // Drop selection if group was deleted.
         if (_selectedGroupId != null &&
             !groups.any((g) => g.id == _selectedGroupId)) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) setState(() => _selectedGroupId = null);
+          });
+        }
+        if (_selectedCategoryId != null &&
+            !categories.any((c) => c.id == _selectedCategoryId)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _selectedCategoryId = null);
           });
         }
         return ListView(
@@ -319,6 +394,73 @@ class ComparePageState extends State<ComparePage> {
               enabled: _products.length >= 2,
               onTap: _startTemporary,
             ),
+            if (categories.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                s.categoryCompare,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                s.categoryCompareHint,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              ...categories.map((c) {
+                final members = _productsInCategory(c);
+                final names = members.map((p) => p.name).toList();
+                final selected = c.id == _selectedCategoryId &&
+                    _tempProducts == null &&
+                    _selectedGroupId == null;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Card(
+                    elevation: 0,
+                    color: selected
+                        ? scheme.primaryContainer.withValues(alpha: 0.35)
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: selected
+                            ? scheme.primary
+                            : scheme.outlineVariant,
+                        width: selected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: scheme.tertiaryContainer,
+                        foregroundColor: scheme.onTertiaryContainer,
+                        child: const Icon(Icons.category_outlined),
+                      ),
+                      title: Text(
+                        c.name,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Text(
+                        s.groupProductSummary(
+                          names.length,
+                          names.take(3).join(' · '),
+                        ),
+                      ),
+                      trailing: Text(
+                        c.units.join(' / '),
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: scheme.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      onTap: () => _openCategory(c),
+                    ),
+                  ),
+                );
+              }),
+            ],
             const SizedBox(height: 20),
             Text(
               s.fixedCompare,
@@ -346,7 +488,9 @@ class ComparePageState extends State<ComparePage> {
                     .whereType<String>()
                     .toList();
                 final invalid = _validateGroup(g) != null;
-                final selected = g.id == _selectedGroupId && _tempProducts == null;
+                final selected = g.id == _selectedGroupId &&
+                    _tempProducts == null &&
+                    _selectedCategoryId == null;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Card(
@@ -1171,6 +1315,7 @@ class _ComparisonGroupFormSheet extends StatefulWidget {
 
 class _ComparisonGroupFormSheetState extends State<_ComparisonGroupFormSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _nameFocus = FocusNode();
   late final TextEditingController _name;
   late final TextEditingController _note;
   late Set<String> _selected;
@@ -1184,10 +1329,14 @@ class _ComparisonGroupFormSheetState extends State<_ComparisonGroupFormSheet> {
     _note = TextEditingController(text: g?.note ?? '');
     _selected = {...(g?.productIds ?? const [])};
     _preferredUnit = g?.preferredUnit ?? '';
+    if (g == null) {
+      scheduleTextFocus(_nameFocus);
+    }
   }
 
   @override
   void dispose() {
+    _nameFocus.dispose();
     _name.dispose();
     _note.dispose();
     super.dispose();
@@ -1259,7 +1408,8 @@ class _ComparisonGroupFormSheetState extends State<_ComparisonGroupFormSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _name,
-                autofocus: !editing,
+                focusNode: _nameFocus,
+                autofocus: !editing && !prefersDelayedTextFocus,
                 decoration: InputDecoration(
                   labelText: s.groupName,
                   hintText: s.groupNameHint,

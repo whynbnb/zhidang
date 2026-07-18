@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
+import '../services/category_store.dart';
 import '../services/supplier_store.dart';
 import '../services/unit_store.dart';
+import '../utils/ime_focus.dart';
 import '../utils/quantity_presets.dart';
 import '../widgets/tag_chips.dart';
 
@@ -40,12 +42,14 @@ class _ProductFormSheet extends StatefulWidget {
 
 class _ProductFormSheetState extends State<_ProductFormSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _nameFocus = FocusNode();
   late final TextEditingController _name;
   late final TextEditingController _note;
   late Set<String> _units;
   late Set<String> _tags;
   late List<UnitRelation> _relations;
   late String _displayUnit;
+  String? _categoryId;
 
   @override
   void initState() {
@@ -55,10 +59,29 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
     _units = {...(widget.product?.units ?? const ['g'])};
     _tags = {...(widget.product?.tags ?? const [])};
     _relations = [...(widget.product?.relations ?? const [])];
+    _categoryId = widget.product?.categoryId;
     final current = widget.product?.displayUnit;
     _displayUnit = (current != null && _units.contains(current))
         ? current
         : (_units.isNotEmpty ? _units.first : 'g');
+    _ensureCategoryUnit();
+    if (widget.product == null) {
+      scheduleTextFocus(_nameFocus);
+    }
+  }
+
+  void _ensureCategoryUnit() {
+    final cat = CategoryStore.instance.byId(_categoryId);
+    if (cat == null) return;
+    for (final u in cat.units) {
+      _units.add(normalizeUnit(u));
+    }
+  }
+
+  Set<String> get _lockedCategoryUnits {
+    final cat = CategoryStore.instance.byId(_categoryId);
+    if (cat == null) return const {};
+    return {for (final u in cat.units) normalizeUnit(u)};
   }
 
   void _setDisplayUnit(String unit) {
@@ -67,6 +90,8 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
   }
 
   void _toggleUnit(String unit, bool selected) {
+    final locked = _lockedCategoryUnits.contains(normalizeUnit(unit));
+    if (!selected && locked) return;
     setState(() {
       if (selected) {
         _units.add(unit);
@@ -80,8 +105,41 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
     });
   }
 
+  void _setCategory(String? id) {
+    final previousId = _categoryId;
+    final nextId = (id == null || id.isEmpty) ? null : id;
+    setState(() {
+      if (previousId != null && previousId != nextId) {
+        final prev = CategoryStore.instance.byId(previousId);
+        if (prev != null) {
+          for (final raw in prev.units) {
+            final u = normalizeUnit(raw);
+            final keep = widget.product != null &&
+                CategoryUnitSync.hasUnitData(widget.product!, u);
+            if (!keep && _units.length > 1) {
+              _units.remove(u);
+            }
+          }
+        }
+      }
+      _categoryId = nextId;
+      if (nextId != null) {
+        final cat = CategoryStore.instance.byId(nextId);
+        if (cat != null) {
+          for (final u in cat.units) {
+            _units.add(normalizeUnit(u));
+          }
+        }
+      }
+      if (_units.isNotEmpty && !_units.contains(_displayUnit)) {
+        _displayUnit = _units.first;
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _nameFocus.dispose();
     _name.dispose();
     _note.dispose();
     super.dispose();
@@ -100,13 +158,14 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
         selected.contains(_displayUnit) ? _displayUnit : selected.first;
     final tags = _tags.toList();
     final base = widget.product;
-    final result = base == null
+    final draft = base == null
         ? Product(
             name: _name.text.trim(),
             units: selected,
             unit: display,
             relations: _relations,
             tags: tags,
+            categoryId: _categoryId,
             note: _note.text.trim(),
           )
         : base.copyWith(
@@ -115,8 +174,16 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
             unit: display,
             relations: _relations,
             tags: tags,
+            categoryId: _categoryId,
+            clearCategory: _categoryId == null || _categoryId!.isEmpty,
             note: _note.text.trim(),
           );
+    final result = CategoryUnitSync.applyAssignment(
+      draft,
+      previousCategoryId: base?.categoryId,
+      newCategoryId: _categoryId,
+      resolve: CategoryStore.instance.byId,
+    );
     Navigator.of(context).pop(ProductFormResult.saved(result));
   }
 
@@ -201,7 +268,8 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _name,
-                autofocus: !editing,
+                focusNode: _nameFocus,
+                autofocus: !editing && !prefersDelayedTextFocus,
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: s.productName,
@@ -211,6 +279,50 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                 validator: (v) => (v == null || v.trim().isEmpty)
                     ? s.productNameRequired
                     : null,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                s.productCategory,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                s.productCategoryHint,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 10),
+              ListenableBuilder(
+                listenable: CategoryStore.instance,
+                builder: (context, _) {
+                  final cats = CategoryStore.instance.categories;
+                  return DropdownButtonFormField<String?>(
+                    // ignore: deprecated_member_use
+                    value: cats.any((c) => c.id == _categoryId)
+                        ? _categoryId
+                        : null,
+                    decoration: InputDecoration(
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                      hintText: s.noneOption,
+                    ),
+                    items: [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text(s.noneOption),
+                      ),
+                      for (final c in cats)
+                        DropdownMenuItem<String?>(
+                          value: c.id,
+                          child: Text('${c.name} · ${c.units.join(' / ')}'),
+                        ),
+                    ],
+                    onChanged: _setCategory,
+                  );
+                },
               ),
               const SizedBox(height: 16),
               Text(
@@ -721,6 +833,7 @@ class _OfferFormSheet extends StatefulWidget {
 
 class _OfferFormSheetState extends State<_OfferFormSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _brandFocus = FocusNode();
   late final TextEditingController _brand;
   late final TextEditingController _price;
   late final TextEditingController _shop;
@@ -803,6 +916,9 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     _shop = TextEditingController(text: shopText);
     _shopInitial = TextEditingValue(text: shopText);
     _note = TextEditingController(text: o?.note ?? '');
+    if (o == null) {
+      scheduleTextFocus(_brandFocus);
+    }
   }
 
   String _fmt(double v) {
@@ -826,6 +942,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
 
   @override
   void dispose() {
+    _brandFocus.dispose();
     _brand.dispose();
     _price.dispose();
     _shop.dispose();
@@ -1082,7 +1199,8 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _brand,
-                autofocus: !editing,
+                focusNode: _brandFocus,
+                autofocus: !editing && !prefersDelayedTextFocus,
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: s.brandOrSpec,

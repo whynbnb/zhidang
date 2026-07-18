@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../services/app_icon_service.dart';
 import '../settings/app_settings.dart';
+import 'categories_page.dart';
 import 'data_manage_page.dart';
 import 'navigation_settings_page.dart';
 import 'suppliers_page.dart';
@@ -271,6 +272,28 @@ class SettingsPage extends StatelessWidget {
                           name: SuppliersPage.routeName,
                         ),
                         builder: (_) => const SuppliersPage(),
+                      ),
+                    );
+                  },
+                ),
+                Divider(
+                  height: 1,
+                  indent: 56,
+                  color: scheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+                ListTile(
+                  leading:
+                      Icon(Icons.category_outlined, color: scheme.primary),
+                  title: Text(s.categoriesManage),
+                  subtitle: Text(s.categoriesManageHint),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        settings: const RouteSettings(
+                          name: CategoriesPage.routeName,
+                        ),
+                        builder: (_) => const CategoriesPage(),
                       ),
                     );
                   },
