@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../screens/compare_page.dart';
 import '../screens/home_page.dart';
+import '../screens/settings_page.dart';
 import '../settings/app_settings.dart';
 
-/// Root shell: products + optional compare entry (bottom / side / header / off).
+/// Root shell: products + optional compare / settings on nav bar or header.
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -16,11 +17,13 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
   final _compareKey = GlobalKey<ComparePageState>();
+  List<ShellNavDestination> _destinations = const [];
 
   @override
   void initState() {
     super.initState();
     AppSettings.instance.addListener(_onSettings);
+    _destinations = AppSettings.instance.navDestinations;
   }
 
   @override
@@ -30,18 +33,65 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _onSettings() {
-    final mode = AppSettings.instance.compareNavMode;
-    if (mode != CompareNavMode.bottomNav && _index != 0) {
-      setState(() => _index = 0);
-    } else {
-      setState(() {});
+    final next = AppSettings.instance.navDestinations;
+    var index = _index;
+    if (next.isEmpty) {
+      index = 0;
+    } else if (index >= next.length) {
+      index = 0;
+    } else if (_destinations.isNotEmpty &&
+        index < _destinations.length &&
+        !next.contains(_destinations[index])) {
+      index = 0;
     }
+    setState(() {
+      _destinations = next;
+      _index = index;
+    });
   }
 
   void _select(int i) {
+    if (i < 0 || i >= _destinations.length) return;
     setState(() => _index = i);
-    if (i == 1) {
+    if (_destinations[i] == ShellNavDestination.compare) {
       _compareKey.currentState?.reload();
+    }
+  }
+
+  Widget _pageFor(ShellNavDestination d) {
+    switch (d) {
+      case ShellNavDestination.products:
+        return const HomePage();
+      case ShellNavDestination.compare:
+        return ComparePage(key: _compareKey);
+      case ShellNavDestination.settings:
+        return const SettingsPage(embedded: true);
+    }
+  }
+
+  NavigationDestination _navDestination(
+    AppStrings s,
+    ShellNavDestination d,
+  ) {
+    switch (d) {
+      case ShellNavDestination.products:
+        return NavigationDestination(
+          icon: const Icon(Icons.inventory_2_outlined),
+          selectedIcon: const Icon(Icons.inventory_2),
+          label: s.tabProducts,
+        );
+      case ShellNavDestination.compare:
+        return NavigationDestination(
+          icon: const Icon(Icons.balance_outlined),
+          selectedIcon: const Icon(Icons.balance),
+          label: s.tabCompare,
+        );
+      case ShellNavDestination.settings:
+        return NavigationDestination(
+          icon: const Icon(Icons.settings_outlined),
+          selectedIcon: const Icon(Icons.settings),
+          label: s.settings,
+        );
     }
   }
 
@@ -49,43 +99,39 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final settings = AppSettings.instance;
-    final mode = settings.compareNavMode;
-    final useNav = mode == CompareNavMode.bottomNav;
-    final useSidebar = useNav && settings.useSidebarNav(context);
+    final dests = settings.navDestinations;
+    final showNav = dests.isNotEmpty;
+    final useSidebar = showNav && settings.useSidebarNav(context);
 
-    final destinations = [
-      NavigationDestination(
-        icon: const Icon(Icons.inventory_2_outlined),
-        selectedIcon: const Icon(Icons.inventory_2),
-        label: s.tabProducts,
-      ),
-      NavigationDestination(
-        icon: const Icon(Icons.balance_outlined),
-        selectedIcon: const Icon(Icons.balance),
-        label: s.tabCompare,
-      ),
-    ];
+    // Keep destinations list in sync without relying solely on listener race.
+    if (dests.length != _destinations.length ||
+        !_listEq(dests, _destinations)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _onSettings();
+      });
+    }
 
-    final body = useNav
+    final body = showNav
         ? IndexedStack(
-            index: _index,
-            children: [
-              const HomePage(),
-              ComparePage(key: _compareKey),
-            ],
+            index: _index.clamp(0, dests.length - 1),
+            children: [for (final d in dests) _pageFor(d)],
           )
         : const HomePage();
+
+    final navDestinations = [
+      for (final d in dests) _navDestination(s, d),
+    ];
 
     if (useSidebar) {
       return Scaffold(
         body: Row(
           children: [
             NavigationRail(
-              selectedIndex: _index,
+              selectedIndex: _index.clamp(0, dests.length - 1),
               onDestinationSelected: _select,
               labelType: NavigationRailLabelType.all,
               destinations: [
-                for (final d in destinations)
+                for (final d in navDestinations)
                   NavigationRailDestination(
                     icon: d.icon,
                     selectedIcon: d.selectedIcon,
@@ -102,13 +148,21 @@ class _MainShellState extends State<MainShell> {
 
     return Scaffold(
       body: body,
-      bottomNavigationBar: useNav
+      bottomNavigationBar: showNav
           ? NavigationBar(
-              selectedIndex: _index,
+              selectedIndex: _index.clamp(0, dests.length - 1),
               onDestinationSelected: _select,
-              destinations: destinations,
+              destinations: navDestinations,
             )
           : null,
     );
+  }
+
+  bool _listEq(List<ShellNavDestination> a, List<ShellNavDestination> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 }

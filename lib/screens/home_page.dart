@@ -5,8 +5,8 @@ import '../l10n/app_strings.dart';
 import '../models/product.dart';
 import '../services/data_revision.dart';
 import '../services/storage_service.dart';
-import '../settings/app_settings.dart';
 import '../utils/layout.dart';
+import '../widgets/app_header_actions.dart';
 import '../widgets/offer_tile.dart';
 import '../widgets/product_card.dart';
 import '../widgets/tag_chips.dart';
@@ -483,41 +483,11 @@ class _ProductListPane extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
-          child: Row(
-            children: [
-              Icon(Icons.savings_outlined, color: scheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  s.appName,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ),
-              ListenableBuilder(
-                listenable: AppSettings.instance,
-                builder: (context, _) {
-                  final mode = AppSettings.instance.compareNavMode;
-                  if (mode != CompareNavMode.headerIcon) {
-                    return const SizedBox.shrink();
-                  }
-                  return IconButton(
-                    onPressed: () => AppNavigator.openCompare(),
-                    icon: const Icon(Icons.balance_outlined),
-                    tooltip: s.tabCompare,
-                  );
-                },
-              ),
-              IconButton(
-                onPressed: onOpenSettings,
-                icon: const Icon(Icons.settings_outlined),
-                tooltip: s.settings,
-              ),
-            ],
-          ),
+        AppPageHeader(
+          title: s.appName,
+          leading: Icon(Icons.savings_outlined, color: scheme.primary),
+          onOpenSettings: onOpenSettings,
+          showCompare: true,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

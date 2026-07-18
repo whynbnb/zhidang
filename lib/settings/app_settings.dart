@@ -2,15 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// How the compare feature is exposed in the main UI (导航栏模式).
+/// How the compare feature is exposed in the main UI.
 enum CompareNavMode {
-  /// Products / Compare navigation (bottom bar or optional sidebar).
+  /// Products / Compare on the navigation bar (bottom or side).
   bottomNav,
 
-  /// Header icon left of settings (Android default).
+  /// Header icon left of settings (when settings is also header).
   headerIcon,
 
-  /// No entry points; compare feature hidden.
+  /// No compare entry points.
   disabled;
 
   static CompareNavMode fromJson(Object? raw) {
@@ -34,6 +34,48 @@ enum CompareNavMode {
     }
     return CompareNavMode.bottomNav;
   }
+
+  bool get isOnNav => this == CompareNavMode.bottomNav;
+  bool get isOnHeader => this == CompareNavMode.headerIcon;
+}
+
+/// Where the settings entry lives.
+enum SettingsEntryMode {
+  /// Settings tab on the navigation bar (desktop default).
+  navBar,
+
+  /// Settings icon in the page header (mobile default).
+  headerIcon;
+
+  static SettingsEntryMode fromJson(Object? raw) {
+    switch (raw?.toString()) {
+      case 'navBar':
+        return SettingsEntryMode.navBar;
+      case 'headerIcon':
+        return SettingsEntryMode.headerIcon;
+      default:
+        return defaultForPlatform();
+    }
+  }
+
+  String toJson() => name;
+
+  static SettingsEntryMode defaultForPlatform() {
+    if (LayoutCapability.isDesktopPlatform) {
+      return SettingsEntryMode.navBar;
+    }
+    return SettingsEntryMode.headerIcon;
+  }
+
+  bool get isOnNav => this == SettingsEntryMode.navBar;
+  bool get isOnHeader => this == SettingsEntryMode.headerIcon;
+}
+
+/// Destinations that can appear on the shell navigation bar.
+enum ShellNavDestination {
+  products,
+  compare,
+  settings,
 }
 
 /// Desktop / large-window helpers for sidebar navigation.
@@ -154,12 +196,14 @@ class AppSettings extends ChangeNotifier {
   static const _themeModeKey = 'settings_theme_mode';
   static const _colorKey = 'settings_theme_color';
   static const _compareNavKey = 'settings_compare_nav_mode';
+  static const _settingsEntryKey = 'settings_entry_mode';
   static const _sidebarNavKey = 'settings_sidebar_nav';
 
   Locale _locale = const Locale('zh');
   ThemeMode _themeMode = ThemeMode.system;
   String _colorId = 'teal';
   CompareNavMode _compareNavMode = CompareNavMode.defaultForPlatform();
+  SettingsEntryMode _settingsEntryMode = SettingsEntryMode.defaultForPlatform();
   bool _sidebarNavEnabled = LayoutCapability.isDesktopPlatform;
   bool _ready = false;
 
@@ -167,14 +211,32 @@ class AppSettings extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   String get colorId => _colorId;
   CompareNavMode get compareNavMode => _compareNavMode;
-  /// Prefer sidebar over bottom bar when nav mode is bottomNav (desktop / tablet landscape).
+  SettingsEntryMode get settingsEntryMode => _settingsEntryMode;
+  /// Prefer sidebar over bottom bar when nav is visible (desktop / tablet landscape).
   bool get sidebarNavEnabled => _sidebarNavEnabled;
   bool get ready => _ready;
   bool get isZh => _locale.languageCode == 'zh';
 
+  /// Ordered destinations for the shell navigation bar (empty if hidden).
+  List<ShellNavDestination> get navDestinations {
+    final compareOnNav = _compareNavMode.isOnNav;
+    final settingsOnNav = _settingsEntryMode.isOnNav;
+    if (!compareOnNav && !settingsOnNav) return const [];
+    return [
+      ShellNavDestination.products,
+      if (compareOnNav) ShellNavDestination.compare,
+      if (settingsOnNav) ShellNavDestination.settings,
+    ];
+  }
+
+  bool get showsNavigationBar => navDestinations.isNotEmpty;
+
+  bool get showCompareHeaderIcon => _compareNavMode.isOnHeader;
+  bool get showSettingsHeaderIcon => _settingsEntryMode.isOnHeader;
+
   /// Whether shell should render a side rail instead of bottom bar.
   bool useSidebarNav(BuildContext context) {
-    if (_compareNavMode != CompareNavMode.bottomNav) return false;
+    if (!showsNavigationBar) return false;
     if (!_sidebarNavEnabled) return false;
     return LayoutCapability.supportsSidebarSurface(context);
   }
@@ -192,6 +254,7 @@ class AppSettings extends ChangeNotifier {
     final themeModeName = prefs.getString(_themeModeKey);
     final colorId = prefs.getString(_colorKey);
     final compareNavRaw = prefs.getString(_compareNavKey);
+    final settingsEntryRaw = prefs.getString(_settingsEntryKey);
     final sidebarRaw = prefs.getBool(_sidebarNavKey);
 
     if (localeCode == 'en' || localeCode == 'zh') {
@@ -211,8 +274,12 @@ class AppSettings extends ChangeNotifier {
     } else {
       _compareNavMode = CompareNavMode.defaultForPlatform();
     }
-    _sidebarNavEnabled =
-        sidebarRaw ?? LayoutCapability.isDesktopPlatform;
+    if (settingsEntryRaw != null) {
+      _settingsEntryMode = SettingsEntryMode.fromJson(settingsEntryRaw);
+    } else {
+      _settingsEntryMode = SettingsEntryMode.defaultForPlatform();
+    }
+    _sidebarNavEnabled = sidebarRaw ?? LayoutCapability.isDesktopPlatform;
     _ready = true;
     notifyListeners();
   }
@@ -248,6 +315,14 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_compareNavKey, mode.toJson());
+  }
+
+  Future<void> setSettingsEntryMode(SettingsEntryMode mode) async {
+    if (_settingsEntryMode == mode) return;
+    _settingsEntryMode = mode;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_settingsEntryKey, mode.toJson());
   }
 
   Future<void> setSidebarNavEnabled(bool enabled) async {

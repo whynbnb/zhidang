@@ -42,28 +42,47 @@ class AppStrings {
   String get languageZh => isZh ? '中文' : 'Chinese';
   String get languageEn => isZh ? 'English' : 'English';
   String get appearance => isZh ? '外观' : 'Appearance';
-  String get compareEntry => isZh ? '导航栏模式' : 'Navigation mode';
+  String get navMode => isZh ? '导航栏模式' : 'Navigation mode';
+  String get navModeHint => isZh
+      ? '配置比价与设置的入口位置'
+      : 'Configure where Compare and Settings appear';
+  String get compareEntry => isZh ? '比价入口' : 'Compare entry';
   String get compareEntryHint => isZh
       ? '选择如何进入跨商品比价'
       : 'Choose how to open cross-product compare';
   String get compareNavBottom => isZh ? '导航栏' : 'Nav bar';
   String get compareNavBottomHint => isZh
-      ? '显示「商品 / 比价」导航（底栏或侧栏）'
-      : 'Show Products / Compare navigation (bottom or side)';
+      ? '在导航栏显示比价（与商品等一并出现）'
+      : 'Show Compare on the navigation bar with Products';
   String get compareNavHeader => isZh ? '顶部图标' : 'Header icon';
   String get compareNavHeaderHint => isZh
-      ? '在设置左侧显示比价图标（安卓默认）'
-      : 'Show compare icon left of settings (Android default)';
+      ? '在页面顶部显示比价图标'
+      : 'Show a compare icon in the page header';
   String get compareNavDisabled => isZh ? '关闭入口' : 'Hidden';
   String get compareNavDisabledHint => isZh
       ? '隐藏所有比价入口'
       : 'Hide all compare entry points';
+  String get settingsEntry => isZh ? '设置入口' : 'Settings entry';
+  String get settingsEntryHint => isZh
+      ? '选择设置图标的位置（桌面默认导航栏）'
+      : 'Choose where Settings appears (nav bar on desktop by default)';
+  String get settingsNavBar => isZh ? '导航栏' : 'Nav bar';
+  String get settingsNavBarHint => isZh
+      ? '在导航栏显示设置'
+      : 'Show Settings on the navigation bar';
+  String get settingsNavHeader => isZh ? '顶部图标' : 'Header icon';
+  String get settingsNavHeaderHint => isZh
+      ? '在页面顶部显示设置图标'
+      : 'Show a settings icon in the page header';
   String get sidebarNav => isZh ? '侧边栏导航' : 'Sidebar navigation';
   String get sidebarNavHint => isZh
-      ? '桌面与平板横屏时使用侧边栏；关闭则始终底边栏'
-      : 'Use a side rail on desktop and tablet landscape; off keeps the bottom bar';
+      ? '有导航项时，桌面与平板横屏使用侧边栏；关闭则始终底边栏'
+      : 'When nav items exist, use a side rail on desktop/tablet landscape; off keeps the bottom bar';
   String get sidebarNavBottom => isZh ? '底边栏' : 'Bottom bar';
   String get sidebarNavSide => isZh ? '侧边栏' : 'Sidebar';
+  String get navBarEmptyHint => isZh
+      ? '比价与设置都不在导航栏时，导航栏会自动隐藏'
+      : 'The navigation bar hides when neither Compare nor Settings is placed there';
   String get themeMode => isZh ? '主题模式' : 'Theme mode';
   String get themeSystem => isZh ? '系统' : 'System';
   String get themeLight => isZh ? '浅色' : 'Light';

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../screens/compare_page.dart';
 import '../screens/data_manage_page.dart';
+import '../screens/navigation_settings_page.dart';
 import '../screens/settings_page.dart';
 import '../screens/suppliers_page.dart';
 import '../screens/units_page.dart';
@@ -21,7 +22,8 @@ class AppNavigator {
     if (topName == SettingsPage.routeName ||
         topName == SuppliersPage.routeName ||
         topName == UnitsPage.routeName ||
-        topName == DataManagePage.routeName) {
+        topName == DataManagePage.routeName ||
+        topName == NavigationSettingsPage.routeName) {
       return;
     }
 

@@ -10,6 +10,7 @@ import '../services/data_revision.dart';
 import '../services/storage_service.dart';
 import '../utils/comparison_logic.dart';
 import '../utils/layout.dart';
+import '../widgets/app_header_actions.dart';
 
 final _currency = NumberFormat('#,##0.##');
 
@@ -431,72 +432,53 @@ class ComparePageState extends State<ComparePage> {
     final s = AppStrings.of(context);
     final isWide = AppLayout.isWide(context);
 
+    final header = AppPageHeader(
+      title: s.tabCompare,
+      onOpenSettings: _openSettings,
+    );
+
     return Scaffold(
-      appBar: isWide
-          ? null
-          : AppBar(
-              title: Text(s.tabCompare),
-              actions: [
-                IconButton(
-                  tooltip: s.settings,
-                  onPressed: _openSettings,
-                  icon: const Icon(Icons.settings_outlined),
-                ),
-              ],
-            ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab-compare-new-group',
         onPressed: _products.length < 2 ? null : () => _addOrEditGroup(),
         icon: const Icon(Icons.link),
         label: Text(s.addFixedGroup),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : isWide
-              ? Row(
-                  children: [
-                    Expanded(
-                      flex: AppLayout.splitLeftFlex,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    s.tabCompare,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineSmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                  ),
-                                ),
-                                IconButton(
-                                  tooltip: s.settings,
-                                  onPressed: _openSettings,
-                                  icon: const Icon(Icons.settings_outlined),
-                                ),
-                              ],
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : isWide
+                ? Row(
+                    children: [
+                      Expanded(
+                        flex: AppLayout.splitLeftFlex,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            header,
+                            Expanded(
+                              child: _buildGroupList(showFabInList: true),
                             ),
-                          ),
-                          Expanded(
-                            child: _buildGroupList(showFabInList: true),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const VerticalDivider(width: 1),
-                    Expanded(
-                      flex: AppLayout.splitRightFlex,
-                      child: _buildSessionPane(),
-                    ),
-                  ],
-                )
-              : _buildGroupList(showFabInList: true),
+                      const VerticalDivider(width: 1),
+                      Expanded(
+                        flex: AppLayout.splitRightFlex,
+                        child: _buildSessionPane(),
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      header,
+                      Expanded(
+                        child: _buildGroupList(showFabInList: true),
+                      ),
+                    ],
+                  ),
+      ),
     );
   }
 }
