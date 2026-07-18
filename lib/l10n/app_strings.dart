@@ -309,6 +309,8 @@ class AppStrings {
       : 'Add a product, enter brand prices and sizes,\nand see which one is the best value.';
   String get selectProductHint =>
       isZh ? '从左侧选择一个商品查看比价' : 'Select a product on the left to compare';
+  String get selectGroupHint =>
+      isZh ? '从左侧选择比价组，或发起临时比价' : 'Select a group on the left, or start a temporary compare';
   String get backToList => isZh ? '返回列表' : 'Back to list';
   String unitLabel(String unit) => isZh ? '单位：$unit' : 'Unit: $unit';
   String measureUnit(String unit) =>

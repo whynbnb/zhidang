@@ -6,6 +6,7 @@ import '../models/product.dart';
 import '../services/data_revision.dart';
 import '../services/storage_service.dart';
 import '../settings/app_settings.dart';
+import '../utils/layout.dart';
 import '../widgets/offer_tile.dart';
 import '../widgets/product_card.dart';
 import '../widgets/tag_chips.dart';
@@ -65,7 +66,7 @@ class _HomePageState extends State<HomePage> {
         _selectedId = null;
       }
       // Wide layout can preselect for split view; phone always starts on list.
-      final isWide = MediaQuery.sizeOf(context).width >= 840;
+      final isWide = AppLayout.isWide(context);
       if (isWide && _selectedId == null && _products.isNotEmpty) {
         _selectedId = _products.first.id;
       }
@@ -125,7 +126,7 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _products = _products.where((p) => p.id != product.id).toList();
         if (_selectedId == product.id) {
-          final isWide = MediaQuery.sizeOf(context).width >= 840;
+          final isWide = AppLayout.isWide(context);
           _selectedId =
               isWide && _products.isNotEmpty ? _products.first.id : null;
         }
@@ -255,8 +256,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final isWide = width >= 840;
+    final isWide = AppLayout.isWide(context);
     final s = AppStrings.of(context);
     final inDetail = !isWide && _selected != null;
 
@@ -343,8 +343,8 @@ class _WideLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(
-          width: 360,
+        Expanded(
+          flex: AppLayout.splitLeftFlex,
           child: _ProductListPane(
             search: search,
             products: products,
@@ -357,6 +357,7 @@ class _WideLayout extends StatelessWidget {
         ),
         const VerticalDivider(width: 1),
         Expanded(
+          flex: AppLayout.splitRightFlex,
           child: selected == null
               ? const _EmptyDetail()
               : _ProductDetailPane(

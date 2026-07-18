@@ -9,6 +9,7 @@ import '../services/comparison_store.dart';
 import '../services/data_revision.dart';
 import '../services/storage_service.dart';
 import '../utils/comparison_logic.dart';
+import '../utils/layout.dart';
 
 final _currency = NumberFormat('#,##0.##');
 
@@ -26,6 +27,12 @@ class ComparePageState extends State<ComparePage> {
   List<Product> _products = [];
   bool _loading = true;
   int _seenRevision = DataRevision.notifier.value;
+
+  /// Wide split: selected fixed group id (null = none / temp session).
+  String? _selectedGroupId;
+  /// Wide split temporary session.
+  List<Product>? _tempProducts;
+  String? _tempTitle;
 
   @override
   void initState() {
@@ -81,6 +88,14 @@ class ComparePageState extends State<ComparePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(s.compareNeedCommonUnit)),
       );
+      return;
+    }
+    if (AppLayout.isWide(context)) {
+      setState(() {
+        _selectedGroupId = null;
+        _tempProducts = selected;
+        _tempTitle = s.tempCompare;
+      });
       return;
     }
     await Navigator.of(context).push(
@@ -204,6 +219,14 @@ class ComparePageState extends State<ComparePage> {
     if (preferred.isNotEmpty && !common.contains(preferred)) {
       preferred = '';
     }
+    if (AppLayout.isWide(context)) {
+      setState(() {
+        _tempProducts = null;
+        _tempTitle = null;
+        _selectedGroupId = group.id;
+      });
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => CompareSessionPage(
@@ -218,142 +241,262 @@ class ComparePageState extends State<ComparePage> {
     );
   }
 
+  ComparisonGroup? _groupById(String? id) {
+    if (id == null) return null;
+    for (final g in ComparisonStore.instance.groups) {
+      if (g.id == id) return g;
+    }
+    return null;
+  }
+
+  Widget _buildSessionPane() {
+    final s = AppStrings.of(context);
+    if (_tempProducts != null && _tempProducts!.length >= 2) {
+      return CompareSessionPage(
+        key: ValueKey(
+          'temp-${_tempProducts!.map((p) => p.id).join(',')}',
+        ),
+        title: _tempTitle ?? s.tempCompare,
+        products: _tempProducts!,
+        temporary: true,
+        embedded: true,
+      );
+    }
+    final group = _groupById(_selectedGroupId);
+    if (group != null) {
+      final issue = _validateGroup(group);
+      if (issue == null) {
+        final products = group.productIds
+            .map((id) => _byId[id])
+            .whereType<Product>()
+            .toList();
+        final common = ComparisonLogic.commonUnits(products);
+        var preferred = group.preferredUnit.trim();
+        if (preferred.isNotEmpty && !common.contains(preferred)) {
+          preferred = '';
+        }
+        return CompareSessionPage(
+          key: ValueKey('group-${group.id}'),
+          title: group.name,
+          products: products,
+          preferredUnit: preferred,
+          temporary: false,
+          group: group,
+          onEditGroup: () => _addOrEditGroup(group),
+          embedded: true,
+        );
+      }
+    }
+    return Center(
+      child: Text(
+        s.selectGroupHint,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+      ),
+    );
+  }
+
+  Widget _buildGroupList({required bool showFabInList}) {
+    final s = AppStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return ListenableBuilder(
+      listenable: ComparisonStore.instance,
+      builder: (context, _) {
+        final groups = ComparisonStore.instance.groups;
+        // Drop selection if group was deleted.
+        if (_selectedGroupId != null &&
+            !groups.any((g) => g.id == _selectedGroupId)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _selectedGroupId = null);
+          });
+        }
+        return ListView(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, showFabInList ? 100 : 24),
+          children: [
+            _QuickCompareCard(
+              enabled: _products.length >= 2,
+              onTap: _startTemporary,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              s.fixedCompare,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              s.fixedCompareHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            if (groups.isEmpty)
+              _EmptyGroups(
+                canCreate: _products.length >= 2,
+                onCreate: () => _addOrEditGroup(),
+              )
+            else
+              ...groups.map((g) {
+                final names = g.productIds
+                    .map((id) => _byId[id]?.name)
+                    .whereType<String>()
+                    .toList();
+                final invalid = _validateGroup(g) != null;
+                final selected = g.id == _selectedGroupId && _tempProducts == null;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Card(
+                    elevation: 0,
+                    color: selected
+                        ? scheme.primaryContainer.withValues(alpha: 0.35)
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: selected
+                            ? scheme.primary
+                            : invalid
+                                ? scheme.error.withValues(alpha: 0.45)
+                                : scheme.outlineVariant,
+                        width: selected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: invalid
+                            ? scheme.errorContainer
+                            : scheme.secondaryContainer,
+                        foregroundColor: invalid
+                            ? scheme.onErrorContainer
+                            : scheme.onSecondaryContainer,
+                        child: Icon(
+                          invalid
+                              ? Icons.warning_amber_rounded
+                              : Icons.balance,
+                        ),
+                      ),
+                      title: Text(
+                        g.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      subtitle: Text(
+                        invalid
+                            ? s.groupStatusInvalid
+                            : names.isEmpty
+                                ? s.groupNoProducts
+                                : s.groupProductSummary(
+                                    names.length,
+                                    names.take(3).join(' · '),
+                                  ),
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (v) {
+                          if (v == 'open') _openGroup(g);
+                          if (v == 'edit') _addOrEditGroup(g);
+                          if (v == 'delete') _deleteGroup(g);
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: 'open',
+                            child: Text(s.openCompare),
+                          ),
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Text(s.edit),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text(s.delete),
+                          ),
+                        ],
+                      ),
+                      onTap: () => _openGroup(g),
+                    ),
+                  ),
+                );
+              }),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final scheme = Theme.of(context).colorScheme;
+    final isWide = AppLayout.isWide(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(s.tabCompare),
-        actions: [
-          IconButton(
-            tooltip: s.settings,
-            onPressed: _openSettings,
-            icon: const Icon(Icons.settings_outlined),
-          ),
-        ],
-      ),
+      appBar: isWide
+          ? null
+          : AppBar(
+              title: Text(s.tabCompare),
+              actions: [
+                IconButton(
+                  tooltip: s.settings,
+                  onPressed: _openSettings,
+                  icon: const Icon(Icons.settings_outlined),
+                ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab-compare-new-group',
-        onPressed: _products.length < 2
-            ? null
-            : () => _addOrEditGroup(),
+        onPressed: _products.length < 2 ? null : () => _addOrEditGroup(),
         icon: const Icon(Icons.link),
         label: Text(s.addFixedGroup),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListenableBuilder(
-              listenable: ComparisonStore.instance,
-              builder: (context, _) {
-                final groups = ComparisonStore.instance.groups;
-                return ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+          : isWide
+              ? Row(
                   children: [
-                    _QuickCompareCard(
-                      enabled: _products.length >= 2,
-                      onTap: _startTemporary,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      s.fixedCompare,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      s.fixedCompareHint,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (groups.isEmpty)
-                      _EmptyGroups(
-                        canCreate: _products.length >= 2,
-                        onCreate: () => _addOrEditGroup(),
-                      )
-                    else
-                      ...groups.map((g) {
-                        final names = g.productIds
-                            .map((id) => _byId[id]?.name)
-                            .whereType<String>()
-                            .toList();
-                        final invalid = _validateGroup(g) != null;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              side: BorderSide(
-                                color: invalid
-                                    ? scheme.error.withValues(alpha: 0.45)
-                                    : scheme.outlineVariant,
-                              ),
-                            ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: invalid
-                                    ? scheme.errorContainer
-                                    : scheme.secondaryContainer,
-                                foregroundColor: invalid
-                                    ? scheme.onErrorContainer
-                                    : scheme.onSecondaryContainer,
-                                child: Icon(
-                                  invalid
-                                      ? Icons.warning_amber_rounded
-                                      : Icons.balance,
+                    Expanded(
+                      flex: AppLayout.splitLeftFlex,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    s.tabCompare,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
                                 ),
-                              ),
-                              title: Text(
-                                g.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
+                                IconButton(
+                                  tooltip: s.settings,
+                                  onPressed: _openSettings,
+                                  icon: const Icon(Icons.settings_outlined),
                                 ),
-                              ),
-                              subtitle: Text(
-                                invalid
-                                    ? s.groupStatusInvalid
-                                    : names.isEmpty
-                                        ? s.groupNoProducts
-                                        : s.groupProductSummary(
-                                            names.length,
-                                            names.take(3).join(' · '),
-                                          ),
-                              ),
-                              trailing: PopupMenuButton<String>(
-                                onSelected: (v) {
-                                  if (v == 'open') _openGroup(g);
-                                  if (v == 'edit') _addOrEditGroup(g);
-                                  if (v == 'delete') _deleteGroup(g);
-                                },
-                                itemBuilder: (_) => [
-                                  PopupMenuItem(
-                                    value: 'open',
-                                    child: Text(s.openCompare),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'edit',
-                                    child: Text(s.edit),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text(s.delete),
-                                  ),
-                                ],
-                              ),
-                              onTap: () => _openGroup(g),
+                              ],
                             ),
                           ),
-                        );
-                      }),
+                          Expanded(
+                            child: _buildGroupList(showFabInList: true),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const VerticalDivider(width: 1),
+                    Expanded(
+                      flex: AppLayout.splitRightFlex,
+                      child: _buildSessionPane(),
+                    ),
                   ],
-                );
-              },
-            ),
+                )
+              : _buildGroupList(showFabInList: true),
     );
   }
 }
@@ -499,6 +642,7 @@ class CompareSessionPage extends StatefulWidget {
     this.temporary = false,
     this.group,
     this.onEditGroup,
+    this.embedded = false,
   });
 
   final String title;
@@ -507,6 +651,8 @@ class CompareSessionPage extends StatefulWidget {
   final bool temporary;
   final ComparisonGroup? group;
   final VoidCallback? onEditGroup;
+  /// When true, no app bar (used inside wide split pane).
+  final bool embedded;
 
   @override
   State<CompareSessionPage> createState() => _CompareSessionPageState();
@@ -557,31 +703,40 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
     final showPreferredBadge =
         best?.offer?.favorite == true && _viewMode != CompareViewMode.cheapest;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          if (!widget.temporary && widget.onEditGroup != null)
-            IconButton(
-              tooltip: s.edit,
-              onPressed: widget.onEditGroup,
-              icon: const Icon(Icons.edit_outlined),
-            ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: [
-          if (widget.temporary)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                s.tempSessionHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+    final content = ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      children: [
+        if (widget.embedded) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  widget.title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
               ),
+              if (!widget.temporary && widget.onEditGroup != null)
+                IconButton(
+                  tooltip: s.edit,
+                  onPressed: widget.onEditGroup,
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (widget.temporary)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              s.tempSessionHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
             ),
+          ),
           if (unitOptions.length > 1) ...[
             Text(
               s.compareByUnit,
@@ -809,8 +964,26 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
                 ),
               );
             }),
+      ],
+    );
+
+    if (widget.embedded) {
+      return content;
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          if (!widget.temporary && widget.onEditGroup != null)
+            IconButton(
+              tooltip: s.edit,
+              onPressed: widget.onEditGroup,
+              icon: const Icon(Icons.edit_outlined),
+            ),
         ],
       ),
+      body: content,
     );
   }
 }
