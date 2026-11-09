@@ -249,11 +249,15 @@ class AppStrings {
       ? '确定清空全部数据？此操作不可撤销。'
       : 'Clear all data? This cannot be undone.';
   String get exportDone => isZh ? '导出成功' : 'Export complete';
+  String get exportCancelled => isZh ? '已取消导出' : 'Export cancelled';
   String get importDone => isZh ? '导入成功' : 'Import complete';
   String get clearDataDone => isZh ? '已清空数据' : 'All data cleared';
   String get exportFailed => isZh ? '导出失败' : 'Export failed';
   String get importFailed =>
-      isZh ? '导入失败或文件无效' : 'Import failed or file invalid';
+      isZh ? '导入失败，请重试' : 'Import failed, please try again';
+  String get importInvalid => isZh
+      ? '不是有效的备份文件'
+      : 'This is not a valid backup file';
   String get clearFailed => isZh ? '清空失败' : 'Clear failed';
   String get importCancelled => isZh ? '已取消导入' : 'Import cancelled';
   String get importAction => isZh ? '导入' : 'Import';

@@ -4,8 +4,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../models/comparison_group.dart';
 import '../models/custom_unit.dart';
@@ -19,6 +17,9 @@ import 'data_revision.dart';
 import 'storage_service.dart';
 import 'supplier_store.dart';
 import 'unit_store.dart';
+
+/// Result of saving a backup file.
+enum BackupExportResult { saved, cancelled }
 
 class BackupPayload {
   const BackupPayload({
@@ -66,47 +67,81 @@ class BackupService {
     return const JsonEncoder.withIndent('  ').convert(payload);
   }
 
-  Future<void> exportToShare() async {
+  /// Save the backup through the platform file dialog.
+  ///
+  /// Using `saveFile` everywhere avoids share-sheet gaps:
+  /// - Linux cannot share files at all (share_plus throws).
+  /// - iPad share sheets require a popover origin.
+  /// - Users get a real `.json` file they can import again.
+  Future<BackupExportResult> exportFile({String? dialogTitle}) async {
     final json = await buildJson();
     final stamp = DateFormat('yyyyMMdd-HHmmss').format(DateTime.now());
     final name = 'zhidang-backup-$stamp.json';
+    final bytes = Uint8List.fromList(utf8.encode(json));
 
-    if (kIsWeb) {
-      await SharePlus.instance.share(
-        ShareParams(
-          text: json,
-          subject: name,
-          title: name,
-        ),
-      );
-      return;
+    final path = await FilePicker.platform.saveFile(
+      dialogTitle: dialogTitle,
+      fileName: name,
+      type: FileType.any,
+      bytes: bytes,
+    );
+
+    // Web triggers a browser download and returns null on purpose.
+    if (kIsWeb) return BackupExportResult.saved;
+
+    if (path == null || path.trim().isEmpty) {
+      return BackupExportResult.cancelled;
     }
 
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$name');
-    await file.writeAsString(json, flush: true);
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(file.path, mimeType: 'application/json', name: name)],
-        subject: name,
-        title: name,
-      ),
-    );
+    // Desktop plugins report a normal path; make sure the bytes landed.
+    // Android/iOS return content URIs and write the bytes natively, so skip.
+    final isDesktop =
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+    if (isDesktop) {
+      final file = File(path);
+      if (!await file.exists() || await file.length() != bytes.length) {
+        await file.writeAsBytes(bytes, flush: true);
+      }
+    }
+    return BackupExportResult.saved;
   }
 
   BackupPayload parse(String raw) {
-    final decoded = jsonDecode(raw);
+    // Strip UTF-8 BOM that some editors/OSes prepend; jsonDecode fails on it.
+    final text = raw.replaceFirst('\uFEFF', '');
+    final decoded = jsonDecode(text);
     if (decoded is! Map) {
       throw const FormatException('Invalid backup root');
     }
     final map = Map<String, dynamic>.from(decoded);
 
-    final productsRaw = map['products'];
-    final suppliersRaw = map['suppliers'];
-    final unitsRaw = map['units'];
-    if (productsRaw is! List || suppliersRaw is! List || unitsRaw is! List) {
-      throw const FormatException('Missing products/suppliers/units');
+    final app = map['app']?.toString();
+    if (app != null && app.isNotEmpty && app != 'zhidang') {
+      throw const FormatException('Not a zhidang backup');
     }
+
+    final productsRaw = map['products'];
+    // Products are the core payload; other sections may be absent in older
+    // or hand-edited backups and are treated as empty instead of failing.
+    if (productsRaw is! List) {
+      throw const FormatException('Missing products');
+    }
+    // Reject arbitrary JSON that merely happens to contain `products`,
+    // otherwise importing it would wipe the user's data.
+    final hasMarker = map.containsKey('version') ||
+        map.containsKey('suppliers') ||
+        map.containsKey('units') ||
+        map.containsKey('comparisons') ||
+        map.containsKey('categories');
+    if (app != 'zhidang' && !hasMarker) {
+      throw const FormatException('Not a zhidang backup');
+    }
+    final suppliersRaw = map['suppliers'];
+    final suppliersList = suppliersRaw is List ? suppliersRaw : const [];
+    final unitsRaw = map['units'];
+    final unitsList = unitsRaw is List ? unitsRaw : const [];
     final comparisonsRaw = map['comparisons'];
     final comparisonsList =
         comparisonsRaw is List ? comparisonsRaw : const [];
@@ -116,7 +151,7 @@ class BackupService {
     final products = productsRaw
         .map((e) => Product.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
-    final suppliers = suppliersRaw
+    final suppliers = suppliersList
         .map((e) => Supplier.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
     final categories = categoriesList
@@ -126,7 +161,7 @@ class BackupService {
         )
         .where((c) => c.name.trim().isNotEmpty)
         .toList();
-    final units = unitsRaw
+    final units = unitsList
         .map((e) => CustomUnit.fromJson(Map<String, dynamic>.from(e as Map)))
         .where((u) => u.name.trim().isNotEmpty)
         .toList();
@@ -152,17 +187,25 @@ class BackupService {
   }
 
   Future<BackupPayload?> pickAndParse() async {
+    // Pick any file: extension/MIME filters hide valid backups on some
+    // Android file managers and iOS providers. Validate contents instead.
+    // Only the web needs bytes in memory; native pickers give a usable path.
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['json'],
-      withData: true,
+      type: FileType.any,
+      withData: kIsWeb,
     );
     if (result == null || result.files.isEmpty) return null;
 
     final file = result.files.single;
-    String? raw = file.bytes != null ? utf8.decode(file.bytes!) : null;
-    if (raw == null && file.path != null && !kIsWeb) {
-      raw = await File(file.path!).readAsString();
+    String? raw;
+    if (file.bytes != null) {
+      raw = utf8.decode(file.bytes!, allowMalformed: true);
+    }
+    if ((raw == null || raw.isEmpty) && file.path != null && !kIsWeb) {
+      final f = File(file.path!);
+      if (await f.exists()) {
+        raw = utf8.decode(await f.readAsBytes(), allowMalformed: true);
+      }
     }
     if (raw == null || raw.trim().isEmpty) {
       throw const FormatException('Empty backup file');

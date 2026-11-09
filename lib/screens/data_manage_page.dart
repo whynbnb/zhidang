@@ -12,10 +12,21 @@ class DataManagePage extends StatelessWidget {
     final s = AppStrings.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await BackupService.instance.exportToShare();
+      final result = await BackupService.instance.exportFile(
+        dialogTitle: s.exportData,
+      );
       if (!context.mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(s.exportDone)));
-    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            result == BackupExportResult.saved
+                ? s.exportDone
+                : s.exportCancelled,
+          ),
+        ),
+      );
+    } catch (e, st) {
+      debugPrint('Backup export failed: $e\n$st');
       if (!context.mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(s.exportFailed)));
     }
@@ -75,7 +86,12 @@ class DataManagePage extends StatelessWidget {
       await BackupService.instance.apply(payload);
       if (!context.mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(s.importDone)));
-    } catch (_) {
+    } on FormatException catch (e) {
+      debugPrint('Backup import rejected: $e');
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(s.importInvalid)));
+    } catch (e, st) {
+      debugPrint('Backup import failed: $e\n$st');
       if (!context.mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(s.importFailed)));
     }
