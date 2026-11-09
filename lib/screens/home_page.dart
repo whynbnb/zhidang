@@ -5,6 +5,7 @@ import '../l10n/app_strings.dart';
 import '../models/product.dart';
 import '../services/data_revision.dart';
 import '../services/storage_service.dart';
+import '../settings/app_settings.dart';
 import '../utils/layout.dart';
 import '../widgets/app_header_actions.dart';
 import '../widgets/offer_tile.dart';
@@ -549,19 +550,31 @@ class _ProductListPane extends StatelessWidget {
                     ),
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 88),
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final product = products[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: ProductCard(
-                        product: product,
-                        selected: product.id == selectedId,
-                        onTap: () => onSelect(product.id),
-                        onLongPress: () => onEditProduct(product),
+              : ListenableBuilder(
+                  listenable: AppSettings.instance,
+                  builder: (context, _) {
+                    final compact = AppSettings.instance.compactMode;
+                    return ListView.builder(
+                      padding: EdgeInsets.fromLTRB(
+                        compact ? 0 : 12,
+                        0,
+                        compact ? 0 : 12,
+                        88,
                       ),
+                      itemCount: products.length,
+                      itemBuilder: (context, index) {
+                        final product = products[index];
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: compact ? 0 : 8),
+                          child: ProductCard(
+                            product: product,
+                            selected: product.id == selectedId,
+                            compact: compact,
+                            onTap: () => onSelect(product.id),
+                            onLongPress: () => onEditProduct(product),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),

@@ -198,6 +198,7 @@ class AppSettings extends ChangeNotifier {
   static const _compareNavKey = 'settings_compare_nav_mode';
   static const _settingsEntryKey = 'settings_entry_mode';
   static const _sidebarNavKey = 'settings_sidebar_nav';
+  static const _compactModeKey = 'settings_compact_mode';
 
   Locale _locale = const Locale('zh');
   ThemeMode _themeMode = ThemeMode.system;
@@ -205,6 +206,7 @@ class AppSettings extends ChangeNotifier {
   CompareNavMode _compareNavMode = CompareNavMode.defaultForPlatform();
   SettingsEntryMode _settingsEntryMode = SettingsEntryMode.defaultForPlatform();
   bool _sidebarNavEnabled = LayoutCapability.isDesktopPlatform;
+  bool _compactMode = false;
   bool _ready = false;
 
   Locale get locale => _locale;
@@ -214,6 +216,8 @@ class AppSettings extends ChangeNotifier {
   SettingsEntryMode get settingsEntryMode => _settingsEntryMode;
   /// Prefer sidebar over bottom bar when nav is visible (desktop / tablet landscape).
   bool get sidebarNavEnabled => _sidebarNavEnabled;
+  /// Dense product rows instead of large cards.
+  bool get compactMode => _compactMode;
   bool get ready => _ready;
   bool get isZh => _locale.languageCode == 'zh';
 
@@ -256,6 +260,7 @@ class AppSettings extends ChangeNotifier {
     final compareNavRaw = prefs.getString(_compareNavKey);
     final settingsEntryRaw = prefs.getString(_settingsEntryKey);
     final sidebarRaw = prefs.getBool(_sidebarNavKey);
+    final compactRaw = prefs.getBool(_compactModeKey);
 
     if (localeCode == 'en' || localeCode == 'zh') {
       _locale = Locale(localeCode!);
@@ -280,6 +285,7 @@ class AppSettings extends ChangeNotifier {
       _settingsEntryMode = SettingsEntryMode.defaultForPlatform();
     }
     _sidebarNavEnabled = sidebarRaw ?? LayoutCapability.isDesktopPlatform;
+    _compactMode = compactRaw ?? false;
     _ready = true;
     notifyListeners();
   }
@@ -331,5 +337,13 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_sidebarNavKey, enabled);
+  }
+
+  Future<void> setCompactMode(bool enabled) async {
+    if (_compactMode == enabled) return;
+    _compactMode = enabled;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_compactModeKey, enabled);
   }
 }

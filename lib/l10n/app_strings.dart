@@ -83,6 +83,10 @@ class AppStrings {
   String get navBarEmptyHint => isZh
       ? '比价与设置都不在导航栏时，导航栏会自动隐藏'
       : 'The navigation bar hides when neither Compare nor Settings is placed there';
+  String get compactMode => isZh ? '紧凑模式' : 'Compact mode';
+  String get compactModeHint => isZh
+      ? '使用紧凑的商品列表，不再显示大卡片'
+      : 'Dense product rows instead of large cards';
   String get themeMode => isZh ? '主题模式' : 'Theme mode';
   String get themeSystem => isZh ? '系统' : 'System';
   String get themeLight => isZh ? '浅色' : 'Light';

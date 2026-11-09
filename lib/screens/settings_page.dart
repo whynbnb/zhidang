@@ -173,6 +173,22 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 0,
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: scheme.outlineVariant),
+            ),
+            child: SwitchListTile(
+              secondary: Icon(Icons.view_agenda_outlined, color: scheme.primary),
+              title: Text(s.compactMode),
+              subtitle: Text(s.compactModeHint),
+              value: settings.compactMode,
+              onChanged: (v) => settings.setCompactMode(v),
+            ),
+          ),
           const SizedBox(height: 20),
           _SectionTitle(s.navMode),
           Card(
