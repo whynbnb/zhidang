@@ -17,6 +17,9 @@ class SettingsPage extends StatelessWidget {
 
   static const routeName = '/settings';
 
+  /// Keep wide-screen controls readable instead of stretching edge to edge.
+  static const double _controlMaxWidth = 480;
+
   Future<void> _setIcon(BuildContext context, AppIconStyle style) async {
     final s = AppStrings.of(context);
     final ok = await AppIconService.instance.setStyle(style);
@@ -68,25 +71,36 @@ class SettingsPage extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-              child: SegmentedButton<LocaleMode>(
-                segments: [
-                  ButtonSegment(
-                    value: LocaleMode.system,
-                    label: Text(s.languageSystem),
+              child: Align(
+                alignment: Alignment.center,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: _controlMaxWidth,
                   ),
-                  ButtonSegment(
-                    value: LocaleMode.zh,
-                    label: Text(s.languageZh),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<LocaleMode>(
+                      segments: [
+                        ButtonSegment(
+                          value: LocaleMode.system,
+                          label: Text(s.languageSystem),
+                        ),
+                        ButtonSegment(
+                          value: LocaleMode.zh,
+                          label: Text(s.languageZh),
+                        ),
+                        ButtonSegment(
+                          value: LocaleMode.en,
+                          label: Text(s.languageEn),
+                        ),
+                      ],
+                      selected: {settings.localeMode},
+                      onSelectionChanged: (v) {
+                        if (v.isNotEmpty) settings.setLocaleMode(v.first);
+                      },
+                    ),
                   ),
-                  ButtonSegment(
-                    value: LocaleMode.en,
-                    label: Text(s.languageEn),
-                  ),
-                ],
-                selected: {settings.localeMode},
-                onSelectionChanged: (v) {
-                  if (v.isNotEmpty) settings.setLocaleMode(v.first);
-                },
+                ),
               ),
             ),
           ),
@@ -106,28 +120,39 @@ class SettingsPage extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: SegmentedButton<ThemeMode>(
-                    segments: [
-                      ButtonSegment(
-                        value: ThemeMode.system,
-                        label: Text(s.themeSystem),
-                        icon: const Icon(Icons.brightness_auto),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: _controlMaxWidth,
                       ),
-                      ButtonSegment(
-                        value: ThemeMode.light,
-                        label: Text(s.themeLight),
-                        icon: const Icon(Icons.light_mode_outlined),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<ThemeMode>(
+                          segments: [
+                            ButtonSegment(
+                              value: ThemeMode.system,
+                              label: Text(s.themeSystem),
+                              icon: const Icon(Icons.brightness_auto),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.light,
+                              label: Text(s.themeLight),
+                              icon: const Icon(Icons.light_mode_outlined),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.dark,
+                              label: Text(s.themeDark),
+                              icon: const Icon(Icons.dark_mode_outlined),
+                            ),
+                          ],
+                          selected: {settings.themeMode},
+                          onSelectionChanged: (v) {
+                            if (v.isNotEmpty) settings.setThemeMode(v.first);
+                          },
+                        ),
                       ),
-                      ButtonSegment(
-                        value: ThemeMode.dark,
-                        label: Text(s.themeDark),
-                        icon: const Icon(Icons.dark_mode_outlined),
-                      ),
-                    ],
-                    selected: {settings.themeMode},
-                    onSelectionChanged: (v) {
-                      if (v.isNotEmpty) settings.setThemeMode(v.first);
-                    },
+                    ),
                   ),
                 ),
               ],
