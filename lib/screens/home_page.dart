@@ -685,209 +685,242 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
     final preferred = product.preferredOfferFor(selectedUnit);
     final best = product.bestOfferFor(selectedUnit);
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(20, widget.compact ? 10 : 16, 20, 32),
-      children: [
-        if (!widget.compact) ...[
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  product.name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ),
-              IconButton(
-                onPressed: widget.onEditProduct,
-                icon: const Icon(Icons.edit_outlined),
-                tooltip: s.editProduct,
-              ),
-            ],
+    return ListenableBuilder(
+      listenable: AppSettings.instance,
+      builder: (context, _) {
+        final dense = AppSettings.instance.compactMode;
+        // Dense offer rows go edge-to-edge; keep header content inset.
+        final horizontal = dense ? 0.0 : 20.0;
+        return ListView(
+          padding: EdgeInsets.fromLTRB(
+            horizontal,
+            widget.compact ? 10 : 16,
+            horizontal,
+            32,
           ),
-          Text(
-            s.measureUnitsLabel(units.join(' / ')),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-          ),
-          if (product.tags.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            TagChipRow(tags: product.tags, dense: true),
-          ],
-          if (product.note.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(product.note),
-          ],
-          const SizedBox(height: 12),
-        ] else if (product.tags.isNotEmpty || product.note.isNotEmpty) ...[
-          if (product.tags.isNotEmpty)
-            TagChipRow(tags: product.tags, dense: true),
-          if (product.note.isNotEmpty) ...[
-            if (product.tags.isNotEmpty) const SizedBox(height: 6),
-            Text(
-              product.note,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-          const SizedBox(height: 10),
-        ],
-        if (units.length > 1) ...[
-          Row(
-            children: [
-              Icon(
-                Icons.straighten,
-                size: 18,
-                color: scheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final unit in units) ...[
-                        ChoiceChip(
-                          label: Text(
-                            '$unit${product.offersFor(unit).isEmpty ? '' : ' (${product.offersFor(unit).length})'}',
-                          ),
-                          selected: unit == selectedUnit,
-                          visualDensity: VisualDensity.compact,
-                          onSelected: (_) =>
-                              setState(() => _selectedUnit = unit),
-                        ),
-                        if (unit != units.last) const SizedBox(width: 8),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-        ],
-        Row(
           children: [
-            Expanded(
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: dense ? 20 : 0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    s.brandCompare,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                  if (!widget.compact) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            product.name,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
                         ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${s.unitLabel(selectedUnit)} · ${s.brandCount(offers.length)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        IconButton(
+                          onPressed: widget.onEditProduct,
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: s.editProduct,
+                        ),
+                      ],
+                    ),
+                    Text(
+                      s.measureUnitsLabel(units.join(' / ')),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                    ),
+                    if (product.tags.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      TagChipRow(tags: product.tags, dense: true),
+                    ],
+                    if (product.note.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(product.note),
+                    ],
+                    const SizedBox(height: 12),
+                  ] else if (product.tags.isNotEmpty ||
+                      product.note.isNotEmpty) ...[
+                    if (product.tags.isNotEmpty)
+                      TagChipRow(tags: product.tags, dense: true),
+                    if (product.note.isNotEmpty) ...[
+                      if (product.tags.isNotEmpty) const SizedBox(height: 6),
+                      Text(
+                        product.note,
+                        style:
+                            Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                  ],
+                  if (units.length > 1) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.straighten,
+                          size: 18,
                           color: scheme.onSurfaceVariant,
                         ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                for (final unit in units) ...[
+                                  ChoiceChip(
+                                    label: Text(
+                                      '$unit${product.offersFor(unit).isEmpty ? '' : ' (${product.offersFor(unit).length})'}',
+                                    ),
+                                    selected: unit == selectedUnit,
+                                    visualDensity: VisualDensity.compact,
+                                    onSelected: (_) => setState(
+                                      () => _selectedUnit = unit,
+                                    ),
+                                  ),
+                                  if (unit != units.last)
+                                    const SizedBox(width: 8),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              s.brandCompare,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${s.unitLabel(selectedUnit)} · ${s.brandCount(offers.length)}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.tonalIcon(
+                        onPressed: () => widget.onAddOffer(selectedUnit),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: Text(s.addOffer),
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: SegmentedButton<_OfferViewMode>(
+                      segments: [
+                        ButtonSegment(
+                          value: _OfferViewMode.all,
+                          label: Text(s.offerViewAll),
+                        ),
+                        ButtonSegment(
+                          value: _OfferViewMode.favorites,
+                          label: Text(s.offerViewFavorites),
+                        ),
+                      ],
+                      selected: {_viewMode},
+                      showSelectedIcon: false,
+                      style: const ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onSelectionChanged: (v) {
+                        if (v.isNotEmpty) setState(() => _viewMode = v.first);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            FilledButton.tonalIcon(
-              onPressed: () => widget.onAddOffer(selectedUnit),
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(s.addOffer),
-              style: FilledButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: SegmentedButton<_OfferViewMode>(
-            segments: [
-              ButtonSegment(
-                value: _OfferViewMode.all,
-                label: Text(s.offerViewAll),
-              ),
-              ButtonSegment(
-                value: _OfferViewMode.favorites,
-                label: Text(s.offerViewFavorites),
-              ),
-            ],
-            selected: {_viewMode},
-            showSelectedIcon: false,
-            style: const ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            onSelectionChanged: (v) {
-              if (v.isNotEmpty) setState(() => _viewMode = v.first);
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (offers.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 40),
-            child: Column(
-              children: [
-                Icon(
-                  _viewMode == _OfferViewMode.favorites
-                      ? Icons.star_outline
-                      : Icons.price_change_outlined,
-                  size: 48,
-                  color: scheme.onSurfaceVariant,
+            if (offers.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 40,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  _viewMode == _OfferViewMode.favorites
-                      ? s.noFavoriteOffers
-                      : s.noOffers,
-                  style: Theme.of(context).textTheme.titleMedium,
+                child: Column(
+                  children: [
+                    Icon(
+                      _viewMode == _OfferViewMode.favorites
+                          ? Icons.star_outline
+                          : Icons.price_change_outlined,
+                      size: 48,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _viewMode == _OfferViewMode.favorites
+                          ? s.noFavoriteOffers
+                          : s.noOffers,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _viewMode == _OfferViewMode.favorites
+                          ? s.noFavoriteOffersHint
+                          : s.noOffersHint,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _viewMode == _OfferViewMode.favorites
-                      ? s.noFavoriteOffersHint
-                      : s.noOffersHint,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
+              )
+            else
+              Column(
+                children: [
+                  for (var i = 0; i < offers.length; i++)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: dense ? 0 : 8),
+                      child: OfferTile(
+                        key: ValueKey(
+                          'offer-${offers[i].id}-$selectedUnit-$_viewMode',
+                        ),
+                        offer: offers[i],
+                        unit: selectedUnit,
+                        isBest: best != null && offers[i].id == best.id,
+                        isPreferred: preferred != null &&
+                            offers[i].id == preferred.id,
+                        rank: i + 1,
+                        compact: dense,
+                        onEdit: () => widget.onEditOffer(offers[i]),
+                        onToggleFavorite: () =>
+                            widget.onToggleFavorite(offers[i]),
+                        onCounterTap: offers[i].counterMode.enabled
+                            ? () => widget.onOfferCounter(offers[i])
+                            : null,
                       ),
-                ),
-              ],
-            ),
-          )
-        else
-          ...List.generate(offers.length, (i) {
-            final offer = offers[i];
-            final isBest = best != null && offer.id == best.id;
-            final isPreferred =
-                preferred != null && offer.id == preferred.id;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: OfferTile(
-                key: ValueKey(
-                  'offer-${offer.id}-$selectedUnit-$_viewMode',
-                ),
-                offer: offer,
-                unit: selectedUnit,
-                isBest: isBest && !isPreferred,
-                isPreferred: isPreferred,
-                rank: i + 1,
-                onEdit: () => widget.onEditOffer(offer),
-                onToggleFavorite: () => widget.onToggleFavorite(offer),
-                onCounterTap: offer.counterMode.enabled
-                    ? () => widget.onOfferCounter(offer)
-                    : null,
+                    ),
+                ],
               ),
-            );
-          }),
-      ],
+          ],
+        );
+      },
     );
   }
 }

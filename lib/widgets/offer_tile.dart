@@ -19,6 +19,7 @@ class OfferTile extends StatelessWidget {
     this.onCounterTap,
     this.onToggleFavorite,
     this.isPreferred = false,
+    this.compact = false,
   });
 
   final Offer offer;
@@ -29,6 +30,9 @@ class OfferTile extends StatelessWidget {
   final VoidCallback? onCounterTap;
   final VoidCallback? onToggleFavorite;
   final bool isPreferred;
+
+  /// Dense row without a large card.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +56,125 @@ class OfferTile extends StatelessWidget {
       onToggleFavorite: onToggleFavorite,
       onCounterTap: onCounterTap,
       onEdit: onEdit,
+      dense: compact,
     );
+
+    if (compact) {
+      final badgeText = isPreferred && offer.favorite
+          ? s.favoriteBadge
+          : (isBest ? s.bestBadge : '$rank');
+      final longBadge = badgeText.length > 2;
+      return Material(
+        color: highlight
+            ? scheme.primaryContainer.withValues(alpha: 0.2)
+            : Colors.transparent,
+        child: InkWell(
+          onTap: onEdit,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 8, 12, 8),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 13,
+                  backgroundColor: highlight
+                      ? scheme.primary
+                      : scheme.surfaceContainerHighest,
+                  foregroundColor: highlight
+                      ? scheme.onPrimary
+                      : scheme.onSurfaceVariant,
+                  child: Text(
+                    badgeText,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: longBadge ? 9 : 11,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              offer.brand,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '¥${_currency.format(unitPrice)}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                  color: highlight
+                                      ? scheme.primary
+                                      : scheme.onSurface,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          Text(
+                            ' / $unit',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '¥${_currency.format(offer.price)} / ${_currency.format(qty)}$unit'
+                              '${offer.shop.isNotEmpty ? ' · ${offer.shop}' : ''}'
+                              '${offer.measures.length > 1 ? ' · $allMeasures' : ''}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ),
+                          if (counterEnabled) ...[
+                            const SizedBox(width: 6),
+                            _CounterBadge(offer: offer),
+                          ],
+                          const SizedBox(width: 2),
+                          actions,
+                        ],
+                      ),
+                      if (offer.tags.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        TagChipRow(tags: offer.tags, dense: true),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Card(
       elevation: 0,
@@ -219,6 +341,7 @@ class _OfferActions extends StatelessWidget {
     required this.onEdit,
     this.onToggleFavorite,
     this.onCounterTap,
+    this.dense = false,
   });
 
   final Offer offer;
@@ -227,6 +350,7 @@ class _OfferActions extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback? onToggleFavorite;
   final VoidCallback? onCounterTap;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -243,9 +367,12 @@ class _OfferActions extends StatelessWidget {
         tooltip: tooltip,
         onPressed: onPressed,
         visualDensity: VisualDensity.compact,
-        constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-        padding: const EdgeInsets.all(6),
-        icon: Icon(icon, size: 22, color: color),
+        constraints: BoxConstraints(
+          minWidth: dense ? 32 : 38,
+          minHeight: dense ? 32 : 38,
+        ),
+        padding: EdgeInsets.all(dense ? 4 : 6),
+        icon: Icon(icon, size: dense ? 20 : 22, color: color),
       );
     }
 
