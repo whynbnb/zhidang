@@ -67,7 +67,7 @@ class OfferTile extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 6, 8),
+        padding: const EdgeInsets.fromLTRB(12, 8, 6, 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -174,7 +174,7 @@ class OfferTile extends StatelessWidget {
               ],
             ),
             if (hasMeta) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -242,10 +242,10 @@ class _OfferActions extends StatelessWidget {
       return IconButton(
         tooltip: tooltip,
         onPressed: onPressed,
-        visualDensity: VisualDensity.standard,
-        constraints: const BoxConstraints(minWidth: 42, minHeight: 42),
-        padding: const EdgeInsets.all(8),
-        icon: Icon(icon, size: 24, color: color),
+        visualDensity: VisualDensity.compact,
+        constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+        padding: const EdgeInsets.all(6),
+        icon: Icon(icon, size: 22, color: color),
       );
     }
 
