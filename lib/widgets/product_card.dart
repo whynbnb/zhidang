@@ -113,9 +113,11 @@ class ProductCard extends StatelessWidget {
                         ),
                       const SizedBox(height: 2),
                       ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 140),
+                        constraints: const BoxConstraints(maxWidth: 170),
                         child: Text(
-                          best.brand,
+                          best.shop.isEmpty
+                              ? best.brand
+                              : '${best.brand} · ${best.shop}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
@@ -204,7 +206,11 @@ class ProductCard extends StatelessWidget {
               const SizedBox(height: 8),
               if (best != null) ...[
                 Text(
-                  s.bestBrand(best.brand),
+                  best.shop.isEmpty
+                      ? s.bestBrand(best.brand)
+                      : '${s.bestBrand(best.brand)} · ${best.shop}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 4),
