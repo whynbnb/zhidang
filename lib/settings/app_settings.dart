@@ -2,6 +2,35 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// App language preference: follow the system or pin a language.
+enum LocaleMode {
+  system,
+  zh,
+  en;
+
+  static LocaleMode fromJson(Object? raw) {
+    switch (raw?.toString()) {
+      case 'zh':
+        return LocaleMode.zh;
+      case 'en':
+        return LocaleMode.en;
+      case 'system':
+        return LocaleMode.system;
+      default:
+        // Older installs stored nothing or an unknown value; keep Chinese.
+        return LocaleMode.zh;
+    }
+  }
+
+  String toJson() => name;
+
+  Locale? get fixedLocale => switch (this) {
+        LocaleMode.system => null,
+        LocaleMode.zh => const Locale('zh'),
+        LocaleMode.en => const Locale('en'),
+      };
+}
+
 /// How the compare feature is exposed in the main UI.
 enum CompareNavMode {
   /// Products / Compare on the navigation bar (bottom or side).
@@ -200,7 +229,7 @@ class AppSettings extends ChangeNotifier {
   static const _sidebarNavKey = 'settings_sidebar_nav';
   static const _compactModeKey = 'settings_compact_mode';
 
-  Locale _locale = const Locale('zh');
+  LocaleMode _localeMode = LocaleMode.zh;
   ThemeMode _themeMode = ThemeMode.system;
   String _colorId = 'teal';
   CompareNavMode _compareNavMode = CompareNavMode.defaultForPlatform();
@@ -209,7 +238,21 @@ class AppSettings extends ChangeNotifier {
   bool _compactMode = false;
   bool _ready = false;
 
-  Locale get locale => _locale;
+  LocaleMode get localeMode => _localeMode;
+
+  /// Resolved app locale; follows the system when [localeMode] is system.
+  Locale get locale {
+    final fixed = _localeMode.fixedLocale;
+    if (fixed != null) return fixed;
+    final system = WidgetsBinding.instance.platformDispatcher.locale;
+    return system.languageCode == 'en'
+        ? const Locale('en')
+        : const Locale('zh');
+  }
+
+  /// Null = let Flutter follow the system locale.
+  Locale? get materialLocale => _localeMode.fixedLocale;
+
   ThemeMode get themeMode => _themeMode;
   String get colorId => _colorId;
   CompareNavMode get compareNavMode => _compareNavMode;
@@ -219,7 +262,7 @@ class AppSettings extends ChangeNotifier {
   /// Dense product rows instead of large cards.
   bool get compactMode => _compactMode;
   bool get ready => _ready;
-  bool get isZh => _locale.languageCode == 'zh';
+  bool get isZh => locale.languageCode == 'zh';
 
   /// Ordered destinations for the shell navigation bar (empty if hidden).
   List<ShellNavDestination> get navDestinations {
@@ -262,9 +305,7 @@ class AppSettings extends ChangeNotifier {
     final sidebarRaw = prefs.getBool(_sidebarNavKey);
     final compactRaw = prefs.getBool(_compactModeKey);
 
-    if (localeCode == 'en' || localeCode == 'zh') {
-      _locale = Locale(localeCode!);
-    }
+    _localeMode = LocaleMode.fromJson(localeCode);
     if (themeModeName != null) {
       _themeMode = ThemeMode.values.firstWhere(
         (e) => e.name == themeModeName,
@@ -290,12 +331,12 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setLocale(Locale locale) async {
-    if (_locale == locale) return;
-    _locale = locale;
+  Future<void> setLocaleMode(LocaleMode mode) async {
+    if (_localeMode == mode) return;
+    _localeMode = mode;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_localeKey, locale.languageCode);
+    await prefs.setString(_localeKey, mode.toJson());
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {

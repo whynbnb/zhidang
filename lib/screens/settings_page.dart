@@ -68,22 +68,24 @@ class SettingsPage extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-              child: SegmentedButton<String>(
+              child: SegmentedButton<LocaleMode>(
                 segments: [
                   ButtonSegment(
-                    value: 'zh',
-                    label: Text(s.languageZh),
-                    icon: const Icon(Icons.translate),
+                    value: LocaleMode.system,
+                    label: Text(s.languageSystem),
                   ),
                   ButtonSegment(
-                    value: 'en',
+                    value: LocaleMode.zh,
+                    label: Text(s.languageZh),
+                  ),
+                  ButtonSegment(
+                    value: LocaleMode.en,
                     label: Text(s.languageEn),
-                    icon: const Icon(Icons.language),
                   ),
                 ],
-                selected: {settings.locale.languageCode},
+                selected: {settings.localeMode},
                 onSelectionChanged: (v) {
-                  if (v.isNotEmpty) settings.setLocale(Locale(v.first));
+                  if (v.isNotEmpty) settings.setLocaleMode(v.first);
                 },
               ),
             ),

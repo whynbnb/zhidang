@@ -39,6 +39,7 @@ class AppStrings {
   String get menuPaste => isZh ? '粘贴' : 'Paste';
   String get menuSelectAll => isZh ? '全选' : 'Select All';
   String get language => isZh ? '语言' : 'Language';
+  String get languageSystem => isZh ? '系统' : 'System';
   String get languageZh => isZh ? '中文' : 'Chinese';
   String get languageEn => isZh ? 'English' : 'English';
   String get appearance => isZh ? '外观' : 'Appearance';

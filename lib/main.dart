@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app/app_navigator.dart';
 import 'l10n/app_strings.dart';
@@ -24,8 +25,34 @@ Future<void> main() async {
   runApp(const ZhidangApp());
 }
 
-class ZhidangApp extends StatelessWidget {
+class ZhidangApp extends StatefulWidget {
   const ZhidangApp({super.key});
+
+  @override
+  State<ZhidangApp> createState() => _ZhidangAppState();
+}
+
+class _ZhidangAppState extends State<ZhidangApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Re-resolve strings when the OS language changes in "system" mode.
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    if (AppSettings.instance.localeMode == LocaleMode.system) {
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +87,9 @@ class ZhidangApp extends StatelessWidget {
           navigatorKey: AppNavigator.key,
           title: AppStrings(settings.locale).appName,
           debugShowCheckedModeBanner: false,
-          locale: settings.locale,
+          locale: settings.materialLocale,
+          supportedLocales: const [Locale('zh'), Locale('en')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
           themeMode: settings.themeMode,
           theme: buildTheme(light),
           darkTheme: buildTheme(dark),
