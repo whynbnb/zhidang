@@ -85,25 +85,13 @@ class NavigationSettingsPage extends StatelessWidget {
                   ),
                 ],
               ),
-              if (LayoutCapability.showSidebarSetting(context) &&
-                  settings.showsNavigationBar) ...[
-                const SizedBox(height: 20),
-                _SectionTitle(s.sidebarNav),
-                _OptionCard(
-                  children: [
-                    SwitchListTile(
-                      secondary: Icon(
-                        Icons.view_sidebar_outlined,
-                        color: scheme.primary,
-                      ),
-                      title: Text(s.sidebarNav),
-                      subtitle: Text(s.sidebarNavHint),
-                      value: settings.sidebarNavEnabled,
-                      onChanged: (v) => settings.setSidebarNavEnabled(v),
+              const SizedBox(height: 16),
+              Text(
+                s.sidebarAutoHint,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
-                  ],
-                ),
-              ],
+              ),
             ],
           );
         },

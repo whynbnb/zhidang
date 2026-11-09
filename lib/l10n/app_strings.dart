@@ -75,12 +75,9 @@ class AppStrings {
   String get settingsNavHeaderHint => isZh
       ? '在页面顶部显示设置图标'
       : 'Show a settings icon in the page header';
-  String get sidebarNav => isZh ? '侧边栏导航' : 'Sidebar navigation';
-  String get sidebarNavHint => isZh
-      ? '有导航项时，桌面与平板横屏使用侧边栏；关闭则始终底边栏'
-      : 'When nav items exist, use a side rail on desktop/tablet landscape; off keeps the bottom bar';
-  String get sidebarNavBottom => isZh ? '底边栏' : 'Bottom bar';
-  String get sidebarNavSide => isZh ? '侧边栏' : 'Sidebar';
+  String get sidebarAutoHint => isZh
+      ? '桌面宽窗口会自动使用侧边栏，平板横屏同样使用侧边栏；其余情况使用底边栏。'
+      : 'Wide desktop windows and tablets in landscape use a sidebar automatically; other sizes use the bottom bar.';
   String get navBarEmptyHint => isZh
       ? '比价与设置都不在导航栏时，导航栏会自动隐藏'
       : 'The navigation bar hides when neither Compare nor Settings is placed there';

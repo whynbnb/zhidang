@@ -118,22 +118,21 @@ class LayoutCapability {
         defaultTargetPlatform == TargetPlatform.linux;
   }
 
-  /// Tablet or larger by shortest side (Material guideline ~600).
-  static bool isTabletOrLarger(BuildContext context) {
-    return MediaQuery.sizeOf(context).shortestSide >= 600;
-  }
+  /// Desktop windows switch to a rail at this width.
+  static const double sidebarBreakpoint = 840;
 
-  /// Whether sidebar navigation can apply on this surface.
-  static bool supportsSidebarSurface(BuildContext context) {
-    if (isDesktopPlatform) return true;
+  /// Responsive rule:
+  /// - desktop / web: rail when the window is wide enough;
+  /// - tablets: rail in landscape only;
+  /// - phones: always bottom bar.
+  static bool useSidebar(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    if (isDesktopPlatform) {
+      return size.width >= sidebarBreakpoint;
+    }
+    final isTablet = size.shortestSide >= 600;
     final isLandscape = size.width > size.height;
-    return isTabletOrLarger(context) && isLandscape;
-  }
-
-  /// Show the sidebar toggle in settings (desktop, or tablet).
-  static bool showSidebarSetting(BuildContext context) {
-    return isDesktopPlatform || isTabletOrLarger(context);
+    return isTablet && isLandscape;
   }
 }
 
@@ -226,7 +225,6 @@ class AppSettings extends ChangeNotifier {
   static const _colorKey = 'settings_theme_color';
   static const _compareNavKey = 'settings_compare_nav_mode';
   static const _settingsEntryKey = 'settings_entry_mode';
-  static const _sidebarNavKey = 'settings_sidebar_nav';
   static const _compactModeKey = 'settings_compact_mode';
 
   LocaleMode _localeMode = LocaleMode.zh;
@@ -234,7 +232,6 @@ class AppSettings extends ChangeNotifier {
   String _colorId = 'teal';
   CompareNavMode _compareNavMode = CompareNavMode.defaultForPlatform();
   SettingsEntryMode _settingsEntryMode = SettingsEntryMode.defaultForPlatform();
-  bool _sidebarNavEnabled = LayoutCapability.isDesktopPlatform;
   bool _compactMode = false;
   bool _ready = false;
 
@@ -257,8 +254,6 @@ class AppSettings extends ChangeNotifier {
   String get colorId => _colorId;
   CompareNavMode get compareNavMode => _compareNavMode;
   SettingsEntryMode get settingsEntryMode => _settingsEntryMode;
-  /// Prefer sidebar over bottom bar when nav is visible (desktop / tablet landscape).
-  bool get sidebarNavEnabled => _sidebarNavEnabled;
   /// Dense product rows instead of large cards.
   bool get compactMode => _compactMode;
   bool get ready => _ready;
@@ -284,8 +279,7 @@ class AppSettings extends ChangeNotifier {
   /// Whether shell should render a side rail instead of bottom bar.
   bool useSidebarNav(BuildContext context) {
     if (!showsNavigationBar) return false;
-    if (!_sidebarNavEnabled) return false;
-    return LayoutCapability.supportsSidebarSurface(context);
+    return LayoutCapability.useSidebar(context);
   }
 
   ThemeColorOption get colorOption => themeColorOptions.firstWhere(
@@ -302,7 +296,6 @@ class AppSettings extends ChangeNotifier {
     final colorId = prefs.getString(_colorKey);
     final compareNavRaw = prefs.getString(_compareNavKey);
     final settingsEntryRaw = prefs.getString(_settingsEntryKey);
-    final sidebarRaw = prefs.getBool(_sidebarNavKey);
     final compactRaw = prefs.getBool(_compactModeKey);
 
     _localeMode = LocaleMode.fromJson(localeCode);
@@ -325,7 +318,6 @@ class AppSettings extends ChangeNotifier {
     } else {
       _settingsEntryMode = SettingsEntryMode.defaultForPlatform();
     }
-    _sidebarNavEnabled = sidebarRaw ?? LayoutCapability.isDesktopPlatform;
     _compactMode = compactRaw ?? false;
     _ready = true;
     notifyListeners();
@@ -370,14 +362,6 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_settingsEntryKey, mode.toJson());
-  }
-
-  Future<void> setSidebarNavEnabled(bool enabled) async {
-    if (_sidebarNavEnabled == enabled) return;
-    _sidebarNavEnabled = enabled;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_sidebarNavKey, enabled);
   }
 
   Future<void> setCompactMode(bool enabled) async {
