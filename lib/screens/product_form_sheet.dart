@@ -311,10 +311,11 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
         body: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             child: Form(
               key: _formKey,
               child: SingleChildScrollView(
+                padding: const EdgeInsets.only(top: 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1302,10 +1303,11 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
         body: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             child: Form(
               key: _formKey,
               child: SingleChildScrollView(
+                padding: const EdgeInsets.only(top: 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
