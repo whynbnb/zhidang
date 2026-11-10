@@ -433,11 +433,14 @@ class _NarrowLayout extends StatelessWidget {
               tooltip: s.backToList,
             ),
             title: Text(
-              selected!.name,
+              s.productCompareTitle(selected!.name),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            subtitle:
-                Text(s.measureUnitsLabel(selected!.measureUnits.join(' / '))),
+            subtitle: Text(
+              s.brandCount(selected!.offers.length),
+            ),
             trailing: IconButton(
               icon: const Icon(Icons.edit_outlined),
               tooltip: s.editProduct,
@@ -655,11 +658,15 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
     if (!units.contains(_selectedUnit)) {
       _selectedUnit = units.first;
     }
+    if (_viewMode == _OfferViewMode.favorites &&
+        widget.product.favoriteOffersFor(_selectedUnit).isEmpty) {
+      _viewMode = _OfferViewMode.all;
+    }
   }
 
-  List<Offer> _visibleOffers(String unit) {
+  List<Offer> _visibleOffers(String unit, _OfferViewMode mode) {
     final product = widget.product;
-    switch (_viewMode) {
+    switch (mode) {
       case _OfferViewMode.all:
         return [...product.offersFor(unit)]
           ..sort((a, b) {
@@ -681,7 +688,11 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
     final selectedUnit = units.contains(_selectedUnit)
         ? _selectedUnit
         : units.first;
-    final offers = _visibleOffers(selectedUnit);
+    final hasFavorites =
+        product.favoriteOffersFor(selectedUnit).isNotEmpty;
+    final viewMode =
+        hasFavorites ? _viewMode : _OfferViewMode.all;
+    final offers = _visibleOffers(selectedUnit, viewMode);
     final preferred = product.preferredOfferFor(selectedUnit);
     final best = product.bestOfferFor(selectedUnit);
 
@@ -724,7 +735,7 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                       ],
                     ),
                     Text(
-                      s.measureUnitsLabel(units.join(' / ')),
+                      s.brandCount(product.offers.length),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
@@ -737,7 +748,7 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                       const SizedBox(height: 4),
                       Text(product.note),
                     ],
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                   ] else if (product.tags.isNotEmpty ||
                       product.note.isNotEmpty) ...[
                     if (product.tags.isNotEmpty)
@@ -752,107 +763,142 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                                 ),
                       ),
                     ],
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                   ],
-                  if (units.length > 1) ...[
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.straighten,
-                          size: 18,
-                          color: scheme.onSurfaceVariant,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final showUnits = units.length > 1;
+                      final favoritesActive =
+                          viewMode == _OfferViewMode.favorites;
+                      final favoriteToggle = IconButton(
+                        onPressed: () => setState(
+                          () => _viewMode = favoritesActive
+                              ? _OfferViewMode.all
+                              : _OfferViewMode.favorites,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                for (final unit in units) ...[
-                                  ChoiceChip(
-                                    label: Text(
-                                      '$unit${product.offersFor(unit).isEmpty ? '' : ' (${product.offersFor(unit).length})'}',
-                                    ),
-                                    selected: unit == selectedUnit,
-                                    visualDensity: VisualDensity.compact,
-                                    onSelected: (_) => setState(
-                                      () => _selectedUnit = unit,
+                        isSelected: favoritesActive,
+                        icon: const Icon(Icons.star_outline, size: 20),
+                        selectedIcon: const Icon(Icons.star, size: 20),
+                        tooltip: favoritesActive
+                            ? s.showAllOffers
+                            : s.favoritesOnly,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 36,
+                          height: 36,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        style: IconButton.styleFrom(
+                          foregroundColor: favoritesActive
+                              ? scheme.onPrimaryContainer
+                              : scheme.onSurfaceVariant,
+                          backgroundColor: favoritesActive
+                              ? scheme.primaryContainer
+                              : Colors.transparent,
+                        ),
+                      );
+                      final addButton = constraints.maxWidth >= 420
+                          ? FilledButton.tonalIcon(
+                              onPressed: () => widget.onAddOffer(selectedUnit),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: Text(s.addOffer),
+                              style: FilledButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                              ),
+                            )
+                          : IconButton.filledTonal(
+                              onPressed: () => widget.onAddOffer(selectedUnit),
+                              icon: const Icon(Icons.add, size: 20),
+                              tooltip: s.addOffer,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints.tightFor(
+                                width: 36,
+                                height: 36,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            );
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              if (hasFavorites) ...[
+                                favoriteToggle,
+                                if (showUnits) ...[
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    height: 20,
+                                    child: VerticalDivider(
+                                      width: 1,
+                                      thickness: 1,
+                                      color: scheme.outlineVariant,
                                     ),
                                   ),
-                                  if (unit != units.last)
-                                    const SizedBox(width: 8),
-                                ],
+                                  const SizedBox(width: 8),
+                                ] else
+                                  const SizedBox(width: 8),
                               ],
-                            ),
+                              if (showUnits) ...[
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: [
+                                        for (final unit in units) ...[
+                                          ChoiceChip(
+                                            label: Text(
+                                              '$unit${product.offersFor(unit).isEmpty ? '' : ' (${product.offersFor(unit).length})'}',
+                                            ),
+                                            selected: unit == selectedUnit,
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            onSelected: (_) => setState(() {
+                                              _selectedUnit = unit;
+                                              if (_viewMode ==
+                                                      _OfferViewMode
+                                                          .favorites &&
+                                                  product
+                                                      .favoriteOffersFor(unit)
+                                                      .isEmpty) {
+                                                _viewMode =
+                                                    _OfferViewMode.all;
+                                              }
+                                            }),
+                                          ),
+                                          if (unit != units.last)
+                                            const SizedBox(width: 6),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                              ] else ...[
+                                // No unit chips: show the dimension here so
+                                // the row stays balanced and the unit is
+                                // never lost.
+                                Text(
+                                  s.measureUnitsLabel(units.join(' / ')),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                ),
+                                const Spacer(),
+                              ],
+                              addButton,
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              s.brandCompare,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${s.unitLabel(selectedUnit)} · ${s.brandCount(offers.length)}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.tonalIcon(
-                        onPressed: () => widget.onAddOffer(selectedUnit),
-                        icon: const Icon(Icons.add, size: 18),
-                        label: Text(s.addOffer),
-                        style: FilledButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                        ),
-                      ),
-                    ],
+                          const SizedBox(height: 8),
+                        ],
+                      );
+                    },
                   ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: SegmentedButton<_OfferViewMode>(
-                      segments: [
-                        ButtonSegment(
-                          value: _OfferViewMode.all,
-                          label: Text(s.offerViewAll),
-                        ),
-                        ButtonSegment(
-                          value: _OfferViewMode.favorites,
-                          label: Text(s.offerViewFavorites),
-                        ),
-                      ],
-                      selected: {_viewMode},
-                      showSelectedIcon: false,
-                      style: const ButtonStyle(
-                        visualDensity: VisualDensity.compact,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onSelectionChanged: (v) {
-                        if (v.isNotEmpty) setState(() => _viewMode = v.first);
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -865,7 +911,7 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                 child: Column(
                   children: [
                     Icon(
-                      _viewMode == _OfferViewMode.favorites
+                      viewMode == _OfferViewMode.favorites
                           ? Icons.star_outline
                           : Icons.price_change_outlined,
                       size: 48,
@@ -873,14 +919,14 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _viewMode == _OfferViewMode.favorites
+                      viewMode == _OfferViewMode.favorites
                           ? s.noFavoriteOffers
                           : s.noOffers,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _viewMode == _OfferViewMode.favorites
+                      viewMode == _OfferViewMode.favorites
                           ? s.noFavoriteOffersHint
                           : s.noOffersHint,
                       textAlign: TextAlign.center,
@@ -899,7 +945,7 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                       padding: EdgeInsets.only(bottom: dense ? 0 : 8),
                       child: OfferTile(
                         key: ValueKey(
-                          'offer-${offers[i].id}-$selectedUnit-$_viewMode',
+                          'offer-${offers[i].id}-$selectedUnit-$viewMode',
                         ),
                         offer: offers[i],
                         unit: selectedUnit,

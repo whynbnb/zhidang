@@ -401,10 +401,13 @@ class AppStrings {
 
   String get bestValueNow => isZh ? '当前最值当' : 'Best value now';
   String get preferredOfferNow => isZh ? '当前关注' : 'Preferred';
-  String get brandCompare => isZh ? '品牌比价' : 'Brand comparison';
+  String productCompareTitle(String name) =>
+      isZh ? '商品比价 - $name' : 'Product comparison - $name';
   String get addOffer => isZh ? '添加报价' : 'Add offer';
   String get offerViewAll => isZh ? '全部' : 'All';
   String get offerViewFavorites => isZh ? '收藏' : 'Favorites';
+  String get favoritesOnly => isZh ? '只看收藏' : 'Favorites only';
+  String get showAllOffers => isZh ? '显示全部' : 'Show all offers';
   String get offerViewCheapest => isZh ? '最便宜' : 'Cheapest';
   String get offerViewMode => isZh ? '显示方式' : 'Show';
   String get favoriteOffer => isZh ? '收藏报价' : 'Favorite offer';
