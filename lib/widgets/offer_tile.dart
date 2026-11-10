@@ -60,10 +60,6 @@ class OfferTile extends StatelessWidget {
     );
 
     if (compact) {
-      final badgeText = isPreferred && offer.favorite
-          ? s.favoriteBadge
-          : (isBest ? s.bestBadge : '$rank');
-      final longBadge = badgeText.length > 2;
       return Material(
         color: highlight
             ? scheme.primaryContainer.withValues(alpha: 0.2)
@@ -81,23 +77,6 @@ class OfferTile extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 12, 8),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 13,
-                  backgroundColor: highlight
-                      ? scheme.primary
-                      : scheme.surfaceContainerHighest,
-                  foregroundColor: highlight
-                      ? scheme.onPrimary
-                      : scheme.onSurfaceVariant,
-                  child: Text(
-                    badgeText,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: longBadge ? 9 : 11,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
