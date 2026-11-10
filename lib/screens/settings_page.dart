@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/app_version.dart';
 import '../l10n/app_strings.dart';
 import '../services/app_icon_service.dart';
 import '../settings/app_settings.dart';
@@ -402,7 +403,7 @@ class SettingsPage extends StatelessWidget {
               title: Text(s.appName),
               subtitle: Text(s.aboutBody),
               trailing: Text(
-                '${s.version} 0.9.12',
+                '${s.version} ${displayVersion(appVersion)}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
