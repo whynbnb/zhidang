@@ -539,6 +539,37 @@ class AppStrings {
   String get counterNoLogs => isZh ? '还没有记录' : 'No log entries yet';
   String get counterDeleteLog => isZh ? '删除记录' : 'Delete entry';
   String get counterViewLogs => isZh ? '查看记录' : 'View log';
+
+  String get quickCalcTitle => isZh ? '快速换算' : 'Quick convert';
+  String get quickCalcTitleHint => isZh
+      ? '双击标题打开快速换算'
+      : 'Double-click the title to convert prices';
+  String get quickCalcHint => isZh
+      ? '输入总价和数量，自动算出单价。数据只在本次运行中保留，退出后清空。'
+      : 'Enter the total price and quantity to see the unit price. Data stays for this run only and clears when the app exits.';
+  String get quickCalcAddHint => isZh
+      ? '填好后点右侧 ✓ 保留，保留后可删除但不能再修改'
+      : 'Tap ✓ to keep a row; kept rows can only be removed';
+  String get quickCalcIncomplete =>
+      isZh ? '请填写总价和数量' : 'Enter a price and quantity';
+  String get quickCalcClear => isZh ? '清空' : 'Clear';
+  String get quickCalcClearConfirm => isZh
+      ? '清空本次全部换算数据？'
+      : 'Clear all conversion data for this session?';
+  String get quickCalcName => isZh ? '名称（可选）' : 'Label (optional)';
+  String get quickCalcNameHint => isZh ? '例如鸡蛋' : 'e.g. Eggs';
+  String get quickCalcPrice => isZh ? '总价（元）' : 'Total price';
+  String get quickCalcQuantity => isZh ? '数量' : 'Quantity';
+  String get quickCalcUnit => isZh ? '单位' : 'Unit';
+  String get quickCalcBest => isZh ? '最低' : 'Lowest';
+  String get quickCalcGroupWeight => isZh ? '重量' : 'Weight';
+  String get quickCalcGroupVolume => isZh ? '体积' : 'Volume';
+  String quickCalcGroupUnit(String unit) =>
+      isZh ? '单位：$unit' : 'Unit: $unit';
+  String get quickCalcEmptyHint => isZh
+      ? '填写总价和数量后显示单价'
+      : 'Enter a price and quantity to see the unit price';
+  String get quickCalcDeleteRow => isZh ? '删除这组数据' : 'Remove this row';
 }
 
 class _StringsScope extends InheritedWidget {

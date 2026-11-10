@@ -59,17 +59,29 @@ class AppPageHeader extends StatelessWidget {
     this.leading,
     this.onOpenSettings,
     this.showCompare = false,
+    this.onTitleDoubleTap,
+    this.titleTooltip,
   });
 
   final String title;
   final Widget? leading;
   final VoidCallback? onOpenSettings;
   final bool showCompare;
+  final VoidCallback? onTitleDoubleTap;
+  final String? titleTooltip;
 
   static const EdgeInsets padding = EdgeInsets.fromLTRB(20, 16, 12, 8);
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final titleText = Text(
+      title,
+      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+    );
+
     return Padding(
       padding: padding,
       child: Row(
@@ -79,12 +91,16 @@ class AppPageHeader extends StatelessWidget {
             const SizedBox(width: 8),
           ],
           Expanded(
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
+            child: onTitleDoubleTap == null
+                ? titleText
+                : Tooltip(
+                    message: titleTooltip ?? s.quickCalcTitleHint,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onDoubleTap: onTitleDoubleTap,
+                      child: titleText,
+                    ),
                   ),
-            ),
           ),
           AppHeaderActions(
             onOpenSettings: onOpenSettings,

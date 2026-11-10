@@ -520,6 +520,7 @@ class _ProductListPane extends StatelessWidget {
           leading: Icon(Icons.savings_outlined, color: scheme.primary),
           onOpenSettings: onOpenSettings,
           showCompare: true,
+          onTitleDoubleTap: AppNavigator.openQuickCalc,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

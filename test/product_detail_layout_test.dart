@@ -315,4 +315,24 @@ void main() {
     addTearDown(() => AppSettings.instance.setLocaleMode(LocaleMode.zh));
     await pumpDetail(tester, const Size(320, 640), compact: false);
   });
+
+  testWidgets('double-clicking the app title opens quick convert', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ZhidangApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('值当'));
+    await tester.pump(const Duration(milliseconds: 80));
+    await tester.tap(find.text('值当'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('快速换算'), findsOneWidget);
+    expect(find.byTooltip('添加'), findsOneWidget);
+  });
 }
