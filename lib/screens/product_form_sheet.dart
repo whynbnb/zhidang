@@ -888,7 +888,6 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   late final TextEditingController _price;
   late final TextEditingController _shop;
   late final TextEditingController _note;
-  late final TextEditingValue _shopInitial;
   late List<String> _availableUnits;
   late Map<String, TextEditingController> _qtyControllers;
   late List<UnitRelation> _offerRelations;
@@ -965,7 +964,6 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     );
     final shopText = o?.shop ?? '';
     _shop = TextEditingController(text: shopText);
-    _shopInitial = TextEditingValue(text: shopText);
     _note = TextEditingController(text: o?.note ?? '');
     _brand.addListener(_onFieldChanged);
     _price.addListener(_onFieldChanged);
@@ -1049,6 +1047,17 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _quickAddSupplier() async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => const _SupplierNameDialog(),
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+    final supplier = await SupplierStore.instance.add(name: name);
+    if (!mounted) return;
+    setState(() => _shop.text = supplier.name);
   }
 
   Future<void> _addOrEditRelation([UnitRelation? existing]) async {
@@ -1445,74 +1454,49 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                 ],
               ),
               const SizedBox(height: 12),
-              Builder(
-                builder: (context) {
-                  final options = SupplierStore.instance.names;
-                  return RawAutocomplete<String>(
-                    initialValue: _shopInitial,
-                    optionsBuilder: (value) {
-                      final current = SupplierStore.instance.names;
-                      final q = value.text.trim().toLowerCase();
-                      if (q.isEmpty) return current;
-                      return current
-                          .where((name) => name.toLowerCase().contains(q));
-                    },
-                    onSelected: (value) {
-                      _shop.text = value;
-                    },
-                    displayStringForOption: (v) => v,
-                    fieldViewBuilder:
-                        (context, controller, focusNode, onFieldSubmitted) {
-                      return TextFormField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(
-                          labelText: s.shopOptional,
-                          hintText:
-                              options.isEmpty ? s.shopHint : s.selectSupplier,
-                          border: const OutlineInputBorder(),
-                          suffixIcon: options.isEmpty
-                              ? null
-                              : const Icon(Icons.arrow_drop_down),
-                        ),
-                        onChanged: (v) => _shop.text = v,
-                        onFieldSubmitted: (_) => onFieldSubmitted(),
-                      );
-                    },
-                    optionsViewBuilder: (context, onSelected, opts) {
-                      final list = opts.toList();
-                      return Align(
-                        alignment: Alignment.topLeft,
-                        child: Material(
-                          elevation: 4,
-                          borderRadius: BorderRadius.circular(12),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              maxHeight: 200,
-                              maxWidth: 360,
-                            ),
-                            child: ListView.builder(
-                              padding: EdgeInsets.zero,
-                              shrinkWrap: true,
-                              itemCount: list.length,
-                              itemBuilder: (context, index) {
-                                final option = list[index];
-                                return ListTile(
-                                  dense: true,
-                                  leading: const Icon(
-                                    Icons.storefront_outlined,
-                                    size: 18,
-                                  ),
-                                  title: Text(option),
-                                  onTap: () => onSelected(option),
-                                );
-                              },
-                            ),
+              ListenableBuilder(
+                listenable: SupplierStore.instance,
+                builder: (context, _) {
+                  final names = SupplierStore.instance.names;
+                  final shop = _shop.text.trim();
+                  final options = <String>[
+                    if (shop.isNotEmpty && !names.contains(shop)) shop,
+                    ...names,
+                  ];
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          key: ValueKey('shop-$shop-${names.length}'),
+                          initialValue: shop,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: s.shopOptional,
+                            border: const OutlineInputBorder(),
                           ),
+                          items: [
+                            DropdownMenuItem<String>(
+                              value: '',
+                              child: Text(s.noneOption),
+                            ),
+                            for (final name in options)
+                              DropdownMenuItem<String>(
+                                value: name,
+                                child: Text(name),
+                              ),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _shop.text = value ?? ''),
                         ),
-                      );
-                    },
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filledTonal(
+                        onPressed: _quickAddSupplier,
+                        icon: const Icon(Icons.add),
+                        tooltip: s.addSupplier,
+                      ),
+                    ],
                   );
                 },
               ),
@@ -1720,6 +1704,57 @@ class _UnitPriceLabel extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
       ),
+    );
+  }
+}
+
+class _SupplierNameDialog extends StatefulWidget {
+  const _SupplierNameDialog();
+
+  @override
+  State<_SupplierNameDialog> createState() => _SupplierNameDialogState();
+}
+
+class _SupplierNameDialogState extends State<_SupplierNameDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _controller.text.trim();
+    if (name.isEmpty) return;
+    Navigator.of(context).pop(name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    return AlertDialog(
+      title: Text(s.addSupplier),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        decoration: InputDecoration(
+          labelText: s.supplierName,
+          border: const OutlineInputBorder(),
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(s.cancel),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(s.add),
+        ),
+      ],
     );
   }
 }
