@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -6,6 +8,7 @@ import '../models/product.dart';
 import '../services/category_store.dart';
 import '../services/supplier_store.dart';
 import '../services/unit_store.dart';
+import '../utils/discard_changes.dart';
 import '../utils/ime_focus.dart';
 import '../utils/quantity_presets.dart';
 import '../widgets/hint_title.dart';
@@ -29,30 +32,15 @@ Future<ProductFormResult?> showProductForm(
 }) {
   return Navigator.of(context).push<ProductFormResult>(
     MaterialPageRoute(
-      builder: (context) {
-        final s = AppStrings.of(context);
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(product == null ? s.newProduct : s.editProduct),
-          ),
-          body: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: _ProductFormSheet(product: product, showTitle: false),
-            ),
-          ),
-        );
-      },
+      builder: (context) => _ProductFormSheet(product: product),
     ),
   );
 }
 
 class _ProductFormSheet extends StatefulWidget {
-  const _ProductFormSheet({this.product, this.showTitle = true});
+  const _ProductFormSheet({this.product});
 
   final Product? product;
-  final bool showTitle;
 
   @override
   State<_ProductFormSheet> createState() => _ProductFormSheetState();
@@ -68,6 +56,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
   late List<UnitRelation> _relations;
   late String _displayUnit;
   String? _categoryId;
+  late final String _initialSignature;
 
   @override
   void initState() {
@@ -83,8 +72,43 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
         ? current
         : (_units.isNotEmpty ? _units.first : 'g');
     _ensureCategoryUnit();
+    _name.addListener(_onFieldChanged);
+    _note.addListener(_onFieldChanged);
+    _initialSignature = _signature();
     if (widget.product == null) {
       scheduleTextFocus(_nameFocus);
+    }
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String _signature() {
+    final units = _units.toList()..sort();
+    final tags = _tags.toList()..sort();
+    final relations = _relations
+        .map((r) => '${r.fromUnit}>${r.toUnit}:${r.factor}')
+        .toList()
+      ..sort();
+    return jsonEncode(<Object?>[
+      _name.text.trim(),
+      _note.text.trim(),
+      units,
+      tags,
+      relations,
+      _displayUnit,
+      _categoryId,
+    ]);
+  }
+
+  bool get _hasUnsavedChanges => _signature() != _initialSignature;
+
+  Future<void> _onPopInvoked(bool didPop, Object? result) async {
+    if (didPop) return;
+    final discard = await confirmDiscardChanges(context);
+    if (discard && mounted) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -157,6 +181,8 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
 
   @override
   void dispose() {
+    _name.removeListener(_onFieldChanged);
+    _note.removeListener(_onFieldChanged);
     _nameFocus.dispose();
     _name.dispose();
     _note.dispose();
@@ -267,24 +293,32 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (widget.showTitle) ...[
-                Text(
-                  editing ? s.editProduct : s.newProduct,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 16),
-              ],
+    final title = editing ? s.editProduct : s.newProduct;
+
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: _onPopInvoked,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          actions: [
+            TextButton(
+              onPressed: _units.isEmpty ? null : _submit,
+              child: Text(editing ? s.save : s.createAction),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
               TextFormField(
                 controller: _name,
                 focusNode: _nameFocus,
@@ -511,11 +545,6 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: _units.isEmpty ? null : _submit,
-                child: Text(editing ? s.save : s.createAction),
-              ),
               if (editing) ...[
                 const SizedBox(height: 8),
                 TextButton.icon(
@@ -531,7 +560,10 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+),
+);
   }
 }
 
@@ -542,25 +574,10 @@ Future<UnitRelation?> showUnitRelationForm(
 }) {
   return Navigator.of(context).push<UnitRelation>(
     MaterialPageRoute(
-      builder: (context) {
-        final s = AppStrings.of(context);
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(relation == null ? s.addRelation : s.editRelation),
-          ),
-          body: SafeArea(
-            top: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(top: 16),
-              child: _UnitRelationFormSheet(
-                units: units,
-                relation: relation,
-                showTitle: false,
-              ),
-            ),
-          ),
-        );
-      },
+      builder: (context) => _UnitRelationFormSheet(
+        units: units,
+        relation: relation,
+      ),
     ),
   );
 }
@@ -569,12 +586,10 @@ class _UnitRelationFormSheet extends StatefulWidget {
   const _UnitRelationFormSheet({
     required this.units,
     this.relation,
-    this.showTitle = true,
   });
 
   final List<String> units;
   final UnitRelation? relation;
-  final bool showTitle;
 
   @override
   State<_UnitRelationFormSheet> createState() => _UnitRelationFormSheetState();
@@ -585,6 +600,7 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
   late String _from;
   late String _to;
   late final TextEditingController _factor;
+  late final String _initialSignature;
 
   @override
   void initState() {
@@ -600,6 +616,24 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
           ? ''
           : formatQuantityValue(widget.relation!.factor),
     );
+    _factor.addListener(_onFieldChanged);
+    _initialSignature = _signature();
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String _signature() => '$_from|$_to|${_factor.text.trim()}';
+
+  bool get _hasUnsavedChanges => _signature() != _initialSignature;
+
+  Future<void> _onPopInvoked(bool didPop, Object? result) async {
+    if (didPop) return;
+    final discard = await confirmDiscardChanges(context);
+    if (discard && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   List<String> get _allUnits {
@@ -631,6 +665,7 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
 
   @override
   void dispose() {
+    _factor.removeListener(_onFieldChanged);
     _factor.dispose();
     super.dispose();
   }
@@ -659,24 +694,31 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
     final units = _allUnits;
     final toItems = units.where((u) => u != _from).toList();
     final canPickPair = units.length >= 2;
+    final title = editing ? s.editRelation : s.addRelation;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (widget.showTitle) ...[
-              Text(
-                editing ? s.editRelation : s.addRelation,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 8),
-            ],
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: _onPopInvoked,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          actions: [
+            TextButton(
+              onPressed: canPickPair && _from != _to ? _submit : null,
+              child: Text(editing ? s.save : s.createAction),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
             Text(
               canPickPair ? s.offerRelationsHint : s.relationNeedTwoUnits,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -780,14 +822,13 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
                   ),
             ),
             const SizedBox(height: 20),
-            FilledButton(
-              onPressed: canPickPair && _from != _to ? _submit : null,
-              child: Text(editing ? s.save : s.createAction),
-            ),
           ],
         ),
       ),
-    );
+    ),
+  ),
+),
+);
   }
 }
 
@@ -812,27 +853,12 @@ Future<OfferFormResult?> showOfferForm(
 }) {
   return Navigator.of(context).push<OfferFormResult>(
     MaterialPageRoute(
-      builder: (context) {
-        final s = AppStrings.of(context);
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(offer == null ? s.addOffer : s.editOffer),
-          ),
-          body: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: _OfferFormSheet(
-                offer: offer,
-                units: units,
-                defaultRelations: defaultRelations,
-                preferredUnit: preferredUnit,
-                showTitle: false,
-              ),
-            ),
-          ),
-        );
-      },
+      builder: (context) => _OfferFormSheet(
+        offer: offer,
+        units: units,
+        defaultRelations: defaultRelations,
+        preferredUnit: preferredUnit,
+      ),
     ),
   );
 }
@@ -843,14 +869,12 @@ class _OfferFormSheet extends StatefulWidget {
     required this.units,
     this.defaultRelations = const [],
     this.preferredUnit,
-    this.showTitle = true,
   });
 
   final Offer? offer;
   final List<String> units;
   final List<UnitRelation> defaultRelations;
   final String? preferredUnit;
-  final bool showTitle;
 
   @override
   State<_OfferFormSheet> createState() => _OfferFormSheetState();
@@ -875,6 +899,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   final Set<String> _autoFilledUnits = {};
   String? _activePresetUnit;
   String? _measureError;
+  late final String _initialSignature;
 
   @override
   void initState() {
@@ -941,8 +966,51 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     _shop = TextEditingController(text: shopText);
     _shopInitial = TextEditingValue(text: shopText);
     _note = TextEditingController(text: o?.note ?? '');
+    _brand.addListener(_onFieldChanged);
+    _price.addListener(_onFieldChanged);
+    _shop.addListener(_onFieldChanged);
+    _note.addListener(_onFieldChanged);
+    _initialSignature = _signature();
     if (o == null) {
       scheduleTextFocus(_brandFocus);
+    }
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String _signature() {
+    final quantities = <String, String>{
+      for (final unit in _availableUnits)
+        if ((_qtyControllers[unit]?.text.trim() ?? '').isNotEmpty)
+          unit: _qtyControllers[unit]!.text.trim(),
+    };
+    final units = quantities.keys.toList()..sort();
+    final relations = _offerRelations
+        .map((r) => '${r.fromUnit}>${r.toUnit}:${r.factor}')
+        .toList()
+      ..sort();
+    final tags = _tags.toList()..sort();
+    return jsonEncode(<Object?>[
+      _brand.text.trim(),
+      _price.text.trim(),
+      _shop.text.trim(),
+      _note.text.trim(),
+      {for (final unit in units) unit: quantities[unit]},
+      relations,
+      tags,
+      _counterMode.name,
+    ]);
+  }
+
+  bool get _hasUnsavedChanges => _signature() != _initialSignature;
+
+  Future<void> _onPopInvoked(bool didPop, Object? result) async {
+    if (didPop) return;
+    final discard = await confirmDiscardChanges(context);
+    if (discard && mounted) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -967,6 +1035,10 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
 
   @override
   void dispose() {
+    _brand.removeListener(_onFieldChanged);
+    _price.removeListener(_onFieldChanged);
+    _shop.removeListener(_onFieldChanged);
+    _note.removeListener(_onFieldChanged);
     _brandFocus.dispose();
     _brand.dispose();
     _price.dispose();
@@ -1212,25 +1284,32 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     final scheme = Theme.of(context).colorScheme;
     final presetUnit = _activePresetUnit ?? _availableUnits.first;
     final hasRelations = _offerRelations.isNotEmpty;
+    final title = editing ? s.editOffer : s.addOffer;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (widget.showTitle) ...[
-                Text(
-                  editing ? s.editOffer : s.addOffer,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 16),
-              ],
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: _onPopInvoked,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          actions: [
+            TextButton(
+              onPressed: _submit,
+              child: Text(editing ? s.save : s.add),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1596,11 +1675,6 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: _submit,
-                child: Text(editing ? s.save : s.add),
-              ),
               if (editing) ...[
                 const SizedBox(height: 8),
                 TextButton.icon(
@@ -1616,7 +1690,10 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+),
+);
   }
 }
 

@@ -167,6 +167,62 @@ void main() {
     expect(find.text('时间记录'), findsOneWidget);
   });
 
+  testWidgets('edit page saves from the app bar', (tester) async {
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    await tester.tap(find.byTooltip('编辑商品'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, '鸡蛋2');
+    await tester.pump();
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('商品比价 - 鸡蛋2'), findsOneWidget);
+  });
+
+  testWidgets('unsaved edits ask before leaving', (tester) async {
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    await tester.tap(find.byTooltip('编辑商品'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, '鸡蛋2');
+    await tester.pump();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('放弃修改？'), findsOneWidget);
+
+    await tester.tap(find.text('继续编辑'));
+    await tester.pumpAndSettle();
+    expect(find.text('编辑商品'), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('放弃'));
+    await tester.pumpAndSettle();
+    expect(find.text('商品比价 - 鸡蛋'), findsOneWidget);
+  });
+
+  testWidgets('offer edit only prompts after changes', (tester) async {
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+
+    await tester.tap(find.byTooltip('编辑').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('放弃修改？'), findsNothing);
+    expect(find.text('商品比价 - 鸡蛋'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('编辑').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'A2');
+    await tester.pump();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('放弃修改？'), findsOneWidget);
+    await tester.tap(find.text('放弃'));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('compact product card uses short badges', (tester) async {
     await AppSettings.instance.setCompactMode(true);
     addTearDown(() => AppSettings.instance.setCompactMode(false));

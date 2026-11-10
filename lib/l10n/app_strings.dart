@@ -388,6 +388,12 @@ class AppStrings {
   String get edit => isZh ? '编辑' : 'Edit';
   String get delete => isZh ? '删除' : 'Delete';
   String get cancel => isZh ? '取消' : 'Cancel';
+  String get discardChangesTitle => isZh ? '放弃修改？' : 'Discard changes?';
+  String get discardChangesBody => isZh
+      ? '当前修改尚未保存，返回后将丢失。'
+      : "Your changes haven't been saved and will be lost.";
+  String get discardChanges => isZh ? '放弃' : 'Discard';
+  String get keepEditing => isZh ? '继续编辑' : 'Keep editing';
   String get save => isZh ? '保存' : 'Save';
   String get add => isZh ? '添加' : 'Add';
   String get createAction => isZh ? '创建' : 'Create';
