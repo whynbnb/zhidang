@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
@@ -9,6 +10,8 @@ import '../utils/ime_focus.dart';
 import '../utils/quantity_presets.dart';
 import '../widgets/hint_title.dart';
 import '../widgets/tag_chips.dart';
+
+final _currency = NumberFormat('#,##0.##');
 
 class ProductFormResult {
   const ProductFormResult.saved(this.product) : deleted = false;
@@ -1110,6 +1113,14 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     return measures;
   }
 
+  double? _unitPriceFor(String unit) {
+    final price = double.tryParse(_price.text.trim());
+    final raw = _qtyControllers[unit]?.text.trim() ?? '';
+    final qty = double.tryParse(raw);
+    if (price == null || price <= 0 || qty == null || qty <= 0) return null;
+    return price / qty;
+  }
+
   Future<void> _submit() async {
     final s = AppStrings.of(context);
     if (!_formKey.currentState!.validate()) return;
@@ -1220,31 +1231,44 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                 ),
                 const SizedBox(height: 16),
               ],
-              TextFormField(
-                controller: _brand,
-                focusNode: _brandFocus,
-                autofocus: !editing && !prefersDelayedTextFocus,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: s.brandOrSpec,
-                  hintText: s.brandHint,
-                  border: const OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? s.brandRequired : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _price,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: s.totalPrice,
-                  border: const OutlineInputBorder(),
-                ),
-                validator: (v) => _positiveNumber(v, s),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: _brand,
+                      focusNode: _brandFocus,
+                      autofocus: !editing && !prefersDelayedTextFocus,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: s.brandOrSpec,
+                        hintText: s.brandHint,
+                        border: const OutlineInputBorder(),
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? s.brandRequired
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: TextFormField(
+                      controller: _price,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: s.totalPrice,
+                        border: const OutlineInputBorder(),
+                      ),
+                      validator: (v) => _positiveNumber(v, s),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               HintTitle(
@@ -1253,35 +1277,48 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
               ),
               const SizedBox(height: 10),
               for (final unit in _availableUnits) ...[
-                TextFormField(
-                  controller: _qtyControllers[unit],
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    labelText: s.quantityLabel(unit),
-                    hintText: s.quantityOptionalHint,
-                    border: const OutlineInputBorder(),
-                    suffixText: unit,
-                    helperText: _autoFilledUnits.contains(unit)
-                        ? s.autoFilled
-                        : null,
-                  ),
-                  onTap: () => setState(() => _activePresetUnit = unit),
-                  onChanged: (value) {
-                    _activePresetUnit = unit;
-                    if (value.trim().isEmpty) {
-                      _manualUnits.remove(unit);
-                      _autoFilledUnits.remove(unit);
-                    } else {
-                      _manualUnits.add(unit);
-                      _autoFilledUnits.remove(unit);
-                    }
-                    _measureError = null;
-                    _applyAutoFill(sourceUnit: unit);
-                  },
-                  validator: (v) => _optionalPositiveNumber(v, s),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _qtyControllers[unit],
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: s.quantityLabel(unit),
+                          hintText: s.quantityOptionalHint,
+                          border: const OutlineInputBorder(),
+                          suffixText: unit,
+                          helperText: _autoFilledUnits.contains(unit)
+                              ? s.autoFilled
+                              : null,
+                        ),
+                        onTap: () =>
+                            setState(() => _activePresetUnit = unit),
+                        onChanged: (value) {
+                          _activePresetUnit = unit;
+                          if (value.trim().isEmpty) {
+                            _manualUnits.remove(unit);
+                            _autoFilledUnits.remove(unit);
+                          } else {
+                            _manualUnits.add(unit);
+                            _autoFilledUnits.remove(unit);
+                          }
+                          _measureError = null;
+                          _applyAutoFill(sourceUnit: unit);
+                        },
+                        validator: (v) => _optionalPositiveNumber(v, s),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _UnitPriceLabel(
+                      price: _unitPriceFor(unit),
+                      unit: unit,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
               ],
@@ -1578,6 +1615,31 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _UnitPriceLabel extends StatelessWidget {
+  const _UnitPriceLabel({required this.price, required this.unit});
+
+  final double? price;
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 104,
+      child: Text(
+        price == null ? '—' : '¥${_currency.format(price)} / $unit',
+        textAlign: TextAlign.right,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: price == null ? scheme.onSurfaceVariant : scheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
       ),
     );
   }

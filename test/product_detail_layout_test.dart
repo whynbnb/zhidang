@@ -139,6 +139,19 @@ void main() {
     expect(find.text('最多 5 个；输入添加，点击标签可移除'), findsOneWidget);
   });
 
+  testWidgets('offer form shows per-unit price', (tester) async {
+    await pumpDetail(tester, const Size(320, 640), compact: false);
+    await tester.tap(find.byTooltip('编辑').first);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('¥0.67 / 个'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).at(1), '30');
+    await tester.pump();
+    expect(find.text('¥1 / 个'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('counter options live under advanced options', (tester) async {
     await pumpDetail(tester, const Size(390, 844), compact: false);
     await tester.tap(find.byTooltip('编辑').first);
