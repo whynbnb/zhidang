@@ -103,6 +103,22 @@ void main() {
     await pumpDetail(tester, const Size(1280, 800), compact: true);
   });
 
+  testWidgets('compact product card uses short badges', (tester) async {
+    await AppSettings.instance.setCompactMode(true);
+    addTearDown(() => AppSettings.instance.setCompactMode(false));
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ZhidangApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 维度'), findsOneWidget);
+    expect(find.text('×3'), findsOneWidget);
+    expect(find.textContaining('单位：'), findsNothing);
+  });
+
   testWidgets('detail header fits on a phone in English', (tester) async {
     await AppSettings.instance.setLocaleMode(LocaleMode.en);
     addTearDown(() => AppSettings.instance.setLocaleMode(LocaleMode.zh));

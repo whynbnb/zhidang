@@ -423,6 +423,8 @@ class AppStrings {
       : 'Add brand prices and sizes to calculate unit prices';
   String brandCount(int n) =>
       isZh ? '$n 个品牌' : (n == 1 ? '1 brand' : '$n brands');
+  String dimensionCountShort(int n) =>
+      isZh ? '$n 维度' : (n == 1 ? '1 dim' : '$n dims');
   String bestBrand(String brand) => isZh ? '最优：$brand' : 'Best: $brand';
   String get noOfferHintCard =>
       isZh ? '还没有报价，点进来添加' : 'No offers yet — tap to add';

@@ -38,13 +38,6 @@ class ProductCard extends StatelessWidget {
     final units = product.measureUnits;
 
     if (compact) {
-      final meta = <String>[
-        units.length > 1
-            ? s.dimensionCount(units.length)
-            : s.unitLabel(primaryUnit),
-        if (product.offers.isNotEmpty) s.brandCount(product.offers.length),
-      ].join(' · ');
-
       return Material(
         color: selected
             ? scheme.primaryContainer.withValues(alpha: 0.35)
@@ -68,23 +61,34 @@ class ProductCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        product.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              product.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
                             ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        meta,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
+                          ),
+                          if (units.length > 1) ...[
+                            const SizedBox(width: 6),
+                            _CompactBadge(
+                              label: s.dimensionCountShort(units.length),
+                              tooltip: s.dimensionCount(units.length),
+                            ),
+                          ],
+                          if (product.offers.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            _CompactBadge(
+                              label: '×${product.offers.length}',
+                              tooltip: s.brandCount(product.offers.length),
+                            ),
+                          ],
+                        ],
                       ),
                       if (product.tags.isNotEmpty) ...[
                         const SizedBox(height: 4),
@@ -248,5 +252,34 @@ class ProductCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _CompactBadge extends StatelessWidget {
+  const _CompactBadge({required this.label, this.tooltip});
+
+  final String label;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+    if (tooltip == null) return badge;
+    return Tooltip(message: tooltip!, child: badge);
   }
 }
