@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
 import '../utils/tag_display.dart';
+import 'hint_title.dart';
 
 /// Free-text tags: add by typing, remove by tapping chip.
 class TagPicker extends StatefulWidget {
@@ -61,18 +62,9 @@ class _TagPickerState extends State<TagPicker> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          s.tags,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          s.tagsAssignHint(widget.maxTags),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
+        HintTitle(
+          title: s.tags,
+          hint: s.tagsAssignHint(widget.maxTags),
         ),
         const SizedBox(height: 10),
         if (tags.isNotEmpty) ...[

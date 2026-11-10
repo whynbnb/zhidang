@@ -7,6 +7,7 @@ import '../services/supplier_store.dart';
 import '../services/unit_store.dart';
 import '../utils/ime_focus.dart';
 import '../utils/quantity_presets.dart';
+import '../widgets/hint_title.dart';
 import '../widgets/tag_chips.dart';
 
 class ProductFormResult {
@@ -23,18 +24,32 @@ Future<ProductFormResult?> showProductForm(
   BuildContext context, {
   Product? product,
 }) {
-  return showModalBottomSheet<ProductFormResult>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (context) => _ProductFormSheet(product: product),
+  return Navigator.of(context).push<ProductFormResult>(
+    MaterialPageRoute(
+      builder: (context) {
+        final s = AppStrings.of(context);
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(product == null ? s.newProduct : s.editProduct),
+          ),
+          body: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _ProductFormSheet(product: product, showTitle: false),
+            ),
+          ),
+        );
+      },
+    ),
   );
 }
 
 class _ProductFormSheet extends StatefulWidget {
-  const _ProductFormSheet({this.product});
+  const _ProductFormSheet({this.product, this.showTitle = true});
 
   final Product? product;
+  final bool showTitle;
 
   @override
   State<_ProductFormSheet> createState() => _ProductFormSheetState();
@@ -245,13 +260,12 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final editing = widget.product != null;
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -259,13 +273,15 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                editing ? s.editProduct : s.newProduct,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 16),
+              if (widget.showTitle) ...[
+                Text(
+                  editing ? s.editProduct : s.newProduct,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 16),
+              ],
               TextFormField(
                 controller: _name,
                 focusNode: _nameFocus,
@@ -281,18 +297,9 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                     : null,
               ),
               const SizedBox(height: 16),
-              Text(
-                s.productCategory,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                s.productCategoryHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+              HintTitle(
+                title: s.productCategory,
+                hint: s.productCategoryHint,
               ),
               const SizedBox(height: 10),
               ListenableBuilder(
@@ -325,18 +332,9 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                 },
               ),
               const SizedBox(height: 16),
-              Text(
-                s.measureDimensions,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                s.measureDimensionsHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+              HintTitle(
+                title: s.measureDimensions,
+                hint: s.measureDimensionsHint,
               ),
               const SizedBox(height: 10),
               ListenableBuilder(
@@ -375,18 +373,9 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                 ),
               if (_units.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Text(
-                  s.listDisplayUnit,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  s.listDisplayUnitHint,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                HintTitle(
+                  title: s.listDisplayUnit,
+                  hint: s.listDisplayUnitHint,
                 ),
                 const SizedBox(height: 10),
                 Wrap(
@@ -548,13 +537,27 @@ Future<UnitRelation?> showUnitRelationForm(
   required List<String> units,
   UnitRelation? relation,
 }) {
-  return showModalBottomSheet<UnitRelation>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (context) => _UnitRelationFormSheet(
-      units: units,
-      relation: relation,
+  return Navigator.of(context).push<UnitRelation>(
+    MaterialPageRoute(
+      builder: (context) {
+        final s = AppStrings.of(context);
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(relation == null ? s.addRelation : s.editRelation),
+          ),
+          body: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 16),
+              child: _UnitRelationFormSheet(
+                units: units,
+                relation: relation,
+                showTitle: false,
+              ),
+            ),
+          ),
+        );
+      },
     ),
   );
 }
@@ -563,10 +566,12 @@ class _UnitRelationFormSheet extends StatefulWidget {
   const _UnitRelationFormSheet({
     required this.units,
     this.relation,
+    this.showTitle = true,
   });
 
   final List<String> units;
   final UnitRelation? relation;
+  final bool showTitle;
 
   @override
   State<_UnitRelationFormSheet> createState() => _UnitRelationFormSheetState();
@@ -646,7 +651,6 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final s = AppStrings.of(context);
     final editing = widget.relation != null;
     final units = _allUnits;
@@ -654,20 +658,22 @@ class _UnitRelationFormSheetState extends State<_UnitRelationFormSheet> {
     final canPickPair = units.length >= 2;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              editing ? s.editRelation : s.addRelation,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: 8),
+            if (widget.showTitle) ...[
+              Text(
+                editing ? s.editRelation : s.addRelation,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+            ],
             Text(
               canPickPair ? s.offerRelationsHint : s.relationNeedTwoUnits,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -801,15 +807,29 @@ Future<OfferFormResult?> showOfferForm(
   List<UnitRelation> defaultRelations = const [],
   String? preferredUnit,
 }) {
-  return showModalBottomSheet<OfferFormResult>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (context) => _OfferFormSheet(
-      offer: offer,
-      units: units,
-      defaultRelations: defaultRelations,
-      preferredUnit: preferredUnit,
+  return Navigator.of(context).push<OfferFormResult>(
+    MaterialPageRoute(
+      builder: (context) {
+        final s = AppStrings.of(context);
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(offer == null ? s.addOffer : s.editOffer),
+          ),
+          body: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _OfferFormSheet(
+                offer: offer,
+                units: units,
+                defaultRelations: defaultRelations,
+                preferredUnit: preferredUnit,
+                showTitle: false,
+              ),
+            ),
+          ),
+        );
+      },
     ),
   );
 }
@@ -820,12 +840,14 @@ class _OfferFormSheet extends StatefulWidget {
     required this.units,
     this.defaultRelations = const [],
     this.preferredUnit,
+    this.showTitle = true,
   });
 
   final Offer? offer;
   final List<String> units;
   final List<UnitRelation> defaultRelations;
   final String? preferredUnit;
+  final bool showTitle;
 
   @override
   State<_OfferFormSheet> createState() => _OfferFormSheetState();
@@ -1174,7 +1196,6 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final editing = widget.offer != null;
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
@@ -1182,7 +1203,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     final hasRelations = _offerRelations.isNotEmpty;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -1190,13 +1211,15 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                editing ? s.editOffer : s.addOffer,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 16),
+              if (widget.showTitle) ...[
+                Text(
+                  editing ? s.editOffer : s.addOffer,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 16),
+              ],
               TextFormField(
                 controller: _brand,
                 focusNode: _brandFocus,
@@ -1224,18 +1247,9 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                 validator: (v) => _positiveNumber(v, s),
               ),
               const SizedBox(height: 16),
-              Text(
-                s.offerMeasures,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                s.offerMeasuresHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+              HintTitle(
+                title: s.offerMeasures,
+                hint: s.offerMeasuresHint,
               ),
               const SizedBox(height: 10),
               for (final unit in _availableUnits) ...[
@@ -1385,47 +1399,6 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                 },
               ),
               const SizedBox(height: 16),
-              Text(
-                s.counter,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                s.counterHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: Text(s.counterModeNone),
-                    selected: _counterMode == OfferCounterMode.none,
-                    onSelected: (_) =>
-                        setState(() => _counterMode = OfferCounterMode.none),
-                  ),
-                  ChoiceChip(
-                    label: Text(s.counterModeCount),
-                    selected: _counterMode == OfferCounterMode.countOnly,
-                    onSelected: (_) => setState(
-                      () => _counterMode = OfferCounterMode.countOnly,
-                    ),
-                  ),
-                  ChoiceChip(
-                    label: Text(s.counterModeLog),
-                    selected: _counterMode == OfferCounterMode.withLog,
-                    onSelected: (_) => setState(
-                      () => _counterMode = OfferCounterMode.withLog,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
               TagPicker(
                 selected: _tags,
                 onChanged: (next) => setState(() => _tags = next),
@@ -1454,14 +1427,51 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                         ),
                   ),
                   subtitle: Text(
-                    hasRelations
-                        ? '${s.offerRelations} · ${s.relationsConfigured(_offerRelations.length)}'
-                        : s.offerRelations,
+                    [
+                      hasRelations
+                          ? '${s.offerRelations} · ${s.relationsConfigured(_offerRelations.length)}'
+                          : s.offerRelations,
+                      if (_counterMode != OfferCounterMode.none)
+                        '${s.counter} · ${_counterMode == OfferCounterMode.withLog ? s.counterModeLog : s.counterModeCount}',
+                    ].join(' · '),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
                   ),
                   children: [
+                    HintTitle(
+                      title: s.counter,
+                      hint: s.counterHint,
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: Text(s.counterModeNone),
+                          selected: _counterMode == OfferCounterMode.none,
+                          onSelected: (_) => setState(
+                            () => _counterMode = OfferCounterMode.none,
+                          ),
+                        ),
+                        ChoiceChip(
+                          label: Text(s.counterModeCount),
+                          selected: _counterMode == OfferCounterMode.countOnly,
+                          onSelected: (_) => setState(
+                            () => _counterMode = OfferCounterMode.countOnly,
+                          ),
+                        ),
+                        ChoiceChip(
+                          label: Text(s.counterModeLog),
+                          selected: _counterMode == OfferCounterMode.withLog,
+                          onSelected: (_) => setState(
+                            () => _counterMode = OfferCounterMode.withLog,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(

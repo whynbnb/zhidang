@@ -103,6 +103,57 @@ void main() {
     await pumpDetail(tester, const Size(1280, 800), compact: true);
   });
 
+  testWidgets('editing opens a full page instead of a sheet', (tester) async {
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+
+    await tester.tap(find.byTooltip('编辑商品'));
+    await tester.pumpAndSettle();
+    expect(find.text('编辑商品'), findsOneWidget);
+    expect(find.byType(AppBar), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('编辑').first);
+    await tester.pumpAndSettle();
+    expect(find.text('编辑报价'), findsOneWidget);
+    expect(find.byType(AppBar), findsOneWidget);
+  });
+
+  testWidgets('edit form hints appear on long press', (tester) async {
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    await tester.tap(find.byTooltip('编辑商品'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('可选；加入后继承大类单位'), findsNothing);
+    await tester.longPress(find.text('所属大类'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('可选；加入后继承大类单位'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.ensureVisible(find.text('标签'));
+    await tester.pumpAndSettle();
+    expect(find.text('最多 5 个；输入添加，点击标签可移除'), findsNothing);
+    await tester.longPress(find.text('标签'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('最多 5 个；输入添加，点击标签可移除'), findsOneWidget);
+  });
+
+  testWidgets('counter options live under advanced options', (tester) async {
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    await tester.tap(find.byTooltip('编辑').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('计数器'), findsNothing);
+    await tester.ensureVisible(find.text('高级选项'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('高级选项'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('计数器'), findsOneWidget);
+    expect(find.text('时间记录'), findsOneWidget);
+  });
+
   testWidgets('compact product card uses short badges', (tester) async {
     await AppSettings.instance.setCompactMode(true);
     addTearDown(() => AppSettings.instance.setCompactMode(false));
