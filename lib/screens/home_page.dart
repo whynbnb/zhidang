@@ -8,6 +8,7 @@ import '../services/storage_service.dart';
 import '../settings/app_settings.dart';
 import '../utils/layout.dart';
 import '../widgets/app_header_actions.dart';
+import '../widgets/note_hint.dart';
 import '../widgets/offer_tile.dart';
 import '../widgets/product_card.dart';
 import '../widgets/tag_chips.dart';
@@ -432,14 +433,35 @@ class _NarrowLayout extends StatelessWidget {
               onPressed: onBack,
               tooltip: s.backToList,
             ),
-            title: Text(
-              s.productCompareTitle(selected!.name),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            subtitle: Text(
-              s.brandCount(selected!.offers.length),
+            title: selected!.note.isNotEmpty
+                ? NoteHintLabel(
+                    note: selected!.note,
+                    label: s.productCompareTitle(selected!.name),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  )
+                : Text(
+                    s.productCompareTitle(selected!.name),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+            subtitle: Row(
+              children: [
+                Text(
+                  s.brandCount(selected!.offers.length),
+                  maxLines: 1,
+                ),
+                if (selected!.tags.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TagChipRow(
+                      tags: selected!.tags,
+                      dense: true,
+                      singleLine: true,
+                    ),
+                  ),
+                ],
+              ],
             ),
             trailing: IconButton(
               icon: const Icon(Icons.edit_outlined),
@@ -719,13 +741,29 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            product.name,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
+                          child: product.note.isNotEmpty
+                              ? NoteHintLabel(
+                                  note: product.note,
+                                  label: product.name,
+                                  maxLines: 1,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                )
+                              : Text(
+                                  product.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                ),
                         ),
                         IconButton(
                           onPressed: widget.onEditProduct,
@@ -734,35 +772,30 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                         ),
                       ],
                     ),
-                    Text(
-                      s.brandCount(product.offers.length),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
+                    Row(
+                      children: [
+                        Text(
+                          s.brandCount(product.offers.length),
+                          maxLines: 1,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                        ),
+                        if (product.tags.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TagChipRow(
+                              tags: product.tags,
+                              dense: true,
+                              singleLine: true,
+                            ),
                           ),
+                        ],
+                      ],
                     ),
-                    if (product.tags.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      TagChipRow(tags: product.tags, dense: true),
-                    ],
-                    if (product.note.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(product.note),
-                    ],
-                    const SizedBox(height: 8),
-                  ] else if (product.tags.isNotEmpty ||
-                      product.note.isNotEmpty) ...[
-                    if (product.tags.isNotEmpty)
-                      TagChipRow(tags: product.tags, dense: true),
-                    if (product.note.isNotEmpty) ...[
-                      if (product.tags.isNotEmpty) const SizedBox(height: 6),
-                      Text(
-                        product.note,
-                        style:
-                            Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                      ),
-                    ],
                     const SizedBox(height: 8),
                   ],
                   LayoutBuilder(

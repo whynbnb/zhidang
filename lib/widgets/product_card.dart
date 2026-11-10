@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
+import 'note_hint.dart';
 import 'tag_chips.dart';
 
 final _currency = NumberFormat('#,##0.##');
@@ -64,15 +65,30 @@ class ProductCard extends StatelessWidget {
                       Row(
                         children: [
                           Flexible(
-                            child: Text(
-                              product.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
+                            child: product.note.isNotEmpty
+                                ? NoteHintLabel(
+                                    note: product.note,
+                                    label: product.name,
+                                    maxLines: 1,
+                                    iconSize: 15,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  )
+                                : Text(
+                                    product.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
                           ),
                           if (units.length > 1) ...[
                             const SizedBox(width: 6),
@@ -170,14 +186,25 @@ class ProductCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      product.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                    child: product.note.isNotEmpty
+                        ? NoteHintLabel(
+                            note: product.note,
+                            label: product.name,
+                            maxLines: 1,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          )
+                        : Text(
+                            product.name,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                   ),
                   if (product.offers.isNotEmpty)
                     Container(
@@ -235,17 +262,6 @@ class ProductCard extends StatelessWidget {
               if (product.tags.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 TagChipRow(tags: product.tags, dense: true),
-              ],
-              if (product.note.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  product.note,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                ),
               ],
             ],
           ),

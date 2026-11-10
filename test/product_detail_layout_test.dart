@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,6 +28,8 @@ void main() {
       Product(
         name: '鸡蛋',
         units: ['个', 'kg'],
+        note: '冷藏保存',
+        tags: ['冷藏', '早餐'],
         offers: [
           Offer(
             brand: 'A',
@@ -34,6 +37,8 @@ void main() {
             unit: '个',
             quantity: 30,
             favorite: true,
+            note: '临期特价',
+            tags: ['123', '345'],
           ),
           Offer(brand: 'B', price: 15, unit: '个', quantity: 20),
           Offer(brand: 'C', price: 12, unit: 'kg', quantity: 1),
@@ -70,6 +75,10 @@ void main() {
     await pumpDetail(tester, const Size(320, 640), compact: false);
     expect(find.text('商品比价 - 鸡蛋'), findsOneWidget);
     expect(find.text('3 个品牌'), findsOneWidget);
+    expect(find.text('冷藏'), findsOneWidget);
+    final countCenter = tester.getCenter(find.text('3 个品牌')).dy;
+    final tagCenter = tester.getCenter(find.text('冷藏')).dy;
+    expect((tagCenter - countCenter).abs(), lessThan(8));
     expect(find.byTooltip('只看收藏'), findsOneWidget);
   });
 
@@ -87,6 +96,48 @@ void main() {
     expect(find.byTooltip('只看收藏'), findsNothing);
     expect(find.text('1 个品牌'), findsOneWidget);
     expect(find.text('度量维度：个'), findsOneWidget);
+  });
+
+  testWidgets('notes are hidden behind hint icons', (tester) async {
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    expect(find.text('冷藏保存'), findsNothing);
+    expect(find.text('临期特价'), findsNothing);
+    expect(find.byTooltip('冷藏保存'), findsOneWidget);
+    expect(find.byTooltip('临期特价'), findsOneWidget);
+
+    await tester.longPress(find.byTooltip('冷藏保存'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('冷藏保存'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.longPress(find.byTooltip('临期特价'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('临期特价'), findsOneWidget);
+  });
+
+  testWidgets('note hint shows on hover', (tester) async {
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(find.byTooltip('冷藏保存')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('冷藏保存'), findsOneWidget);
+  });
+
+  testWidgets('note hint works in compact rows', (tester) async {
+    await pumpDetail(tester, const Size(390, 844), compact: true);
+    await tester.longPress(find.byTooltip('临期特价'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('临期特价'), findsOneWidget);
+  });
+
+  testWidgets('offer tags sit beside the brand', (tester) async {
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    final tagCenter = tester.getCenter(find.text('123')).dy;
+    final brandCenter = tester.getCenter(find.text('A')).dy;
+    expect((tagCenter - brandCenter).abs(), lessThan(10));
   });
 
   testWidgets('detail header fits on a phone in compact mode', (tester) async {
@@ -237,6 +288,7 @@ void main() {
     expect(find.text('2 维度'), findsOneWidget);
     expect(find.text('×3'), findsOneWidget);
     expect(find.textContaining('单位：'), findsNothing);
+    expect(find.byTooltip('冷藏保存'), findsOneWidget);
   });
 
   testWidgets('detail header fits on a phone in English', (tester) async {

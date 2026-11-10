@@ -19,6 +19,8 @@ class HintTitle extends StatelessWidget {
       child: Tooltip(
         message: hint,
         triggerMode: TooltipTriggerMode.longPress,
+          showDuration: const Duration(seconds: 6),
+        constraints: const BoxConstraints(maxWidth: 280),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

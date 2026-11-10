@@ -122,15 +122,56 @@ class TagChipRow extends StatelessWidget {
     super.key,
     required this.tags,
     this.dense = false,
+    this.singleLine = false,
   });
 
   final List<String> tags;
   final bool dense;
 
+  /// Scrolls horizontally instead of wrapping to another line.
+  final bool singleLine;
+
   @override
   Widget build(BuildContext context) {
     if (tags.isEmpty) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
+
+    Widget chip(String tag) {
+      return Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: dense ? 7 : 8,
+          vertical: dense ? 2 : 3,
+        ),
+        decoration: BoxDecoration(
+          color: scheme.secondaryContainer.withValues(alpha: 0.75),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          TagDisplay.ellipsize(tag),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: scheme.onSecondaryContainer,
+                fontSize: dense ? 11 : 12,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+      );
+    }
+
+    if (singleLine) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var i = 0; i < tags.length; i++) ...[
+              chip(tags[i]),
+              if (i != tags.length - 1) const SizedBox(width: 6),
+            ],
+          ],
+        ),
+      );
+    }
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -138,29 +179,7 @@ class TagChipRow extends StatelessWidget {
         spacing: 6,
         runSpacing: 4,
         alignment: WrapAlignment.start,
-        children: [
-          for (final tag in tags)
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: dense ? 7 : 8,
-                vertical: dense ? 2 : 3,
-              ),
-              decoration: BoxDecoration(
-                color: scheme.secondaryContainer.withValues(alpha: 0.75),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                TagDisplay.ellipsize(tag),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: scheme.onSecondaryContainer,
-                      fontSize: dense ? 11 : 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ),
-        ],
+        children: [for (final tag in tags) chip(tag)],
       ),
     );
   }

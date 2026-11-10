@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
 import '../utils/quantity_presets.dart';
+import 'note_hint.dart';
 import 'tag_chips.dart';
 
 final _currency = NumberFormat('#,##0.##');
@@ -47,7 +48,7 @@ class OfferTile extends StatelessWidget {
     final counterEnabled = offer.counterMode.enabled;
     final isLog = offer.counterMode == OfferCounterMode.withLog;
     final highlight = isPreferred || isBest;
-    final hasMeta = counterEnabled || offer.tags.isNotEmpty;
+    final hasMeta = counterEnabled;
 
     final actions = _OfferActions(
       offer: offer,
@@ -85,14 +86,45 @@ class OfferTile extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              offer.brand,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: offer.note.isNotEmpty
+                                      ? NoteHintLabel(
+                                          note: offer.note,
+                                          label: offer.brand,
+                                          maxLines: 1,
+                                          iconSize: 15,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        )
+                                      : Text(
+                                          offer.brand,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                ),
+                                if (offer.tags.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: TagChipRow(
+                                      tags: offer.tags,
+                                      dense: true,
+                                      singleLine: true,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -141,10 +173,6 @@ class OfferTile extends StatelessWidget {
                           actions,
                         ],
                       ),
-                      if (offer.tags.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        TagChipRow(tags: offer.tags, dense: true),
-                      ],
                     ],
                   ),
                 ),
@@ -201,22 +229,54 @@ class OfferTile extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              offer.brand,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: offer.note.isNotEmpty
+                                      ? NoteHintLabel(
+                                          note: offer.note,
+                                          label: offer.brand,
+                                          maxLines: 2,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        )
+                                      : Text(
+                                          offer.brand,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                ),
+                                if (offer.tags.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: TagChipRow(
+                                      tags: offer.tags,
+                                      dense: true,
+                                      singleLine: true,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                          if (offer.favorite)
+                          if (offer.favorite) ...[
+                            const SizedBox(width: 8),
                             Icon(
                               Icons.star_rounded,
                               size: 18,
                               color: scheme.tertiary,
                             ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 2),
@@ -237,16 +297,6 @@ class OfferTile extends StatelessWidget {
                           style:
                               Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: scheme.primary,
-                                  ),
-                        ),
-                      if (offer.note.isNotEmpty)
-                        Text(
-                          offer.note,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: scheme.onSurfaceVariant,
                                   ),
                         ),
                     ],
@@ -286,10 +336,6 @@ class OfferTile extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           if (counterEnabled) _CounterBadge(offer: offer),
-                          if (counterEnabled && offer.tags.isNotEmpty)
-                            const SizedBox(height: 6),
-                          if (offer.tags.isNotEmpty)
-                            TagChipRow(tags: offer.tags, dense: true),
                         ],
                       ),
                     ),
