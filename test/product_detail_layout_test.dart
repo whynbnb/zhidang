@@ -165,7 +165,7 @@ void main() {
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('编辑').first);
+    await tester.tap(find.text('A').first);
     await tester.pumpAndSettle();
     expect(find.text('编辑报价'), findsOneWidget);
     expect(find.byType(AppBar), findsOneWidget);
@@ -192,7 +192,7 @@ void main() {
 
   testWidgets('offer form shows per-unit price', (tester) async {
     await pumpDetail(tester, const Size(320, 640), compact: false);
-    await tester.tap(find.byTooltip('编辑').first);
+    await tester.tap(find.text('A').first);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('¥0.67 / 个'), findsOneWidget);
@@ -205,7 +205,7 @@ void main() {
 
   testWidgets('counter options live under advanced options', (tester) async {
     await pumpDetail(tester, const Size(390, 844), compact: false);
-    await tester.tap(find.byTooltip('编辑').first);
+    await tester.tap(find.text('A').first);
     await tester.pumpAndSettle();
 
     expect(find.text('计数器'), findsNothing);
@@ -256,14 +256,14 @@ void main() {
   testWidgets('offer edit only prompts after changes', (tester) async {
     await pumpDetail(tester, const Size(390, 844), compact: false);
 
-    await tester.tap(find.byTooltip('编辑').first);
+    await tester.tap(find.text('A').first);
     await tester.pumpAndSettle();
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.text('放弃修改？'), findsNothing);
     expect(find.text('商品比价 - 鸡蛋'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('编辑').first);
+    await tester.tap(find.text('A').first);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'A2');
     await tester.pump();

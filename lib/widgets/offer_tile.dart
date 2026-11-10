@@ -56,7 +56,6 @@ class OfferTile extends StatelessWidget {
       isLog: isLog,
       onToggleFavorite: onToggleFavorite,
       onCounterTap: onCounterTap,
-      onEdit: onEdit,
       dense: compact,
     );
 
@@ -185,6 +184,7 @@ class OfferTile extends StatelessWidget {
 
     return Card(
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       color: highlight
           ? scheme.primaryContainer.withValues(alpha: 0.55)
           : scheme.surfaceContainerHighest.withValues(alpha: 0.45),
@@ -195,8 +195,11 @@ class OfferTile extends StatelessWidget {
           width: highlight ? 1.5 : 1,
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 6, 6),
+      child: InkWell(
+        onTap: onEdit,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 6, 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -354,7 +357,8 @@ class OfferTile extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
@@ -363,7 +367,6 @@ class _OfferActions extends StatelessWidget {
     required this.offer,
     required this.counterEnabled,
     required this.isLog,
-    required this.onEdit,
     this.onToggleFavorite,
     this.onCounterTap,
     this.dense = false,
@@ -372,7 +375,6 @@ class _OfferActions extends StatelessWidget {
   final Offer offer;
   final bool counterEnabled;
   final bool isLog;
-  final VoidCallback onEdit;
   final VoidCallback? onToggleFavorite;
   final VoidCallback? onCounterTap;
   final bool dense;
@@ -423,11 +425,6 @@ class _OfferActions extends StatelessWidget {
                 icon: isLog ? Icons.schedule : Icons.tag,
                 color: isLog ? scheme.tertiary : scheme.secondary,
               ),
-            btn(
-              tooltip: s.edit,
-              onPressed: onEdit,
-              icon: Icons.edit_outlined,
-            ),
           ],
         ),
       ],
