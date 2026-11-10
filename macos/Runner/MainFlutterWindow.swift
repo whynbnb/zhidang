@@ -21,7 +21,10 @@ class MainFlutterWindow: NSWindow {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       self.makeKeyAndOrderFront(nil)
-      self.makeFirstResponder(flutterViewController.view)
+      if let view = self.contentViewController?.view,
+         self.firstResponder !== view {
+        self.makeFirstResponder(view)
+      }
     }
   }
 

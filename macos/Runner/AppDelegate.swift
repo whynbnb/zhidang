@@ -17,7 +17,11 @@ class AppDelegate: FlutterAppDelegate {
     super.applicationDidBecomeActive(notification)
     guard let window = NSApp.mainWindow ?? NSApp.keyWindow else { return }
     window.makeKeyAndOrderFront(nil)
-    if let content = window.contentViewController?.view {
+    // Only steal focus when the Flutter view is not already the first
+    // responder. Reassigning it on every activation can desynchronize the
+    // keyboard state (e.g. a held modifier never gets its key-down delivered).
+    if let content = window.contentViewController?.view,
+       window.firstResponder !== content {
       window.makeFirstResponder(content)
     }
   }

@@ -7,6 +7,7 @@ import 'screens/main_shell.dart';
 import 'services/app_icon_service.dart';
 import 'services/category_store.dart';
 import 'services/comparison_store.dart';
+import 'services/keyboard_event_guard.dart';
 import 'services/supplier_store.dart';
 import 'services/unit_store.dart';
 import 'settings/app_settings.dart';
@@ -23,6 +24,11 @@ Future<void> main() async {
     AppIconService.instance.load(),
   ]);
   runApp(const ZhidangApp());
+
+  // ServicesBinding registers its raw key handler asynchronously during
+  // startup. Wait for the first frame so this guard is the final handler.
+  await WidgetsBinding.instance.endOfFrame;
+  installKeyboardEventGuard();
 }
 
 class ZhidangApp extends StatefulWidget {
