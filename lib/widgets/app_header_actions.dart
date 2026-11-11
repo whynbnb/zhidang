@@ -4,17 +4,19 @@ import '../app/app_navigator.dart';
 import '../l10n/app_strings.dart';
 import '../settings/app_settings.dart';
 
-/// Shared top-right actions: compare (optional) then settings (optional).
+/// Shared top-right actions: quick convert, compare, then settings.
 /// Settings is always the rightmost control so pages stay aligned.
 class AppHeaderActions extends StatelessWidget {
   const AppHeaderActions({
     super.key,
     this.onOpenSettings,
     this.showCompare = false,
+    this.onQuickCalc,
   });
 
   final VoidCallback? onOpenSettings;
   final bool showCompare;
+  final VoidCallback? onQuickCalc;
 
   @override
   Widget build(BuildContext context) {
@@ -26,12 +28,19 @@ class AppHeaderActions extends StatelessWidget {
         final compare = showCompare && settings.showCompareHeaderIcon;
         final settingsIcon =
             settings.showSettingsHeaderIcon && onOpenSettings != null;
-        if (!compare && !settingsIcon) {
+        final quickCalc = onQuickCalc != null;
+        if (!quickCalc && !compare && !settingsIcon) {
           return const SizedBox(width: 4);
         }
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (quickCalc)
+              IconButton(
+                onPressed: onQuickCalc,
+                icon: const Icon(Icons.calculate_outlined),
+                tooltip: s.quickCalcTitle,
+              ),
             if (compare)
               IconButton(
                 onPressed: () => AppNavigator.openCompare(),
@@ -59,6 +68,7 @@ class AppPageHeader extends StatelessWidget {
     this.leading,
     this.onOpenSettings,
     this.showCompare = false,
+    this.onQuickCalc,
     this.onTitleDoubleTap,
     this.titleTooltip,
   });
@@ -67,6 +77,7 @@ class AppPageHeader extends StatelessWidget {
   final Widget? leading;
   final VoidCallback? onOpenSettings;
   final bool showCompare;
+  final VoidCallback? onQuickCalc;
   final VoidCallback? onTitleDoubleTap;
   final String? titleTooltip;
 
@@ -105,6 +116,7 @@ class AppPageHeader extends StatelessWidget {
           AppHeaderActions(
             onOpenSettings: onOpenSettings,
             showCompare: showCompare,
+            onQuickCalc: onQuickCalc,
           ),
         ],
       ),

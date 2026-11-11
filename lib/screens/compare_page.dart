@@ -579,6 +579,7 @@ class ComparePageState extends State<ComparePage> {
     final header = AppPageHeader(
       title: s.tabCompare,
       onOpenSettings: _openSettings,
+      onQuickCalc: AppNavigator.openQuickCalc,
     );
 
     return Scaffold(
