@@ -575,9 +575,12 @@ class ComparePageState extends State<ComparePage> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final isWide = AppLayout.isWide(context);
+    // Pushed compare pages get a back button; the nav-bar tab does not.
+    final canGoBack = ModalRoute.of(context)?.canPop ?? false;
 
     final header = AppPageHeader(
       title: s.tabCompare,
+      leading: canGoBack ? const BackButton() : null,
       onOpenSettings: _openSettings,
       onQuickCalc: AppNavigator.openQuickCalc,
     );
