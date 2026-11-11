@@ -106,6 +106,83 @@ class _UnitsPageState extends State<UnitsPage> {
     );
   }
 
+  Future<void> _reorder(int oldIndex, int newIndex) async {
+    if (_query.isNotEmpty) return;
+    await UnitStore.instance.reorder(oldIndex, newIndex);
+  }
+
+  Widget _unitTile(
+    BuildContext context,
+    AppStrings s,
+    ColorScheme scheme,
+    CustomUnit unit,
+    int index, {
+    required bool showHandle,
+  }) {
+    return Padding(
+      key: ValueKey(unit.id),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: scheme.primaryContainer,
+            foregroundColor: scheme.onPrimaryContainer,
+            child: const Icon(Icons.straighten_outlined),
+          ),
+          title: Text(
+            unit.name,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          subtitle: unit.note.isEmpty ? null : Text(unit.note),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (showHandle)
+                ReorderableDragStartListener(
+                  index: index,
+                  child: Tooltip(
+                    message: s.unitReorderHint,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 12,
+                      ),
+                      child: Icon(
+                        Icons.drag_handle,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              PopupMenuButton<String>(
+                onSelected: (v) {
+                  if (v == 'edit') _addOrEdit(unit);
+                  if (v == 'delete') _delete(unit);
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Text(s.edit),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text(s.delete),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          onTap: () => _addOrEdit(unit),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
@@ -244,53 +321,33 @@ class _UnitsPageState extends State<UnitsPage> {
                           ),
                         ),
                       )
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 100),
-                        itemCount: items.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final unit = items[index];
-                          return Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              side: BorderSide(color: scheme.outlineVariant),
+                    : _query.isEmpty
+                        ? ReorderableListView.builder(
+                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 100),
+                            buildDefaultDragHandles: false,
+                            itemCount: items.length,
+                            onReorderItem: _reorder,
+                            itemBuilder: (context, index) => _unitTile(
+                              context,
+                              s,
+                              scheme,
+                              items[index],
+                              index,
+                              showHandle: true,
                             ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: scheme.primaryContainer,
-                                foregroundColor: scheme.onPrimaryContainer,
-                                child: const Icon(Icons.straighten_outlined),
-                              ),
-                              title: Text(
-                                unit.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              subtitle:
-                                  unit.note.isEmpty ? null : Text(unit.note),
-                              trailing: PopupMenuButton<String>(
-                                onSelected: (v) {
-                                  if (v == 'edit') _addOrEdit(unit);
-                                  if (v == 'delete') _delete(unit);
-                                },
-                                itemBuilder: (_) => [
-                                  PopupMenuItem(
-                                    value: 'edit',
-                                    child: Text(s.edit),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text(s.delete),
-                                  ),
-                                ],
-                              ),
-                              onTap: () => _addOrEdit(unit),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 100),
+                            itemCount: items.length,
+                            itemBuilder: (context, index) => _unitTile(
+                              context,
+                              s,
+                              scheme,
+                              items[index],
+                              index,
+                              showHandle: false,
                             ),
-                          );
-                        },
-                      ),
+                          ),
               ),
             ],
           );

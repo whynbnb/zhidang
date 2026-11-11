@@ -93,7 +93,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
   }
 
   String? _subtitle(ProductCategory category, AppStrings s) {
-    final parts = <String>[s.measureUnitsLabel(category.units.join(' / '))];
+    final parts = <String>[
+      s.measureUnitsLabel(
+        UnitStore.instance.sortUnits(category.units).join(' / '),
+      ),
+    ];
     if (category.relations.isNotEmpty) {
       parts.add(s.unitConversionsCount(category.relations.length));
     }
@@ -326,7 +330,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
   }
 
   Future<void> _addOrEditRelation([UnitRelation? existing]) async {
-    final units = <String>{
+    final units = UnitStore.instance.sortUnits({
       ...UnitStore.instance.names,
       ..._units,
       for (final relation in _relations) ...[
@@ -334,7 +338,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
         relation.toUnit,
       ],
       if (existing != null) ...[existing.fromUnit, existing.toUnit],
-    }.toList();
+    });
     final result = await showUnitRelationForm(
       context,
       units: units,
@@ -396,11 +400,10 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
     final editing = widget.category != null;
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
-    final unitOptions = {
+    final unitOptions = UnitStore.instance.sortUnits({
       ...UnitStore.instance.names,
       ..._units,
-    }.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    });
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),

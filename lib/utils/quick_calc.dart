@@ -164,7 +164,7 @@ List<String> quickCalcUnitOptions({
     'roll',
   ];
   final options = <String>[];
-  for (final unit in [...(isZh ? zh : en), ...extra]) {
+  for (final unit in [...extra, ...(isZh ? zh : en)]) {
     final trimmed = unit.trim();
     if (trimmed.isEmpty || options.contains(trimmed)) continue;
     options.add(trimmed);

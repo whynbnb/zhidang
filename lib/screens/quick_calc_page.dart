@@ -140,12 +140,13 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     final groupOptions = <String, List<String>>{};
     for (final group in groups.entries) {
       final first = group.value.first;
-      final options = quickCalcDisplayUnits(
+      final primaryOptions = quickCalcDisplayUnits(
         unit: first.unit,
         relations: relations,
         isZh: s.isZh,
       );
-      var primary = options.first;
+      final options = UnitStore.instance.sortUnits(primaryOptions);
+      var primary = primaryOptions.first;
       final stored = _store.primaryUnits[group.key];
       if (stored != null) {
         for (final option in options) {
@@ -607,12 +608,13 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
           );
     String? previewPrimary;
     if (provisional != null) {
-      final options = quickCalcDisplayUnits(
+      final primaryOptions = quickCalcDisplayUnits(
         unit: _draft.unit,
         relations: relations,
         isZh: s.isZh,
       );
-      previewPrimary = options.first;
+      final options = UnitStore.instance.sortUnits(primaryOptions);
+      previewPrimary = primaryOptions.first;
       final stored = _store.primaryUnits[provisional.groupKey];
       if (stored != null) {
         for (final option in options) {

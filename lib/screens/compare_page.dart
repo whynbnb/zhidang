@@ -8,6 +8,7 @@ import '../models/product.dart';
 import '../models/product_category.dart';
 import '../services/category_store.dart';
 import '../services/comparison_store.dart';
+import '../services/unit_store.dart';
 import '../services/data_revision.dart';
 import '../services/storage_service.dart';
 import '../utils/comparison_logic.dart';
@@ -804,11 +805,9 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
   List<String> get _unitOptions {
     final common = ComparisonLogic.commonUnits(widget.products);
     if (common.isNotEmpty) return common;
-    final all = {
+    return UnitStore.instance.sortUnits({
       for (final p in widget.products) ...p.measureUnits,
-    }.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    return all;
+    });
   }
 
   String get _activeUnit {

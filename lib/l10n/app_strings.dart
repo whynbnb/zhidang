@@ -460,6 +460,7 @@ class AppStrings {
   String get advancedOptions => isZh ? '高级选项' : 'Advanced';
   String get unitRelations => isZh ? '单位换算（可选）' : 'Unit conversion (optional)';
   String get unitConversions => isZh ? '单位换算' : 'Unit conversions';
+  String get unitReorderHint => isZh ? '拖动排序' : 'Drag to reorder';
   String get unitConversionsHint => isZh
       ? '这里的换算不会自动应用到商品；快速换算会直接使用，商品和报价可在高级选项中手动选择'
       : 'These conversions are not forced onto products. Quick convert uses them directly; products and offers can add them under Advanced.';

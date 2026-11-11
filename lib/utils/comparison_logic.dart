@@ -1,4 +1,5 @@
 import '../models/product.dart';
+import '../services/unit_store.dart';
 
 enum CompareViewMode {
   all,
@@ -35,9 +36,7 @@ class ComparisonLogic {
     for (var i = 1; i < products.length; i++) {
       set = set.intersection(products[i].measureUnits.toSet());
     }
-    final list = set.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    return list;
+    return UnitStore.instance.sortUnits(set);
   }
 
   /// Prefer [preferred] if still common; else first common; else first product unit.

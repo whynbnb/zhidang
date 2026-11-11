@@ -5,6 +5,7 @@ import '../l10n/app_strings.dart';
 import '../models/product.dart';
 import '../services/data_revision.dart';
 import '../services/storage_service.dart';
+import '../services/unit_store.dart';
 import '../settings/app_settings.dart';
 import '../utils/layout.dart';
 import '../widgets/app_header_actions.dart';
@@ -707,7 +708,12 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
     final product = widget.product;
     final scheme = Theme.of(context).colorScheme;
     final s = AppStrings.of(context);
-    final units = product.measureUnits;
+    final primaryUnit = normalizeUnit(product.unit);
+    final sortedUnits = UnitStore.instance.sortUnits(product.measureUnits);
+    final units = [
+      if (sortedUnits.contains(primaryUnit)) primaryUnit,
+      ...sortedUnits.where((unit) => unit != primaryUnit),
+    ];
     final selectedUnit = units.contains(_selectedUnit)
         ? _selectedUnit
         : units.first;

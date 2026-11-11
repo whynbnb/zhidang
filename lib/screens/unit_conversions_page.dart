@@ -21,7 +21,7 @@ class _UnitConversionsPageState extends State<UnitConversionsPage> {
   Future<void> _addOrEdit([UnitRelation? relation]) async {
     final store = UnitStore.instance;
     final s = AppStrings.of(context);
-    final units = <String>{
+    final units = store.sortUnits({
       ...store.names,
       ...quickCalcUnitOptions(isZh: s.isZh),
       for (final existing in store.relations) ...[
@@ -29,7 +29,7 @@ class _UnitConversionsPageState extends State<UnitConversionsPage> {
         existing.toUnit,
       ],
       if (relation != null) ...[relation.fromUnit, relation.toUnit],
-    }.toList();
+    });
     final result = await showUnitRelationForm(
       context,
       units: units,

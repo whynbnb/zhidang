@@ -261,11 +261,11 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
   Future<void> _addOrEditRelation([UnitRelation? existing]) async {
     final result = await showUnitRelationForm(
       context,
-      units: {
+      units: UnitStore.instance.sortUnits({
         ..._units,
         if (existing != null) existing.fromUnit,
         if (existing != null) existing.toUnit,
-      }.toList(),
+      }),
       relation: existing,
     );
     if (result == null) return;
@@ -407,7 +407,9 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
                       for (final c in cats)
                         DropdownMenuItem<String?>(
                           value: c.id,
-                          child: Text('${c.name} · ${c.units.join(' / ')}'),
+                          child: Text(
+                            '${c.name} · ${UnitStore.instance.sortUnits(c.units).join(' / ')}',
+                          ),
                         ),
                     ],
                     onChanged: _setCategory,
@@ -423,12 +425,12 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
               ListenableBuilder(
                 listenable: UnitStore.instance,
                 builder: (context, _) {
-                  final unitOptions = {
+                  final unitOptions = UnitStore.instance.sortUnits({
                     ...UnitStore.instance.names,
                     ..._units,
                     if (widget.product != null) ...widget.product!.measureUnits,
                     for (final r in _relations) ...[r.fromUnit, r.toUnit],
-                  }.toList();
+                  });
                   return Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -738,12 +740,12 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
       for (final r in _offerRelations) ...[r.fromUnit, r.toUnit],
       for (final r in widget.defaultRelations) ...[r.fromUnit, r.toUnit],
     ];
-    _availableUnits = {
+    _availableUnits = UnitStore.instance.sortUnits({
       ...baseUnits,
       ...fromOffer,
       ...fromRelations,
       if (widget.preferredUnit != null) normalizeUnit(widget.preferredUnit),
-    }.toList();
+    });
 
     _qtyControllers = {
       for (final unit in _availableUnits)
@@ -832,7 +834,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     if (_qtyControllers.containsKey(u)) return;
     _qtyControllers[u] = TextEditingController();
     if (!_availableUnits.contains(u)) {
-      _availableUnits = [..._availableUnits, u];
+      _availableUnits = UnitStore.instance.sortUnits([..._availableUnits, u]);
     }
   }
 
@@ -867,11 +869,11 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   Future<void> _addOrEditRelation([UnitRelation? existing]) async {
     final result = await showUnitRelationForm(
       context,
-      units: {
+      units: UnitStore.instance.sortUnits({
         ...widget.units.map(normalizeUnit),
         if (existing != null) existing.fromUnit,
         if (existing != null) existing.toUnit,
-      }.toList(),
+      }),
       relation: existing,
     );
     if (result == null) return;

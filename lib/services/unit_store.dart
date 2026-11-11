@@ -61,6 +61,46 @@ class UnitStore extends ChangeNotifier {
   List<String> get names =>
       _units.map((e) => e.name).where((e) => e.isNotEmpty).toList();
 
+  int orderOf(String name) {
+    final key = name.trim().toLowerCase();
+    for (var i = 0; i < _units.length; i++) {
+      if (_units[i].name.trim().toLowerCase() == key) return i;
+    }
+    return _units.length;
+  }
+
+  /// Reorder and dedupe [units] by the stored unit order. Unknown units keep
+  /// their relative order after known ones.
+  List<String> sortUnits(Iterable<String> units) {
+    final seen = <String>{};
+    final indexed = <(int, String)>[];
+    for (final raw in units) {
+      final name = raw.trim();
+      if (name.isEmpty) continue;
+      if (!seen.add(name.toLowerCase())) continue;
+      indexed.add((orderOf(name), name));
+    }
+    indexed.sort((a, b) {
+      final byOrder = a.$1.compareTo(b.$1);
+      if (byOrder != 0) return byOrder;
+      return a.$2.toLowerCase().compareTo(b.$2.toLowerCase());
+    });
+    return [for (final entry in indexed) entry.$2];
+  }
+
+  Future<void> reorder(int oldIndex, int newIndex) async {
+    if (oldIndex < 0 || oldIndex >= _units.length) return;
+    if (newIndex < 0) newIndex = 0;
+    if (newIndex >= _units.length) newIndex = _units.length - 1;
+    if (oldIndex == newIndex) return;
+    final next = [..._units];
+    final item = next.removeAt(oldIndex);
+    next.insert(newIndex, item);
+    _units = next;
+    notifyListeners();
+    await _persist();
+  }
+
   static List<String> defaultNamesForLocale(Locale locale) {
     return locale.languageCode == 'en'
         ? List<String>.from(defaultUnitNamesEn)

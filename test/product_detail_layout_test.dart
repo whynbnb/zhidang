@@ -343,6 +343,8 @@ void main() {
     await pumpDetail(tester, const Size(390, 844), compact: false);
 
     expect(find.text('斤 (1)'), findsOneWidget);
+    await tester.ensureVisible(find.text('斤 (1)'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('斤 (1)'));
     await tester.pumpAndSettle();
 

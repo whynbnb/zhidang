@@ -105,12 +105,12 @@ void main() {
     });
   });
 
-  test('unit options start with common choices and keep custom units', () {
+  test('unit options follow the supplied order, then common choices', () {
     final options = quickCalcUnitOptions(
       isZh: true,
       extra: const ['个', '箱'],
     );
-    expect(options.take(3), ['个', '斤', 'kg']);
+    expect(options.take(3), ['个', '箱', '斤']);
     expect(options.where((unit) => unit == '个').length, 1);
     expect(options, contains('箱'));
   });
