@@ -64,6 +64,7 @@ class CategoryStore extends ChangeNotifier {
   Future<ProductCategory> add({
     required String name,
     required List<String> units,
+    List<UnitRelation> relations = const [],
     String note = '',
   }) async {
     final trimmed = name.trim();
@@ -72,6 +73,7 @@ class CategoryStore extends ChangeNotifier {
       return update(
         existing.copyWith(
           units: units,
+          relations: relations,
           note: note.trim().isNotEmpty ? note.trim() : existing.note,
         ),
       );
@@ -79,6 +81,7 @@ class CategoryStore extends ChangeNotifier {
     final category = ProductCategory(
       name: trimmed,
       units: units,
+      relations: relations,
       note: note.trim(),
     );
     _categories = [..._categories, category]

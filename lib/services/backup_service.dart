@@ -28,6 +28,7 @@ class BackupPayload {
     required this.units,
     required this.comparisons,
     this.categories = const [],
+    this.unitRelations = const [],
     this.exportedAt,
     this.version = 1,
   });
@@ -38,6 +39,7 @@ class BackupPayload {
   final List<Supplier> suppliers;
   final List<ProductCategory> categories;
   final List<CustomUnit> units;
+  final List<UnitRelation> unitRelations;
   final List<ComparisonGroup> comparisons;
 }
 
@@ -61,6 +63,8 @@ class BackupService {
       'categories':
           CategoryStore.instance.categories.map((e) => e.toJson()).toList(),
       'units': UnitStore.instance.units.map((e) => e.toJson()).toList(),
+      'unitRelations':
+          UnitStore.instance.relations.map((e) => e.toJson()).toList(),
       'comparisons':
           ComparisonStore.instance.groups.map((e) => e.toJson()).toList(),
     };
@@ -133,6 +137,7 @@ class BackupService {
     final hasMarker = map.containsKey('version') ||
         map.containsKey('suppliers') ||
         map.containsKey('units') ||
+        map.containsKey('unitRelations') ||
         map.containsKey('comparisons') ||
         map.containsKey('categories');
     if (app != 'zhidang' && !hasMarker) {
@@ -142,6 +147,9 @@ class BackupService {
     final suppliersList = suppliersRaw is List ? suppliersRaw : const [];
     final unitsRaw = map['units'];
     final unitsList = unitsRaw is List ? unitsRaw : const [];
+    final unitRelationsRaw = map['unitRelations'];
+    final unitRelationsList =
+        unitRelationsRaw is List ? unitRelationsRaw : const [];
     final comparisonsRaw = map['comparisons'];
     final comparisonsList =
         comparisonsRaw is List ? comparisonsRaw : const [];
@@ -165,6 +173,14 @@ class BackupService {
         .map((e) => CustomUnit.fromJson(Map<String, dynamic>.from(e as Map)))
         .where((u) => u.name.trim().isNotEmpty)
         .toList();
+    final unitRelations = unitRelationsList
+        .map(
+          (e) => UnitRelation.fromJson(
+            Map<String, dynamic>.from(e as Map),
+          ),
+        )
+        .where((r) => r.factor > 0 && r.fromUnit != r.toUnit)
+        .toList();
     final comparisons = comparisonsList
         .map(
           (e) =>
@@ -182,6 +198,7 @@ class BackupService {
       suppliers: suppliers,
       categories: categories,
       units: units,
+      unitRelations: unitRelations,
       comparisons: comparisons,
     );
   }
@@ -222,6 +239,7 @@ class BackupService {
     } else {
       await UnitStore.instance.replaceAll(payload.units);
     }
+    await UnitStore.instance.replaceRelations(payload.unitRelations);
     await ComparisonStore.instance.replaceAll(payload.comparisons);
     DataRevision.bump();
   }
@@ -232,6 +250,7 @@ class BackupService {
     await CategoryStore.instance.clear();
     await ComparisonStore.instance.clear();
     await UnitStore.instance.resetToDefaults(AppSettings.instance.locale);
+    await UnitStore.instance.replaceRelations(const []);
     DataRevision.bump();
   }
 }

@@ -5,6 +5,7 @@ import '../models/custom_unit.dart';
 import '../services/unit_store.dart';
 import '../utils/ime_focus.dart';
 import '../settings/app_settings.dart';
+import 'unit_conversions_page.dart';
 
 class UnitsPage extends StatefulWidget {
   const UnitsPage({super.key});
@@ -164,6 +165,43 @@ class _UnitsPageState extends State<UnitsPage> {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(color: scheme.outlineVariant),
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: scheme.secondaryContainer,
+                      foregroundColor: scheme.onSecondaryContainer,
+                      child: const Icon(Icons.swap_horiz),
+                    ),
+                    title: Text(
+                      s.unitConversions,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      UnitStore.instance.relations.isEmpty
+                          ? s.noUnitConversions
+                          : s.unitConversionsCount(
+                              UnitStore.instance.relations.length,
+                            ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        settings: const RouteSettings(
+                          name: UnitConversionsPage.routeName,
+                        ),
+                        builder: (_) => const UnitConversionsPage(),
+                      ),
+                    ),
                   ),
                 ),
               ),

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zhidang/l10n/app_strings.dart';
 import 'package:zhidang/screens/quick_calc_page.dart';
+import 'package:zhidang/screens/unit_conversions_page.dart';
 import 'package:zhidang/services/quick_calc_store.dart';
 import 'package:zhidang/services/unit_store.dart';
 import 'package:zhidang/settings/app_settings.dart';
@@ -16,9 +17,13 @@ void main() {
     QuickCalcStore.instance.clear();
     await AppSettings.instance.load();
     await UnitStore.instance.load(locale: AppSettings.instance.locale);
+    await UnitStore.instance.replaceRelations(const []);
   });
 
-  tearDown(() => QuickCalcStore.instance.clear());
+  tearDown(() async {
+    QuickCalcStore.instance.clear();
+    await UnitStore.instance.replaceRelations(const []);
+  });
 
   Future<void> pumpPage(WidgetTester tester) async {
     await tester.pumpWidget(
@@ -141,5 +146,102 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(TextField), findsNWidgets(3));
     expect(find.byTooltip('添加'), findsOneWidget);
+  });
+
+  testWidgets('title bar opens the global conversion library', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    expect(find.byTooltip('单位换算'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('单位换算'));
+    await tester.pumpAndSettle();
+    expect(find.byType(UnitConversionsPage), findsOneWidget);
+  });
+
+  testWidgets('global relations drive the draft preview', (tester) async {
+    await UnitStore.instance.addRelation(
+      fromUnit: '斤',
+      toUnit: 'kg',
+      factor: 0.4,
+    );
+    await pumpPage(tester);
+
+    await tester.enterText(find.byType(TextField).at(1), '30');
+    await tester.enterText(find.byType(TextField).at(2), '1');
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('斤').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('¥30 / 斤'), findsOneWidget);
+    expect(find.text('¥75 / kg'), findsOneWidget);
+  });
+
+  testWidgets('weight group header fits on a narrow phone', (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpPage(tester);
+    await tester.enterText(find.byType(TextField).at(1), '123');
+    await tester.enterText(find.byType(TextField).at(2), '5');
+    await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('斤').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('添加'));
+    await tester.pumpAndSettle();
+    await commitDraft(tester);
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(const ValueKey('quick-calc-primary-weight')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .getRect(find.byKey(const ValueKey('quick-calc-primary-weight')))
+          .right,
+      greaterThan(280),
+    );
+  });
+
+  testWidgets('group header switches the primary display unit', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tester.enterText(find.byType(TextField).at(1), '123');
+    await tester.enterText(find.byType(TextField).at(2), '5');
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('斤').last);
+    await tester.pumpAndSettle();
+    await commitDraft(tester);
+
+    final selector = find.byKey(const ValueKey('quick-calc-primary-weight'));
+    expect(selector, findsOneWidget);
+    expect(tester.getRect(selector).right, greaterThan(760));
+    final dividerRect = tester.getRect(find.byType(Divider).first);
+    expect(tester.getRect(selector).left - dividerRect.right, lessThan(20));
+    expect(
+      find.descendant(of: selector, matching: find.text('斤')),
+      findsOneWidget,
+    );
+
+    await tester.tap(selector);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('kg').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(of: selector, matching: find.text('kg')),
+      findsOneWidget,
+    );
+    expect(QuickCalcStore.instance.primaryUnits['weight'], 'kg');
   });
 }

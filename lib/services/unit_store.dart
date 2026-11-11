@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/custom_unit.dart';
+import '../models/product.dart';
 
 /// Built-in unit presets. Seeded into the store when empty / on reset.
 const defaultUnitNamesZh = [
@@ -43,12 +44,18 @@ class UnitStore extends ChangeNotifier {
 
   static const _key = 'zhidang_units';
   static const _legacyKey = 'zhidang_custom_units';
+  static const _relationsKey = 'zhidang_unit_relations';
 
   List<CustomUnit> _units = [];
+  List<UnitRelation> _relations = [];
   bool _ready = false;
 
   List<CustomUnit> get units => List.unmodifiable(_units);
   bool get ready => _ready;
+
+  /// Global conversion library. Only used by quick convert and when a
+  /// category/product explicitly picks a relation.
+  List<UnitRelation> get relations => List.unmodifiable(_relations);
 
   /// Names in store order (default seed order, then user-added).
   List<String> get names =>
@@ -62,6 +69,20 @@ class UnitStore extends ChangeNotifier {
 
   Future<void> load({Locale? locale}) async {
     final prefs = await SharedPreferences.getInstance();
+    final rawRelations = prefs.getString(_relationsKey);
+    if (rawRelations != null && rawRelations.isNotEmpty) {
+      try {
+        final list = jsonDecode(rawRelations) as List<dynamic>;
+        _relations = list
+            .map((e) => UnitRelation.fromJson(e as Map<String, dynamic>))
+            .where((r) => r.factor > 0 && r.fromUnit != r.toUnit)
+            .toList();
+      } catch (_) {
+        _relations = [];
+      }
+    } else {
+      _relations = [];
+    }
     var raw = prefs.getString(_key);
     if (raw == null || raw.isEmpty) {
       // Migrate previous custom-only list if present.
@@ -105,6 +126,94 @@ class UnitStore extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final raw = jsonEncode(_units.map((e) => e.toJson()).toList());
     await prefs.setString(_key, raw);
+  }
+
+  Future<void> _persistRelations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(_relations.map((e) => e.toJson()).toList());
+    await prefs.setString(_relationsKey, raw);
+  }
+
+  UnitRelation? relationBetween(String a, String b) {
+    final from = normalizeUnit(a);
+    final to = normalizeUnit(b);
+    for (final relation in _relations) {
+      if ((relation.fromUnit == from && relation.toUnit == to) ||
+          (relation.fromUnit == to && relation.toUnit == from)) {
+        return relation;
+      }
+    }
+    return null;
+  }
+
+  Future<UnitRelation> addRelation({
+    required String fromUnit,
+    required String toUnit,
+    required double factor,
+  }) async {
+    final relation = UnitRelation(
+      fromUnit: fromUnit,
+      toUnit: toUnit,
+      factor: factor,
+    );
+    final existing = relationBetween(fromUnit, toUnit);
+    if (existing != null) {
+      final updated = existing.copyWith(
+        fromUnit: relation.fromUnit,
+        toUnit: relation.toUnit,
+        factor: relation.factor,
+      );
+      return updateRelation(updated);
+    }
+    _relations = [..._relations, relation];
+    notifyListeners();
+    await _persistRelations();
+    return relation;
+  }
+
+  Future<UnitRelation> updateRelation(UnitRelation relation) async {
+    final updated = UnitRelation(
+      id: relation.id,
+      fromUnit: relation.fromUnit,
+      toUnit: relation.toUnit,
+      factor: relation.factor,
+    );
+    _relations = _relations
+        .where(
+          (r) =>
+              r.id == updated.id ||
+              !((r.fromUnit == updated.fromUnit &&
+                      r.toUnit == updated.toUnit) ||
+                  (r.fromUnit == updated.toUnit &&
+                      r.toUnit == updated.fromUnit)),
+        )
+        .map((r) => r.id == updated.id ? updated : r)
+        .toList();
+    notifyListeners();
+    await _persistRelations();
+    return updated;
+  }
+
+  Future<void> removeRelation(String id) async {
+    _relations = _relations.where((r) => r.id != id).toList();
+    notifyListeners();
+    await _persistRelations();
+  }
+
+  Future<void> replaceRelations(List<UnitRelation> list) async {
+    _relations = list
+        .map(
+          (r) => UnitRelation(
+            id: r.id,
+            fromUnit: r.fromUnit,
+            toUnit: r.toUnit,
+            factor: r.factor,
+          ),
+        )
+        .where((r) => r.factor > 0 && r.fromUnit != r.toUnit)
+        .toList();
+    notifyListeners();
+    await _persistRelations();
   }
 
   Future<CustomUnit> add({required String name, String note = ''}) async {

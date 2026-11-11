@@ -38,6 +38,8 @@ class QuickCalcStore extends ChangeNotifier {
 
   final List<QuickCalcEntry> _entries = [];
   final QuickCalcDraft draft = QuickCalcDraft();
+  /// Chosen primary display unit per comparison group (weight / volume / count:x).
+  final Map<String, String> primaryUnits = {};
 
   List<QuickCalcEntry> get entries => List.unmodifiable(_entries);
 
@@ -79,6 +81,7 @@ class QuickCalcStore extends ChangeNotifier {
     draft.name = '';
     draft.price = '';
     draft.quantity = '';
+    primaryUnits.clear();
     notifyListeners();
   }
 }

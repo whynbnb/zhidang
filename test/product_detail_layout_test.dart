@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zhidang/main.dart';
+import 'package:zhidang/l10n/app_strings.dart';
 import 'package:zhidang/models/product.dart';
+import 'package:zhidang/screens/categories_page.dart';
 import 'package:zhidang/services/category_store.dart';
 import 'package:zhidang/services/comparison_store.dart';
 import 'package:zhidang/services/storage_service.dart';
@@ -518,6 +520,144 @@ void main() {
     expect(fieldAt('数量（斤）').controller!.text, isEmpty);
     expect(fieldAt('数量（个）').controller!.text, '30');
     expect(find.text('¥0.66 / 个'), findsOneWidget);
+  });
+
+  testWidgets('product editor can pick global conversions', (tester) async {
+    await UnitStore.instance.replaceRelations([
+      UnitRelation(fromUnit: '斤', toUnit: 'kg', factor: 0.5),
+    ]);
+    addTearDown(() => UnitStore.instance.replaceRelations(const []));
+
+    await pumpDetail(tester, const Size(390, 1000), compact: false);
+    await tester.tap(find.byTooltip('编辑商品'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('高级选项'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('高级选项'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('从单位库选择'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('从单位库选择'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('1 斤 = 0.5 kg'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '添加'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 斤 = 0.5 kg'), findsOneWidget);
+  });
+
+  testWidgets('category editor can pick global conversions', (tester) async {
+    await UnitStore.instance.replaceRelations([
+      UnitRelation(fromUnit: '斤', toUnit: 'kg', factor: 0.5),
+    ]);
+    addTearDown(() => UnitStore.instance.replaceRelations(const []));
+
+    await tester.pumpWidget(
+      AppStrings.provide(
+        locale: const Locale('zh'),
+        child: const MaterialApp(home: CategoriesPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('添加大类').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, '肉类');
+    await tester.pump();
+
+    await tester.ensureVisible(find.text('从单位库选择'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('从单位库选择'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1 斤 = 0.5 kg'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '添加'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 斤 = 0.5 kg'), findsOneWidget);
+    await tester.ensureVisible(find.widgetWithText(FilledButton, '创建'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '创建'));
+    await tester.pumpAndSettle();
+
+    final category = CategoryStore.instance.findByName('肉类');
+    expect(category, isNotNull);
+    expect(category!.relations, hasLength(1));
+  });
+
+  testWidgets('offer editor can pick global conversions', (tester) async {
+    await UnitStore.instance.replaceRelations([
+      UnitRelation(fromUnit: '斤', toUnit: 'kg', factor: 0.5),
+    ]);
+    addTearDown(() => UnitStore.instance.replaceRelations(const []));
+
+    await pumpDetail(tester, const Size(390, 1000), compact: false);
+    await tester.tap(find.text('A').first);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('高级选项'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('高级选项'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('从单位库选择'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('从单位库选择'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('1 斤 = 0.5 kg'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '添加'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 斤 = 0.5 kg'), findsOneWidget);
+  });
+
+  testWidgets('product can import its category conversions', (tester) async {
+    final category = await CategoryStore.instance.add(
+      name: '肉类',
+      units: const ['g', 'kg'],
+      relations: [
+        UnitRelation(fromUnit: '斤', toUnit: 'kg', factor: 0.5),
+      ],
+    );
+    addTearDown(() => CategoryStore.instance.remove(category.id));
+    await StorageService().saveProducts([
+      Product(
+        name: '猪肉',
+        units: const ['g', 'kg'],
+        categoryId: category.id,
+        offers: [
+          Offer(brand: 'A', price: 10, unit: 'g', quantity: 500),
+        ],
+      ),
+    ]);
+
+    tester.view.physicalSize = const Size(390, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const ZhidangApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('猪肉').first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('编辑商品'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('高级选项'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('高级选项'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('使用大类换算'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('使用大类换算'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 斤 = 0.5 kg'), findsOneWidget);
   });
 
   testWidgets('double-clicking the app title opens quick convert', (

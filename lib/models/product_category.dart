@@ -11,16 +11,20 @@ class ProductCategory {
     required this.name,
     List<String>? units,
     String? unit,
+    List<UnitRelation>? relations,
     this.note = '',
     DateTime? updatedAt,
   })  : id = id ?? _uuid.v4(),
         units = _normalizeUnits(units, unit),
+        relations = List<UnitRelation>.from(relations ?? const []),
         updatedAt = updatedAt ?? DateTime.now();
 
   final String id;
   String name;
   /// Shared measure units inherited by member products.
   List<String> units;
+  /// Optional conversions chosen by this category. Not forced on products.
+  List<UnitRelation> relations;
   String note;
   DateTime updatedAt;
 
@@ -32,6 +36,7 @@ class ProductCategory {
         'name': name,
         'units': units,
         'unit': unit,
+        'relations': relations.map((e) => e.toJson()).toList(),
         'note': note,
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -42,10 +47,21 @@ class ProductCategory {
       (json['units'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
       legacyUnit,
     );
+    final relations = (json['relations'] as List<dynamic>?)
+            ?.map(
+              (e) => UnitRelation.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ),
+            )
+            .where((r) => r.factor > 0 && r.fromUnit != r.toUnit)
+            .toList() ??
+        <UnitRelation>[];
     return ProductCategory(
       id: json['id'] as String?,
       name: json['name'] as String? ?? '',
       units: units,
+      unit: legacyUnit,
+      relations: relations,
       note: json['note'] as String? ?? '',
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'] as String)
@@ -56,12 +72,14 @@ class ProductCategory {
   ProductCategory copyWith({
     String? name,
     List<String>? units,
+    List<UnitRelation>? relations,
     String? note,
   }) =>
       ProductCategory(
         id: id,
         name: name ?? this.name,
         units: units ?? this.units,
+        relations: relations ?? this.relations,
         note: note ?? this.note,
         updatedAt: DateTime.now(),
       );

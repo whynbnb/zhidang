@@ -5,6 +5,7 @@ import '../services/quick_calc_store.dart';
 import '../services/unit_store.dart';
 import '../settings/app_settings.dart';
 import '../utils/quick_calc.dart';
+import 'unit_conversions_page.dart';
 
 class QuickCalcPage extends StatefulWidget {
   const QuickCalcPage({super.key});
@@ -31,6 +32,7 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
   @override
   void initState() {
     super.initState();
+    UnitStore.instance.addListener(_onUnitsChanged);
     if (_draft.unit.isEmpty) {
       _draft.unit = _defaultUnit;
     }
@@ -42,8 +44,13 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     _quantity.addListener(_syncDraft);
   }
 
+  void _onUnitsChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    UnitStore.instance.removeListener(_onUnitsChanged);
     _name.dispose();
     _price.dispose();
     _quantity.dispose();
@@ -113,9 +120,8 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     final textTheme = Theme.of(context).textTheme;
     final wide = MediaQuery.sizeOf(context).width >= 720;
 
-    final results = <String, QuickCalcResult?>{};
-    final groupCounts = <String, int>{};
-    final groupBest = <String, double>{};
+    final relations = UnitStore.instance.relations;
+    final provisional = <String, QuickCalcResult?>{};
     final groups = <String, List<QuickCalcEntry>>{};
     for (final entry in _store.entries) {
       final result = computeQuickCalcValues(
@@ -123,10 +129,50 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
         quantity: entry.quantity,
         unit: entry.unit,
         isZh: s.isZh,
+        relations: relations,
       );
-      results[entry.id] = result;
+      provisional[entry.id] = result;
       final key = result?.groupKey ?? 'unknown:${entry.id}';
       groups.putIfAbsent(key, () => []).add(entry);
+    }
+
+    final groupPrimaries = <String, String>{};
+    final groupOptions = <String, List<String>>{};
+    for (final group in groups.entries) {
+      final first = group.value.first;
+      final options = quickCalcDisplayUnits(
+        unit: first.unit,
+        relations: relations,
+        isZh: s.isZh,
+      );
+      var primary = options.first;
+      final stored = _store.primaryUnits[group.key];
+      if (stored != null) {
+        for (final option in options) {
+          if (option.toLowerCase() == stored.toLowerCase()) {
+            primary = option;
+            break;
+          }
+        }
+      }
+      groupPrimaries[group.key] = primary;
+      groupOptions[group.key] = options;
+    }
+
+    final results = <String, QuickCalcResult?>{};
+    final groupCounts = <String, int>{};
+    final groupBest = <String, double>{};
+    for (final entry in _store.entries) {
+      final groupKey = provisional[entry.id]?.groupKey;
+      final result = computeQuickCalcValues(
+        price: entry.price,
+        quantity: entry.quantity,
+        unit: entry.unit,
+        isZh: s.isZh,
+        relations: relations,
+        primaryUnit: groupKey == null ? null : groupPrimaries[groupKey],
+      );
+      results[entry.id] = result;
       if (result == null) continue;
       groupCounts[result.groupKey] = (groupCounts[result.groupKey] ?? 0) + 1;
       final best = groupBest[result.groupKey];
@@ -158,6 +204,18 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: s.unitConversions,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                settings: const RouteSettings(
+                  name: UnitConversionsPage.routeName,
+                ),
+                builder: (_) => const UnitConversionsPage(),
+              ),
+            ),
+            icon: const Icon(Icons.swap_horiz),
+          ),
           TextButton(
             onPressed: _store.hasData ? _clearAll : null,
             child: Text(s.quickCalcClear),
@@ -171,7 +229,17 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
           children: [
             for (final group in groups.entries) ...[
-              _buildGroupHeader(context, s, group.key, group.value),
+              _buildGroupHeader(
+                context,
+                s,
+                group.key,
+                group.value,
+                primary: groupPrimaries[group.key]!,
+                options: groupOptions[group.key]!,
+                onPrimarySelected: (unit) => setState(
+                  () => _store.primaryUnits[group.key] = unit,
+                ),
+              ),
               for (final entry in group.value) ...[
                 _buildCommittedRow(
                   context,
@@ -207,8 +275,11 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     BuildContext context,
     AppStrings s,
     String groupKey,
-    List<QuickCalcEntry> entries,
-  ) {
+    List<QuickCalcEntry> entries, {
+    required String primary,
+    required List<String> options,
+    required ValueChanged<String> onPrimarySelected,
+  }) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -222,7 +293,12 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
       label = s.quickCalcGroupVolume;
     } else if (groupKey.startsWith('count:')) {
       icon = Icons.tag;
-      label = s.quickCalcGroupUnit(entries.first.unit);
+      final units = entries
+          .map((entry) => entry.unit)
+          .toSet()
+          .toList()
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      label = s.quickCalcGroupUnit(units.join(' / '));
     } else {
       icon = Icons.tag;
       label = entries.first.unit;
@@ -230,22 +306,83 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: scheme.onSurfaceVariant),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: textTheme.labelMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Divider(height: 1, color: scheme.outlineVariant),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Row(
+            children: [
+              Icon(icon, size: 14, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth * 0.55,
+                ),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Divider(height: 1, color: scheme.outlineVariant),
+              ),
+              const SizedBox(width: 8),
+              if (options.length > 1)
+                PopupMenuButton<String>(
+                  key: ValueKey('quick-calc-primary-$groupKey'),
+                  tooltip: s.quickCalcPrimaryUnit,
+                  initialValue: primary,
+                  onSelected: onPrimarySelected,
+                  itemBuilder: (_) => [
+                    for (final option in options)
+                      PopupMenuItem<String>(
+                        value: option,
+                        child: Text(option),
+                      ),
+                  ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          primary,
+                          style: textTheme.labelMedium?.copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.arrow_drop_down,
+                          size: 18,
+                          color: scheme.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Text(
+                    primary,
+                    style: textTheme.labelMedium?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -344,7 +481,13 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     final scheme = Theme.of(context).colorScheme;
     final units = quickCalcUnitOptions(
       isZh: s.isZh,
-      extra: UnitStore.instance.names,
+      extra: [
+        ...UnitStore.instance.names,
+        for (final relation in UnitStore.instance.relations) ...[
+          relation.fromUnit,
+          relation.toUnit,
+        ],
+      ],
     );
     if (!units.contains(_draft.unit)) {
       units.insert(0, _draft.unit);
@@ -452,13 +595,43 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
 
     final previewPrice = parseCalcNumber(_price.text);
     final previewQuantity = parseCalcNumber(_quantity.text);
-    final preview = previewPrice == null || previewQuantity == null
+    final relations = UnitStore.instance.relations;
+    final provisional = previewPrice == null || previewQuantity == null
         ? null
         : computeQuickCalcValues(
             price: previewPrice,
             quantity: previewQuantity,
             unit: _draft.unit,
             isZh: s.isZh,
+            relations: relations,
+          );
+    String? previewPrimary;
+    if (provisional != null) {
+      final options = quickCalcDisplayUnits(
+        unit: _draft.unit,
+        relations: relations,
+        isZh: s.isZh,
+      );
+      previewPrimary = options.first;
+      final stored = _store.primaryUnits[provisional.groupKey];
+      if (stored != null) {
+        for (final option in options) {
+          if (option.toLowerCase() == stored.toLowerCase()) {
+            previewPrimary = option;
+            break;
+          }
+        }
+      }
+    }
+    final preview = provisional == null
+        ? null
+        : computeQuickCalcValues(
+            price: previewPrice!,
+            quantity: previewQuantity!,
+            unit: _draft.unit,
+            isZh: s.isZh,
+            relations: relations,
+            primaryUnit: previewPrimary,
           );
 
     return Card(

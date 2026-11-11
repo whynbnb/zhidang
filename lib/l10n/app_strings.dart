@@ -459,6 +459,26 @@ class AppStrings {
   String get compareByDimension => isZh ? '按维度比价' : 'Compare by dimension';
   String get advancedOptions => isZh ? '高级选项' : 'Advanced';
   String get unitRelations => isZh ? '单位换算（可选）' : 'Unit conversion (optional)';
+  String get unitConversions => isZh ? '单位换算' : 'Unit conversions';
+  String get unitConversionsHint => isZh
+      ? '这里的换算不会自动应用到商品；快速换算会直接使用，商品和报价可在高级选项中手动选择'
+      : 'These conversions are not forced onto products. Quick convert uses them directly; products and offers can add them under Advanced.';
+  String get categoryRelationsHint => isZh
+      ? '大类选择的换算不会强制应用到商品，商品可自行选用'
+      : 'Conversions chosen here are not forced onto products; each product can choose its own.';
+  String get useCategoryRelations =>
+      isZh ? '使用大类换算' : 'Use category conversions';
+  String unitConversionsCount(int n) =>
+      isZh ? '已设 $n 条' : (n == 1 ? '1 conversion' : '$n conversions');
+  String get noUnitConversions => isZh
+      ? '还没有全局单位换算'
+      : 'No global unit conversions yet';
+  String get chooseGlobalRelations => isZh
+      ? '从单位库选择'
+      : 'Choose from unit library';
+  String get noSelectableGlobalRelations => isZh
+      ? '单位库里没有可添加的换算'
+      : 'No more conversions in the unit library';
   String get unitRelationsHint => isZh
       ? '仅在需要「1 包 = 200 张」这类自动换算时使用'
       : 'Only when you need auto conversion like 1 pack = 200 sheets';
@@ -574,6 +594,8 @@ class AppStrings {
       ? '填写总价和数量后显示单价'
       : 'Enter a price and quantity to see the unit price';
   String get quickCalcDeleteRow => isZh ? '删除这组数据' : 'Remove this row';
+  String get quickCalcPrimaryUnit =>
+      isZh ? '主显示单位' : 'Primary display unit';
 }
 
 class _StringsScope extends InheritedWidget {

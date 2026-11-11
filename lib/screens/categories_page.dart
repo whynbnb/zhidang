@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
+import '../models/product.dart';
 import '../models/product_category.dart';
 import '../services/category_store.dart';
 import '../services/unit_store.dart';
 import '../utils/ime_focus.dart';
+import '../widgets/hint_title.dart';
+import 'unit_relation_form.dart';
 
 class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
@@ -50,6 +53,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
       await CategoryStore.instance.add(
         name: result.name,
         units: result.units,
+        relations: result.relations,
         note: result.note,
       );
     } else {
@@ -57,6 +61,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
         category.copyWith(
           name: result.name,
           units: result.units,
+          relations: result.relations,
           note: result.note,
         ),
       );
@@ -89,6 +94,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
   String? _subtitle(ProductCategory category, AppStrings s) {
     final parts = <String>[s.measureUnitsLabel(category.units.join(' / '))];
+    if (category.relations.isNotEmpty) {
+      parts.add(s.unitConversionsCount(category.relations.length));
+    }
     if (category.note.isNotEmpty) parts.add(category.note);
     return parts.join('\n');
   }
@@ -244,11 +252,13 @@ class CategoryDraft {
   const CategoryDraft({
     required this.name,
     required this.units,
+    this.relations = const [],
     this.note = '',
   });
 
   final String name;
   final List<String> units;
+  final List<UnitRelation> relations;
   final String note;
 }
 
@@ -279,6 +289,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
   late final TextEditingController _name;
   late final TextEditingController _note;
   late Set<String> _units;
+  late List<UnitRelation> _relations;
 
   @override
   void initState() {
@@ -286,6 +297,11 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
     _name = TextEditingController(text: widget.category?.name ?? '');
     _note = TextEditingController(text: widget.category?.note ?? '');
     _units = {...(widget.category?.units ?? const ['g'])};
+    _relations = [...(widget.category?.relations ?? const [])];
+    for (final relation in _relations) {
+      _units.add(relation.fromUnit);
+      _units.add(relation.toUnit);
+    }
     if (widget.category == null) {
       scheduleTextFocus(_nameFocus);
     }
@@ -309,6 +325,58 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
     });
   }
 
+  Future<void> _addOrEditRelation([UnitRelation? existing]) async {
+    final units = <String>{
+      ...UnitStore.instance.names,
+      ..._units,
+      for (final relation in _relations) ...[
+        relation.fromUnit,
+        relation.toUnit,
+      ],
+      if (existing != null) ...[existing.fromUnit, existing.toUnit],
+    }.toList();
+    final result = await showUnitRelationForm(
+      context,
+      units: units,
+      relation: existing,
+    );
+    if (result == null) return;
+    setState(() {
+      _units.add(result.fromUnit);
+      _units.add(result.toUnit);
+      if (existing == null) {
+        _relations = [..._relations, result];
+      } else {
+        _relations = _relations
+            .map((relation) => relation.id == existing.id ? result : relation)
+            .toList();
+      }
+    });
+  }
+
+  Future<void> _addGlobalRelations() async {
+    final picked = await showGlobalRelationsPicker(
+      context,
+      existing: _relations,
+    );
+    if (picked == null || picked.isEmpty) return;
+    setState(() {
+      for (final relation in picked) {
+        _relations = [..._relations, relation];
+        _units.add(relation.fromUnit);
+        _units.add(relation.toUnit);
+      }
+    });
+  }
+
+  void _deleteRelation(UnitRelation relation) {
+    setState(() {
+      _relations = _relations
+          .where((existing) => existing.id != relation.id)
+          .toList();
+    });
+  }
+
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     if (_units.isEmpty) return;
@@ -316,6 +384,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
       CategoryDraft(
         name: _name.text.trim(),
         units: _units.toList(),
+        relations: _relations,
         note: _note.text.trim(),
       ),
     );
@@ -404,6 +473,85 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                   child: Text(
                     s.measureDimensionRequired,
                     style: TextStyle(color: scheme.error, fontSize: 12),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              HintTitle(
+                title: s.unitRelations,
+                hint: s.categoryRelationsHint,
+              ),
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Wrap(
+                  spacing: 4,
+                  children: [
+                    if (UnitStore.instance.relations.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: _addGlobalRelations,
+                        icon: const Icon(
+                          Icons.library_add_outlined,
+                          size: 18,
+                        ),
+                        label: Text(s.chooseGlobalRelations),
+                      ),
+                    TextButton.icon(
+                      onPressed: _units.length < 2
+                          ? null
+                          : () => _addOrEditRelation(),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text(s.addRelation),
+                    ),
+                  ],
+                ),
+              ),
+              if (_relations.isEmpty)
+                Text(
+                  s.noRelations,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                )
+              else
+                ..._relations.map(
+                  (relation) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Material(
+                      color: scheme.surfaceContainerHighest.withValues(
+                        alpha: 0.35,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      child: ListTile(
+                        dense: true,
+                        title: Text(
+                          relation.label,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: s.edit,
+                              onPressed: () => _addOrEditRelation(relation),
+                              icon: const Icon(
+                                Icons.edit_outlined,
+                                size: 20,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: s.delete,
+                              onPressed: () => _deleteRelation(relation),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               const SizedBox(height: 12),
