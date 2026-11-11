@@ -8,6 +8,7 @@ import 'services/app_icon_service.dart';
 import 'services/category_store.dart';
 import 'services/comparison_store.dart';
 import 'services/keyboard_event_guard.dart';
+import 'services/quick_calc_store.dart';
 import 'services/supplier_store.dart';
 import 'services/unit_store.dart';
 import 'settings/app_settings.dart';
@@ -21,6 +22,7 @@ Future<void> main() async {
     CategoryStore.instance.load(),
     UnitStore.instance.load(locale: AppSettings.instance.locale),
     ComparisonStore.instance.load(),
+    QuickCalcStore.instance.load(),
     AppIconService.instance.load(),
   ]);
   runApp(const ZhidangApp());

@@ -106,7 +106,7 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
       ),
     );
     if (ok != true || !mounted) return;
-    _store.clear();
+    await _store.clear();
     _name.clear();
     _price.clear();
     _quantity.clear();
@@ -463,11 +463,32 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
               ],
             ),
           ),
-          IconButton(
-            onPressed: () => _store.remove(entry.id),
-            tooltip: s.quickCalcDeleteRow,
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.close, size: 20),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () async {
+                  await _store.togglePin(entry.id);
+                  if (mounted) setState(() {});
+                },
+                tooltip: entry.pinned ? s.quickCalcUnpin : s.quickCalcPin,
+                visualDensity: VisualDensity.compact,
+                color: entry.pinned ? scheme.tertiary : null,
+                icon: Icon(
+                  entry.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+                  size: 20,
+                ),
+              ),
+              IconButton(
+                onPressed: () async {
+                  await _store.remove(entry.id);
+                  if (mounted) setState(() {});
+                },
+                tooltip: s.quickCalcDeleteRow,
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.close, size: 20),
+              ),
+            ],
           ),
         ],
       ),

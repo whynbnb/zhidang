@@ -14,14 +14,14 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    QuickCalcStore.instance.clear();
+    await QuickCalcStore.instance.clear();
     await AppSettings.instance.load();
     await UnitStore.instance.load(locale: AppSettings.instance.locale);
     await UnitStore.instance.replaceRelations(const []);
   });
 
   tearDown(() async {
-    QuickCalcStore.instance.clear();
+    await QuickCalcStore.instance.clear();
     await UnitStore.instance.replaceRelations(const []);
   });
 
@@ -243,5 +243,28 @@ void main() {
       findsOneWidget,
     );
     expect(QuickCalcStore.instance.primaryUnits['weight'], 'kg');
+  });
+
+  testWidgets('rows can be pinned and unpinned', (tester) async {
+    await pumpPage(tester);
+    await tester.enterText(find.byType(TextField).at(1), '123');
+    await tester.enterText(find.byType(TextField).at(2), '5');
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('斤').last);
+    await tester.pumpAndSettle();
+    await commitDraft(tester);
+
+    expect(find.byTooltip('固定，下次打开仍保留'), findsOneWidget);
+    await tester.tap(find.byTooltip('固定，下次打开仍保留'));
+    await tester.pumpAndSettle();
+
+    expect(QuickCalcStore.instance.entries.single.pinned, isTrue);
+    expect(find.byIcon(Icons.push_pin), findsOneWidget);
+
+    await tester.tap(find.byTooltip('取消固定'));
+    await tester.pumpAndSettle();
+    expect(QuickCalcStore.instance.entries.single.pinned, isFalse);
+    expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
   });
 }
