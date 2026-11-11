@@ -451,6 +451,75 @@ void main() {
     expect(saved.quantityFor('斤'), 4);
   });
 
+  testWidgets('quantity handle selects a unit without opening the keyboard', (
+    tester,
+  ) async {
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    await tester.tap(find.text('A').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('快速数量 · 个'), findsOneWidget);
+
+    final fields = find.byType(TextFormField);
+    await tester.tap(fields.at(2));
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+
+    await tester.tap(find.byKey(const ValueKey('quantity-handle-kg')));
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isFalse);
+    expect(find.text('快速数量 · kg'), findsOneWidget);
+  });
+
+  testWidgets('clearing a quantity also clears derived units', (tester) async {
+    await StorageService().saveProducts([
+      Product(
+        name: '鸡蛋',
+        units: const ['个', 'kg', '斤'],
+        relations: [
+          UnitRelation(fromUnit: '斤', toUnit: 'kg', factor: 0.5),
+        ],
+        offers: [
+          Offer(
+            brand: 'A',
+            price: 19.9,
+            measures: [
+              OfferMeasure(unit: '个', quantity: 30),
+              OfferMeasure(unit: 'kg', quantity: 2),
+            ],
+          ),
+        ],
+      ),
+    ]);
+    await pumpDetail(tester, const Size(390, 1000), compact: false);
+    await tester.tap(find.text('A').first);
+    await tester.pumpAndSettle();
+
+    Finder fieldFor(String label) => find.ancestor(
+          of: find.text(label),
+          matching: find.byType(TextFormField),
+        );
+    TextFormField fieldAt(String label) =>
+        tester.widget<TextFormField>(fieldFor(label));
+
+    expect(fieldAt('数量（斤）').controller!.text, '4');
+    expect(find.byIcon(Icons.backspace_outlined), findsNothing);
+
+    // Long-press the kg handle to clear it; the derived 斤 value goes too.
+    await tester.longPress(
+      find.byKey(const ValueKey('quantity-handle-kg')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('清空该单位数量'), findsOneWidget);
+    await tester.tap(find.text('清空该单位数量'));
+    await tester.pumpAndSettle();
+
+    expect(fieldAt('数量（kg）').controller!.text, isEmpty);
+    expect(fieldAt('数量（斤）').controller!.text, isEmpty);
+    expect(fieldAt('数量（个）').controller!.text, '30');
+    expect(find.text('¥0.66 / 个'), findsOneWidget);
+  });
+
   testWidgets('double-clicking the app title opens quick convert', (
     tester,
   ) async {

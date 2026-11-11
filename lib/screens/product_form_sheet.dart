@@ -1159,6 +1159,113 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     if (notify && mounted) setState(() {});
   }
 
+  Widget _buildQuantityHandle(
+    BuildContext context,
+    AppStrings s,
+    String unit,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final active = _activePresetUnit == unit;
+    return Builder(
+      builder: (handleContext) {
+        return Semantics(
+          button: true,
+          label: s.quantityHandleHint,
+          child: InkWell(
+            key: ValueKey('quantity-handle-$unit'),
+            onTap: () => _selectUnit(unit),
+            onLongPress: () => _showQuantityMenu(handleContext, unit),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              width: 28,
+              height: 48,
+              decoration: BoxDecoration(
+                color: active
+                    ? scheme.primaryContainer.withValues(alpha: 0.55)
+                    : null,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                active
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                size: 20,
+                color: active
+                    ? scheme.primary
+                    : scheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showQuantityMenu(
+    BuildContext anchorContext,
+    String unit,
+  ) async {
+    final s = AppStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final box = anchorContext.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (box == null || overlay == null) return;
+
+    final topLeft = box.localToGlobal(Offset.zero, ancestor: overlay);
+    final bottomRight = box.localToGlobal(
+      box.size.bottomRight(Offset.zero),
+      ancestor: overlay,
+    );
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(topLeft, bottomRight),
+      Offset.zero & overlay.size,
+    );
+    final hasValue = (_qtyControllers[unit]?.text.trim() ?? '').isNotEmpty;
+
+    final choice = await showMenu<String>(
+      context: context,
+      position: position,
+      items: [
+        PopupMenuItem<String>(
+          value: 'clear',
+          enabled: hasValue,
+          child: Row(
+            children: [
+              Icon(
+                Icons.delete_outline,
+                size: 18,
+                color: hasValue ? scheme.error : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 10),
+              Text(s.quantityClear),
+            ],
+          ),
+        ),
+      ],
+    );
+    if (choice == 'clear' && mounted) {
+      _clearQuantity(unit);
+    }
+  }
+
+  /// Select the quick-quantity target without focusing the text field.
+  void _selectUnit(String unit) {
+    FocusScope.of(context).unfocus();
+    setState(() => _activePresetUnit = unit);
+  }
+
+  void _clearQuantity(String unit) {
+    final controller = _qtyControllers[unit];
+    if (controller == null) return;
+    FocusScope.of(context).unfocus();
+    controller.clear();
+    _editedUnits.remove(unit);
+    _autoFilledUnits.remove(unit);
+    _measureError = null;
+    _convertFrom(unit, '');
+  }
+
   /// Last edited unit wins: update every unit connected to [unit].
   void _convertFrom(String unit, String raw) {
     final factors = Product.conversionFactors(
@@ -1388,6 +1495,8 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    _buildQuantityHandle(context, s, unit),
+                    const SizedBox(width: 4),
                     Expanded(
                       child: TextFormField(
                         controller: _qtyControllers[unit],

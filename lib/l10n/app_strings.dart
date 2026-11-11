@@ -498,14 +498,18 @@ class AppStrings {
   String get totalPrice => isZh ? '总价（元）' : 'Total price';
   String get offerMeasures => isZh ? '规格数量' : 'Quantities';
   String get offerMeasuresHint => isZh
-      ? '填写购买数量；需要自动换算时再展开下方高级选项'
-      : 'Enter purchase quantities; open Advanced only if you need conversion';
+      ? '填写购买数量；左侧图标点按可选中快速数量目标，长按可清空该单位'
+      : 'Enter quantities; tap the left icon to target quick quantities, long-press to clear';
   String get measureAtLeastOneRequired => isZh
       ? '请至少填写一个维度的数量'
       : 'Enter quantity for at least one dimension';
   String get quantityOptionalHint => isZh ? '可不填' : 'Optional';
   String quantityLabel(String unit) =>
       isZh ? '数量（$unit）' : 'Quantity ($unit)';
+  String get quantityHandleHint => isZh
+      ? '点按选中此单位，长按清空；不会弹出键盘'
+      : 'Tap to select this unit, long-press to clear; no keyboard';
+  String get quantityClear => isZh ? '清空该单位数量' : 'Clear this unit';
   String get quantityQuickPick => isZh ? '快速数量' : 'Quick quantity';
   String get shopOptional => isZh ? '供应商（可选）' : 'Supplier (optional)';
   String get shopHint =>
