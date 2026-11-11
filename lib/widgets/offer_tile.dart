@@ -21,6 +21,8 @@ class OfferTile extends StatelessWidget {
     this.onToggleFavorite,
     this.isPreferred = false,
     this.compact = false,
+    this.quantity,
+    this.unitPrice,
   });
 
   final Offer offer;
@@ -32,6 +34,12 @@ class OfferTile extends StatelessWidget {
   final VoidCallback? onToggleFavorite;
   final bool isPreferred;
 
+  /// Relation-aware quantity in [unit]. Falls back to the offer's own measure.
+  final double? quantity;
+
+  /// Relation-aware unit price in [unit]. Falls back to the offer's own measure.
+  final double? unitPrice;
+
   /// Dense row without a large card.
   final bool compact;
 
@@ -39,12 +47,15 @@ class OfferTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final s = AppStrings.of(context);
-    final qty = offer.quantityFor(unit) ?? 0;
-    final unitPrice = offer.unitPriceFor(unit) ?? 0;
+    final qty = quantity ?? offer.quantityFor(unit) ?? 0;
+    final resolvedUnitPrice = unitPrice ?? offer.unitPriceFor(unit) ?? 0;
     final allMeasures = offer.measures
         .where((m) => m.quantity > 0)
         .map((m) => '${formatQuantityValue(m.quantity)}${m.unit}')
         .join(' · ');
+    final showOriginalMeasures = offer.measures.length > 1 ||
+        (offer.measures.length == 1 &&
+            normalizeUnit(offer.measures.first.unit) != normalizeUnit(unit));
     final counterEnabled = offer.counterMode.enabled;
     final isLog = offer.counterMode == OfferCounterMode.withLog;
     final highlight = isPreferred || isBest;
@@ -128,7 +139,7 @@ class OfferTile extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '¥${_currency.format(unitPrice)}',
+                            '¥${_currency.format(resolvedUnitPrice)}',
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
@@ -155,7 +166,7 @@ class OfferTile extends StatelessWidget {
                             child: Text(
                               '¥${_currency.format(offer.price)} / ${_currency.format(qty)}$unit'
                               '${offer.shop.isNotEmpty ? ' · ${offer.shop}' : ''}'
-                              '${offer.measures.length > 1 ? ' · $allMeasures' : ''}',
+                              '${showOriginalMeasures ? ' · $allMeasures' : ''}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context)
@@ -292,7 +303,7 @@ class OfferTile extends StatelessWidget {
                               color: scheme.onSurfaceVariant,
                             ),
                       ),
-                      if (offer.measures.length > 1)
+                      if (showOriginalMeasures)
                         Text(
                           allMeasures,
                           maxLines: 2,
@@ -310,7 +321,7 @@ class OfferTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '¥${_currency.format(unitPrice)}',
+                      '¥${_currency.format(resolvedUnitPrice)}',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color:
                                 highlight ? scheme.primary : scheme.onSurface,

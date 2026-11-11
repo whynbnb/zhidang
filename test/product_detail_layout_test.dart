@@ -316,6 +316,141 @@ void main() {
     await pumpDetail(tester, const Size(320, 640), compact: false);
   });
 
+  testWidgets('product relations convert offers in the detail list', (
+    tester,
+  ) async {
+    await StorageService().saveProducts([
+      Product(
+        name: '鸡蛋',
+        units: const ['个', '斤', 'kg'],
+        relations: [
+          UnitRelation(fromUnit: '斤', toUnit: 'kg', factor: 0.5),
+        ],
+        offers: [
+          Offer(
+            brand: 'A',
+            price: 20,
+            measures: [
+              OfferMeasure(unit: '个', quantity: 30),
+              OfferMeasure(unit: 'kg', quantity: 2),
+            ],
+          ),
+        ],
+      ),
+    ]);
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+
+    expect(find.text('斤 (1)'), findsOneWidget);
+    await tester.tap(find.text('斤 (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('¥5'), findsOneWidget);
+    expect(find.textContaining('¥20 / 4斤'), findsOneWidget);
+  });
+
+  testWidgets('offer editor converts units and follows the last edit', (
+    tester,
+  ) async {
+    await StorageService().saveProducts([
+      Product(
+        name: '鸡蛋',
+        units: const ['个', 'kg', '斤'],
+        relations: [
+          UnitRelation(fromUnit: '斤', toUnit: 'kg', factor: 0.5),
+        ],
+        offers: [
+          Offer(
+            brand: 'A',
+            price: 19.9,
+            measures: [
+              OfferMeasure(unit: '个', quantity: 30),
+              OfferMeasure(unit: 'kg', quantity: 2),
+            ],
+          ),
+        ],
+      ),
+    ]);
+    await pumpDetail(tester, const Size(390, 1000), compact: false);
+
+    Finder fieldFor(String label) => find.ancestor(
+          of: find.text(label),
+          matching: find.byType(TextFormField),
+        );
+    TextFormField fieldAt(String label) =>
+        tester.widget<TextFormField>(fieldFor(label));
+
+    await tester.tap(find.text('A').first);
+    await tester.pumpAndSettle();
+
+    // The 斤 field is derived from 2kg immediately.
+    expect(fieldAt('数量（斤）').controller!.text, '4');
+    expect(find.text('¥4.97 / 斤'), findsOneWidget);
+
+    // Saving without editing does not turn the derived unit into a permanent
+    // attribute; only originally recorded units are kept.
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    var saved = (await StorageService().loadProducts()).single.offers.single;
+    expect(saved.measures.map((m) => m.unit).toSet(), {'个', 'kg'});
+
+    // Editing 斤 updates kg immediately, using the last edit as the source.
+    await tester.tap(find.text('A').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(fieldFor('数量（斤）'), '3');
+    await tester.pump();
+    expect(fieldAt('数量（kg）').controller!.text, '1.5');
+    expect(find.text('¥6.63 / 斤'), findsOneWidget);
+    expect(find.text('¥13.27 / kg'), findsOneWidget);
+
+    // Edited units are retained as attributes.
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    saved = (await StorageService().loadProducts()).single.offers.single;
+    expect(saved.quantityFor('斤'), closeTo(3, 1e-9));
+    expect(saved.quantityFor('kg'), closeTo(1.5, 1e-9));
+  });
+
+  testWidgets('saved offer units survive product unit removal', (
+    tester,
+  ) async {
+    await StorageService().saveProducts([
+      Product(
+        name: '鸡蛋',
+        units: const ['个', 'kg'],
+        offers: [
+          Offer(
+            brand: 'A',
+            price: 20,
+            measures: [
+              OfferMeasure(unit: '个', quantity: 30),
+              OfferMeasure(unit: 'kg', quantity: 2),
+              OfferMeasure(unit: '斤', quantity: 4),
+            ],
+          ),
+        ],
+      ),
+    ]);
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+
+    // 斤 is not a product unit anymore, but it was recorded on the offer.
+    expect(find.text('斤 (1)'), findsOneWidget);
+    await tester.tap(find.text('A').first);
+    await tester.pumpAndSettle();
+    final jinField = find.ancestor(
+      of: find.text('数量（斤）'),
+      matching: find.byType(TextFormField),
+    );
+    expect(
+      tester.widget<TextFormField>(jinField).controller!.text,
+      '4',
+    );
+
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    final saved = (await StorageService().loadProducts()).single.offers.single;
+    expect(saved.quantityFor('斤'), 4);
+  });
+
   testWidgets('double-clicking the app title opens quick convert', (
     tester,
   ) async {

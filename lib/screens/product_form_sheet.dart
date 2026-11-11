@@ -893,13 +893,20 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   late List<UnitRelation> _offerRelations;
   late Set<String> _tags;
   late OfferCounterMode _counterMode;
-  /// Quantities the user entered (or loaded from a saved offer). Never auto-overwritten.
-  final Set<String> _manualUnits = {};
-  /// Quantities filled by conversion from manual seeds. Safe to update/clear.
+  /// Units stored on the offer when the editor opened. These stay available
+  /// even if the product later stops showing that unit.
+  final Set<String> _originalUnits = {};
+  /// Units the user has typed or picked during this session. They are kept
+  /// when saving even if they were not recorded originally.
+  final Set<String> _editedUnits = {};
+  /// Units whose current value came from conversion rather than direct input.
   final Set<String> _autoFilledUnits = {};
   String? _activePresetUnit;
   String? _measureError;
   late final String _initialSignature;
+
+  List<UnitRelation> get _conversionRelations =>
+      [...widget.defaultRelations, ..._offerRelations];
 
   @override
   void initState() {
@@ -918,6 +925,12 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             )
             .toList()
         : [...o.relations];
+    _originalUnits.addAll(
+      o?.measures
+              .where((m) => m.quantity > 0)
+              .map((m) => normalizeUnit(m.unit)) ??
+          const <String>[],
+    );
 
     final baseUnits = widget.units.isNotEmpty
         ? widget.units.map(normalizeUnit).toList()
@@ -941,22 +954,15 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
         ),
     };
 
-    // Treat existing offer quantities as owned so editing one unit
-    // cannot wipe unrelated dimensions via auto-fill.
-    if (o != null) {
-      for (final unit in _availableUnits) {
-        final q = o.quantityFor(unit);
-        if (q != null && q > 0) {
-          _manualUnits.add(unit);
-        }
-      }
-    }
-
     final preferred = normalizeUnit(
       widget.preferredUnit ?? _availableUnits.first,
       fallback: _availableUnits.first,
     );
     _activePresetUnit = preferred;
+
+    // Fill conversion-only units (e.g. 2kg -> 4斤) without treating them as
+    // user-recorded attributes.
+    _fillDerivedFromSeeds(notify: false);
 
     _brand = TextEditingController(text: o?.brand ?? '');
     _price = TextEditingController(
@@ -1082,11 +1088,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             .toList();
       }
     });
-    final source = _activePresetUnit ?? _availableUnits.first;
-    if ((_qtyControllers[source]?.text.trim().isNotEmpty ?? false) ||
-        _manualUnits.isNotEmpty) {
-      _applyAutoFill(sourceUnit: source);
-    }
+    _fillDerivedFromSeeds();
   }
 
   void _deleteRelation(UnitRelation relation) {
@@ -1094,10 +1096,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
       _offerRelations =
           _offerRelations.where((r) => r.id != relation.id).toList();
     });
-    final source = _activePresetUnit ?? _availableUnits.first;
-    if (_manualUnits.isNotEmpty) {
-      _applyAutoFill(sourceUnit: source);
-    }
+    _fillDerivedFromSeeds();
   }
 
   void _useProductDefaults() {
@@ -1116,75 +1115,94 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
         _ensureUnitController(r.toUnit);
       }
     });
-    final source = _activePresetUnit ?? _availableUnits.first;
-    if (_manualUnits.isNotEmpty ||
-        (_qtyControllers[source]?.text.trim().isNotEmpty ?? false)) {
-      _applyAutoFill(sourceUnit: source);
-    }
+    _fillDerivedFromSeeds();
   }
 
-  void _applyAutoFill({required String sourceUnit}) {
-    final seeded = <String, double>{};
-    for (final unit in _manualUnits) {
+  void _fillDerivedFromSeeds({bool notify = true}) {
+    final seeds = <String, double>{};
+    for (final unit in {..._originalUnits, ..._editedUnits}) {
       final raw = _qtyControllers[unit]?.text.trim() ?? '';
       final n = double.tryParse(raw);
-      if (n != null && n > 0) seeded[unit] = n;
-    }
-
-    final sourceRaw = _qtyControllers[sourceUnit]?.text.trim() ?? '';
-    final sourceN = double.tryParse(sourceRaw);
-    if (sourceN != null && sourceN > 0) {
-      seeded[sourceUnit] = sourceN;
-    } else {
-      seeded.remove(sourceUnit);
-    }
-
-    if (seeded.isEmpty) {
-      // Only clear previous auto-filled values; leave other fields alone.
-      for (final unit in {..._autoFilledUnits}) {
-        if (_manualUnits.contains(unit)) continue;
-        _qtyControllers[unit]?.text = '';
-      }
-      _autoFilledUnits.clear();
-      setState(() {});
-      return;
+      if (n != null && n > 0) seeds[unit] = n;
     }
 
     final expanded = Product.expandQuantitiesWithRelations(
-      seeded,
-      relations: _offerRelations,
+      seeds,
+      relations: _conversionRelations,
     );
 
-    // Only touch units derived by conversion, never wipe unrelated manual data.
     final nextAuto = <String>{};
     for (final unit in _availableUnits) {
-      if (_manualUnits.contains(unit)) continue;
-      if (seeded.containsKey(unit)) continue;
+      if (seeds.containsKey(unit)) continue;
       final controller = _qtyControllers[unit];
       if (controller == null) continue;
       final value = expanded[unit];
-      if (value == null) {
-        if (_autoFilledUnits.contains(unit)) {
-          controller.text = '';
+      if (value != null && value > 0) {
+        final text = formatQuantityValue(value);
+        if (controller.text != text) controller.text = text;
+        nextAuto.add(unit);
+      } else if (_autoFilledUnits.contains(unit) &&
+          !_originalUnits.contains(unit) &&
+          !_editedUnits.contains(unit)) {
+        // The relation that produced this value is gone.
+        controller.text = '';
+      }
+    }
+    _autoFilledUnits
+      ..removeWhere(
+        (unit) =>
+            !nextAuto.contains(unit) &&
+            !_originalUnits.contains(unit) &&
+            !_editedUnits.contains(unit),
+      )
+      ..addAll(nextAuto);
+    if (notify && mounted) setState(() {});
+  }
+
+  /// Last edited unit wins: update every unit connected to [unit].
+  void _convertFrom(String unit, String raw) {
+    final factors = Product.conversionFactors(
+      unit,
+      relations: _conversionRelations,
+    );
+    final value = double.tryParse(raw.trim());
+
+    if (value == null || value <= 0) {
+      for (final target in factors.keys) {
+        if (target == unit) continue;
+        if (_originalUnits.contains(target) || _editedUnits.contains(target)) {
+          continue;
         }
-        continue;
+        if (!_autoFilledUnits.contains(target)) continue;
+        _qtyControllers[target]?.text = '';
+        _autoFilledUnits.remove(target);
       }
-      final text = formatQuantityValue(value);
-      if (controller.text != text) {
-        controller.text = text;
-      }
-      nextAuto.add(unit);
+      if (mounted) setState(() {});
+      return;
     }
 
-    _autoFilledUnits
-      ..clear()
-      ..addAll(nextAuto);
-    setState(() {});
+    final nextAuto = <String>{};
+    for (final entry in factors.entries) {
+      if (entry.key == unit) continue;
+      final controller = _qtyControllers[entry.key];
+      if (controller == null) continue;
+      final text = formatQuantityValue(value * entry.value);
+      if (controller.text != text) controller.text = text;
+      nextAuto.add(entry.key);
+    }
+    _autoFilledUnits.addAll(nextAuto);
+    _autoFilledUnits.remove(unit);
+    if (mounted) setState(() {});
   }
 
   List<OfferMeasure> _collectMeasures() {
+    // Save units that were originally recorded or edited in this session.
+    // Conversion-only units are recomputed on the fly instead of becoming
+    // permanent attributes.
+    final keep = <String>{..._originalUnits, ..._editedUnits};
     final measures = <OfferMeasure>[];
     for (final unit in _availableUnits) {
+      if (!keep.contains(unit)) continue;
       final raw = _qtyControllers[unit]?.text.trim() ?? '';
       if (raw.isEmpty) continue;
       final n = double.tryParse(raw);
@@ -1391,14 +1409,13 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                         onChanged: (value) {
                           _activePresetUnit = unit;
                           if (value.trim().isEmpty) {
-                            _manualUnits.remove(unit);
-                            _autoFilledUnits.remove(unit);
+                            _editedUnits.remove(unit);
                           } else {
-                            _manualUnits.add(unit);
-                            _autoFilledUnits.remove(unit);
+                            _editedUnits.add(unit);
                           }
+                          _autoFilledUnits.remove(unit);
                           _measureError = null;
-                          _applyAutoFill(sourceUnit: unit);
+                          _convertFrom(unit, value);
                         },
                         validator: (v) => _optionalPositiveNumber(v, s),
                       ),
@@ -1441,14 +1458,14 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                         final text = formatQuantityValue(preset.value);
                         final controller = _qtyControllers[presetUnit];
                         if (controller == null) return;
-                        _manualUnits.add(presetUnit);
+                        _editedUnits.add(presetUnit);
                         _autoFilledUnits.remove(presetUnit);
                         controller.text = text;
                         controller.selection = TextSelection.collapsed(
                           offset: text.length,
                         );
                         _measureError = null;
-                        _applyAutoFill(sourceUnit: presetUnit);
+                        _convertFrom(presetUnit, text);
                       },
                     ),
                 ],

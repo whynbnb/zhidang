@@ -18,7 +18,8 @@ class ComparisonRow {
   final String unit;
   final Offer? offer;
 
-  double? get unitPrice => offer?.unitPriceFor(unit);
+  double? get unitPrice =>
+      offer == null ? null : product.unitPriceForOffer(offer!, unit);
 
   bool get hasPrice => unitPrice != null;
 }

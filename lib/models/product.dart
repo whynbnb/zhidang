@@ -505,9 +505,72 @@ class Product {
     return values;
   }
 
+  /// Conversion factors from [unit] to every reachable unit
+  /// (1 [unit] = returned factor × target unit).
+  static Map<String, double> conversionFactors(
+    String unit, {
+    List<UnitRelation> relations = const [],
+  }) {
+    final edges = <String, Map<String, double>>{};
+    void addEdge(String from, String to, double factor) {
+      if (factor <= 0 || from == to) return;
+      edges.putIfAbsent(from, () => {});
+      edges[from]![to] = factor;
+      edges.putIfAbsent(to, () => {});
+      edges[to]![from] = 1 / factor;
+    }
+
+    addEdge('kg', 'g', 1000);
+    addEdge('L', 'ml', 1000);
+    for (final r in relations) {
+      if (r.factor > 0 && r.fromUnit != r.toUnit) {
+        addEdge(r.fromUnit, r.toUnit, r.factor);
+      }
+    }
+
+    final start = normalizeUnit(unit);
+    final result = <String, double>{start: 1};
+    final queue = <String>[start];
+    while (queue.isNotEmpty) {
+      final current = queue.removeAt(0);
+      final currentFactor = result[current]!;
+      final next = edges[current];
+      if (next == null) continue;
+      next.forEach((target, factor) {
+        if (result.containsKey(target)) return;
+        result[target] = currentFactor * factor;
+        queue.add(target);
+      });
+    }
+    return result;
+  }
+
   List<Offer> offersFor(String unit) {
     final target = normalizeUnit(unit, fallback: this.unit);
-    return offers.where((o) => o.hasUnit(target)).toList();
+    return offers.where((o) => quantityForOffer(o, target) != null).toList();
+  }
+
+  /// Quantity of [offer] in [unit], including built-in kg/g and L/ml
+  /// conversions plus product-level and offer-level relations.
+  double? quantityForOffer(Offer offer, String unit) {
+    final target = normalizeUnit(unit);
+    final expanded = expandQuantities(
+      {
+        for (final m in offer.measures)
+          if (m.quantity > 0) m.unit: m.quantity,
+      },
+      extraRelations: offer.relations,
+    );
+    final qty = expanded[target];
+    if (qty == null || qty <= 0) return null;
+    return qty;
+  }
+
+  /// Relation-aware unit price for [offer] in [unit].
+  double? unitPriceForOffer(Offer offer, String unit) {
+    final qty = quantityForOffer(offer, unit);
+    if (qty == null) return null;
+    return offer.price / qty;
   }
 
   Offer? bestOfferFor(String unit) {
@@ -516,8 +579,8 @@ class Product {
     final target = normalizeUnit(unit, fallback: this.unit);
     final sorted = [...list]
       ..sort((a, b) {
-        final pa = a.unitPriceFor(target) ?? double.infinity;
-        final pb = b.unitPriceFor(target) ?? double.infinity;
+        final pa = unitPriceForOffer(a, target) ?? double.infinity;
+        final pb = unitPriceForOffer(b, target) ?? double.infinity;
         return pa.compareTo(pb);
       });
     return sorted.first;
@@ -528,8 +591,8 @@ class Product {
     final target = normalizeUnit(unit, fallback: this.unit);
     final list = offersFor(target).where((o) => o.favorite).toList()
       ..sort((a, b) {
-        final pa = a.unitPriceFor(target) ?? double.infinity;
-        final pb = b.unitPriceFor(target) ?? double.infinity;
+        final pa = unitPriceForOffer(a, target) ?? double.infinity;
+        final pb = unitPriceForOffer(b, target) ?? double.infinity;
         return pa.compareTo(pb);
       });
     return list;

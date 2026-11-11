@@ -693,8 +693,8 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
       case _OfferViewMode.all:
         return [...product.offersFor(unit)]
           ..sort((a, b) {
-            final pa = a.unitPriceFor(unit) ?? double.infinity;
-            final pb = b.unitPriceFor(unit) ?? double.infinity;
+            final pa = product.unitPriceForOffer(a, unit) ?? double.infinity;
+            final pb = product.unitPriceForOffer(b, unit) ?? double.infinity;
             return pa.compareTo(pb);
           });
       case _OfferViewMode.favorites:
@@ -983,6 +983,10 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                         ),
                         offer: offers[i],
                         unit: selectedUnit,
+                        quantity:
+                            product.quantityForOffer(offers[i], selectedUnit),
+                        unitPrice:
+                            product.unitPriceForOffer(offers[i], selectedUnit),
                         isBest: best != null && offers[i].id == best.id,
                         isPreferred: preferred != null &&
                             offers[i].id == preferred.id,

@@ -34,8 +34,11 @@ class ProductCard extends StatelessWidget {
     final best = product.bestOfferFor(primaryUnit) ?? product.bestOffer;
     final bestUnit = best == null
         ? primaryUnit
-        : (best.hasUnit(primaryUnit) ? primaryUnit : best.unit);
-    final bestPrice = best?.unitPriceFor(bestUnit);
+        : (product.quantityForOffer(best, primaryUnit) != null
+            ? primaryUnit
+            : best.unit);
+    final bestPrice =
+        best == null ? null : product.unitPriceForOffer(best, bestUnit);
     final units = product.measureUnits;
 
     if (compact) {
