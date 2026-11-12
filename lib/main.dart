@@ -12,6 +12,7 @@ import 'services/quick_calc_store.dart';
 import 'services/supplier_store.dart';
 import 'services/unit_store.dart';
 import 'settings/app_settings.dart';
+import 'utils/layout.dart';
 import 'widgets/macos_menu_bar.dart';
 
 Future<void> main() async {
@@ -125,10 +126,14 @@ class _ZhidangAppState extends State<ZhidangApp>
           theme: buildTheme(light),
           darkTheme: buildTheme(dark),
           builder: (context, child) {
-            return AppStrings.provide(
-              locale: settings.locale,
-              child: MacosMenuBar(
-                child: child ?? const SizedBox.shrink(),
+            final media = sanitizeAndroidWindowInsets(MediaQuery.of(context));
+            return MediaQuery(
+              data: media,
+              child: AppStrings.provide(
+                locale: settings.locale,
+                child: MacosMenuBar(
+                  child: child ?? const SizedBox.shrink(),
+                ),
               ),
             );
           },

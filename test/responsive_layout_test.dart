@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -79,5 +80,27 @@ void main() {
     tester.view.physicalSize = const Size(1200, 900);
     await tester.pumpAndSettle();
     expect(find.text('值当'), findsWidgets);
+  });
+
+  test('stale Android window insets are clamped', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    const stale = MediaQueryData(
+      padding: EdgeInsets.only(top: 112, bottom: 150),
+      viewPadding: EdgeInsets.only(top: 112, bottom: 150),
+    );
+    final fixed = sanitizeAndroidWindowInsets(stale);
+
+    expect(fixed.padding.top, 48);
+    expect(fixed.padding.bottom, 48);
+    expect(fixed.viewPadding.top, 48);
+    expect(fixed.viewPadding.bottom, 48);
+
+    const normal = MediaQueryData(
+      padding: EdgeInsets.only(top: 24, bottom: 32),
+      viewPadding: EdgeInsets.only(top: 48, bottom: 32),
+    );
+    expect(sanitizeAndroidWindowInsets(normal), normal);
   });
 }

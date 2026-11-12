@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Shared wide-layout rules for product and compare shells.
@@ -45,4 +46,34 @@ class ResponsiveWidthScope extends StatelessWidget {
       },
     );
   }
+}
+
+/// Repairs implausible system insets reported by some Android ROMs after a
+/// freeform window is restored. The stale value is usually the caption bar of
+/// the small window, which can be mistaken for a huge top safe-area inset.
+MediaQueryData sanitizeAndroidWindowInsets(MediaQueryData data) {
+  if (defaultTargetPlatform != TargetPlatform.android) return data;
+  EdgeInsets repair(EdgeInsets value) {
+    if (value.top <= 72 && value.bottom <= 120) return value;
+    return value.copyWith(
+      top: value.top > 72 ? 48 : value.top,
+      bottom: value.bottom > 120 ? 48 : value.bottom,
+    );
+  }
+
+  final padding = repair(data.padding);
+  final viewPadding = repair(data.viewPadding);
+  final viewInsets = data.viewInsets.top > 72
+      ? data.viewInsets.copyWith(top: 0)
+      : data.viewInsets;
+  if (padding == data.padding &&
+      viewPadding == data.viewPadding &&
+      viewInsets == data.viewInsets) {
+    return data;
+  }
+  return data.copyWith(
+    padding: padding,
+    viewPadding: viewPadding,
+    viewInsets: viewInsets,
+  );
 }
