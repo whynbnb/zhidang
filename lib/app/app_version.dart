@@ -1,5 +1,5 @@
 /// User-facing app version. Keep in sync with `pubspec.yaml`.
-const appVersion = '0.12.0';
+const appVersion = '0.13.0';
 
 /// The UI only shows major.minor, even if the stored version has a patch or
 /// build suffix.
