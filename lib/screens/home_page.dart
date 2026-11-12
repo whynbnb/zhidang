@@ -8,6 +8,7 @@ import '../services/storage_service.dart';
 import '../services/unit_store.dart';
 import '../settings/app_settings.dart';
 import '../utils/layout.dart';
+import '../utils/tag_suggestions.dart';
 import '../widgets/app_header_actions.dart';
 import '../widgets/note_hint.dart';
 import '../widgets/offer_tile.dart';
@@ -669,6 +670,7 @@ enum _OfferViewMode { all, favorites }
 class _ProductDetailPaneState extends State<_ProductDetailPane> {
   late String _selectedUnit;
   _OfferViewMode _viewMode = _OfferViewMode.all;
+  final Set<String> _selectedTags = {};
 
   @override
   void initState() {
@@ -682,31 +684,76 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
     if (oldWidget.product.id != widget.product.id) {
       _selectedUnit = normalizeUnit(widget.product.unit);
       _viewMode = _OfferViewMode.all;
+      _selectedTags.clear();
       return;
     }
     final units = widget.product.measureUnits;
     if (!units.contains(_selectedUnit)) {
       _selectedUnit = units.first;
     }
+    _pruneSelectedTags(_selectedUnit);
     if (_viewMode == _OfferViewMode.favorites &&
         widget.product.favoriteOffersFor(_selectedUnit).isEmpty) {
       _viewMode = _OfferViewMode.all;
     }
   }
 
+  List<String> _tagsFor(String unit) {
+    return collectTagSuggestions(
+      widget.product.offersFor(unit).map((offer) => offer.tags),
+    );
+  }
+
+  Map<String, int> _tagCountsFor(String unit) {
+    final counts = <String, int>{};
+    for (final offer in widget.product.offersFor(unit)) {
+      for (final tag in offer.tags.map((tag) => tag.toLowerCase()).toSet()) {
+        counts[tag] = (counts[tag] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }
+
+  void _pruneSelectedTags(String unit) {
+    final available = _tagsFor(unit).map((tag) => tag.toLowerCase()).toSet();
+    _selectedTags.removeWhere((tag) => !available.contains(tag));
+  }
+
+  void _toggleTag(String tag) {
+    final key = tag.toLowerCase();
+    setState(() {
+      if (!_selectedTags.add(key)) _selectedTags.remove(key);
+    });
+  }
+
+  void _selectUnit(String unit) {
+    final available = _tagsFor(unit).map((tag) => tag.toLowerCase()).toSet();
+    setState(() {
+      _selectedUnit = unit;
+      _selectedTags.removeWhere((tag) => !available.contains(tag));
+      if (_viewMode == _OfferViewMode.favorites &&
+          widget.product.favoriteOffersFor(unit).isEmpty) {
+        _viewMode = _OfferViewMode.all;
+      }
+    });
+  }
+
   List<Offer> _visibleOffers(String unit, _OfferViewMode mode) {
     final product = widget.product;
-    switch (mode) {
-      case _OfferViewMode.all:
-        return [...product.offersFor(unit)]
-          ..sort((a, b) {
-            final pa = product.unitPriceForOffer(a, unit) ?? double.infinity;
-            final pb = product.unitPriceForOffer(b, unit) ?? double.infinity;
-            return pa.compareTo(pb);
-          });
-      case _OfferViewMode.favorites:
-        return product.favoriteOffersFor(unit);
-    }
+    final offers = switch (mode) {
+      _OfferViewMode.all => [...product.offersFor(unit)]
+        ..sort((a, b) {
+          final pa = product.unitPriceForOffer(a, unit) ?? double.infinity;
+          final pb = product.unitPriceForOffer(b, unit) ?? double.infinity;
+          return pa.compareTo(pb);
+        }),
+      _OfferViewMode.favorites => product.favoriteOffersFor(unit),
+    };
+    if (_selectedTags.isEmpty) return offers;
+    return offers
+        .where((offer) =>
+            offer.tags.any((tag) => _selectedTags.contains(tag.toLowerCase())))
+        .toList();
   }
 
   @override
@@ -728,8 +775,28 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
     final viewMode =
         hasFavorites ? _viewMode : _OfferViewMode.all;
     final offers = _visibleOffers(selectedUnit, viewMode);
-    final preferred = product.preferredOfferFor(selectedUnit);
-    final best = product.bestOfferFor(selectedUnit);
+    final tagFilterActive = _selectedTags.isNotEmpty;
+    final offerTags = _tagsFor(selectedUnit);
+    final tagCounts = _tagCountsFor(selectedUnit);
+    final unitOfferCount = product.offersFor(selectedUnit).length;
+    final Offer? best;
+    final Offer? preferred;
+    if (!tagFilterActive) {
+      best = product.bestOfferFor(selectedUnit);
+      preferred = product.preferredOfferFor(selectedUnit);
+    } else {
+      final tagged = _visibleOffers(selectedUnit, _OfferViewMode.all);
+      if (tagged.isEmpty) {
+        best = null;
+        preferred = null;
+      } else {
+        best = tagged.first;
+        preferred = tagged.firstWhere(
+          (offer) => offer.favorite,
+          orElse: () => tagged.first,
+        );
+      }
+    }
 
     return ListenableBuilder(
       listenable: AppSettings.instance,
@@ -866,11 +933,73 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                               ),
                               visualDensity: VisualDensity.compact,
                             );
+                      final tagFilterButton = offerTags.isEmpty
+                          ? null
+                          : MenuAnchor(
+                              alignmentOffset: const Offset(0, 8),
+                              menuChildren: [
+                                CheckboxMenuButton(
+                                  value: !tagFilterActive,
+                                  closeOnActivate: false,
+                                  onChanged: (_) =>
+                                      setState(_selectedTags.clear),
+                                  child: Text(
+                                    '${s.allTags} ($unitOfferCount)',
+                                  ),
+                                ),
+                                for (final tag in offerTags)
+                                  CheckboxMenuButton(
+                                    value: _selectedTags.contains(
+                                      tag.toLowerCase(),
+                                    ),
+                                    closeOnActivate: false,
+                                    onChanged: (_) => _toggleTag(tag),
+                                    child: Text(
+                                      '$tag (${tagCounts[tag.toLowerCase()] ?? 0})',
+                                    ),
+                                  ),
+                              ],
+                              builder: (context, controller, child) {
+                                return IconButton(
+                                  onPressed: () => controller.isOpen
+                                      ? controller.close()
+                                      : controller.open(),
+                                  tooltip: s.filterByTag,
+                                  icon: Badge.count(
+                                    count: _selectedTags.length,
+                                    isLabelVisible: tagFilterActive,
+                                    child: const Icon(
+                                      Icons.filter_alt_outlined,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints:
+                                      const BoxConstraints.tightFor(
+                                    width: 36,
+                                    height: 36,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  style: IconButton.styleFrom(
+                                    foregroundColor: tagFilterActive
+                                        ? scheme.onPrimaryContainer
+                                        : scheme.onSurfaceVariant,
+                                    backgroundColor: tagFilterActive
+                                        ? scheme.primaryContainer
+                                        : Colors.transparent,
+                                  ),
+                                );
+                              },
+                            );
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Row(
                             children: [
+                              if (tagFilterButton != null) ...[
+                                tagFilterButton,
+                                const SizedBox(width: 4),
+                              ],
                               if (hasFavorites) ...[
                                 favoriteToggle,
                                 if (showUnits) ...[
@@ -901,18 +1030,8 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                                             selected: unit == selectedUnit,
                                             visualDensity:
                                                 VisualDensity.compact,
-                                            onSelected: (_) => setState(() {
-                                              _selectedUnit = unit;
-                                              if (_viewMode ==
-                                                      _OfferViewMode
-                                                          .favorites &&
-                                                  product
-                                                      .favoriteOffersFor(unit)
-                                                      .isEmpty) {
-                                                _viewMode =
-                                                    _OfferViewMode.all;
-                                              }
-                                            }),
+                                            onSelected: (_) =>
+                                                _selectUnit(unit),
                                           ),
                                           if (unit != units.last)
                                             const SizedBox(width: 6),
@@ -957,29 +1076,43 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
                 child: Column(
                   children: [
                     Icon(
-                      viewMode == _OfferViewMode.favorites
-                          ? Icons.star_outline
-                          : Icons.price_change_outlined,
+                      tagFilterActive
+                          ? Icons.label_outline
+                          : viewMode == _OfferViewMode.favorites
+                              ? Icons.star_outline
+                              : Icons.price_change_outlined,
                       size: 48,
                       color: scheme.onSurfaceVariant,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      viewMode == _OfferViewMode.favorites
-                          ? s.noFavoriteOffers
-                          : s.noOffers,
+                      tagFilterActive
+                          ? s.noTaggedOffers
+                          : viewMode == _OfferViewMode.favorites
+                              ? s.noFavoriteOffers
+                              : s.noOffers,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      viewMode == _OfferViewMode.favorites
-                          ? s.noFavoriteOffersHint
-                          : s.noOffersHint,
+                      tagFilterActive
+                          ? s.noTaggedOffersHint
+                          : viewMode == _OfferViewMode.favorites
+                              ? s.noFavoriteOffersHint
+                              : s.noOffersHint,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
                     ),
+                    if (tagFilterActive) ...[
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => setState(_selectedTags.clear),
+                        icon: const Icon(Icons.label_off_outlined, size: 18),
+                        label: Text(s.clearTagFilter),
+                      ),
+                    ],
                   ],
                 ),
               )

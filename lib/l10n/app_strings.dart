@@ -420,6 +420,15 @@ class AppStrings {
   String get offerViewFavorites => isZh ? '收藏' : 'Favorites';
   String get favoritesOnly => isZh ? '只看收藏' : 'Favorites only';
   String get showAllOffers => isZh ? '显示全部' : 'Show all offers';
+  String get filterByTag => isZh ? '按标签筛选' : 'Filter by tag';
+  String get allTags => isZh ? '全部标签' : 'All tags';
+  String get clearTagFilter => isZh ? '清除标签筛选' : 'Clear tag filters';
+  String get noTaggedOffers => isZh
+      ? '没有符合标签的报价'
+      : 'No offers match these tags';
+  String get noTaggedOffersHint => isZh
+      ? '换一个标签，或清除标签筛选'
+      : 'Try another tag or clear the tag filters';
   String get offerViewCheapest => isZh ? '最便宜' : 'Cheapest';
   String get offerViewMode => isZh ? '显示方式' : 'Show';
   String get favoriteOffer => isZh ? '收藏报价' : 'Favorite offer';

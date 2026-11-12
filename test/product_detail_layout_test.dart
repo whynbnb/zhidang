@@ -137,9 +137,118 @@ void main() {
 
   testWidgets('offer tags sit beside the brand', (tester) async {
     await pumpDetail(tester, const Size(390, 844), compact: false);
-    final tagCenter = tester.getCenter(find.text('123')).dy;
+    final tagCenter = tester.getCenter(
+      find.descendant(
+        of: find.byType(OfferTile).first,
+        matching: find.text('123'),
+      ),
+    ).dy;
     final brandCenter = tester.getCenter(find.text('A')).dy;
     expect((tagCenter - brandCenter).abs(), lessThan(10));
+  });
+
+  testWidgets('tag filter menu filters the offer list', (tester) async {
+    await StorageService().saveProducts([
+      Product(
+        name: '鸡蛋',
+        units: const ['个'],
+        offers: [
+          Offer(
+            brand: 'A',
+            price: 10,
+            unit: '个',
+            quantity: 10,
+            tags: const ['促销'],
+            favorite: true,
+          ),
+          Offer(
+            brand: 'B',
+            price: 20,
+            unit: '个',
+            quantity: 10,
+            tags: const ['会员'],
+          ),
+          Offer(brand: 'C', price: 30, unit: '个', quantity: 10),
+        ],
+      ),
+    ]);
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+
+    await tester.tap(find.byTooltip('按标签筛选'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(CheckboxMenuButton, '全部标签 (3)'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(CheckboxMenuButton, '促销 (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('A'), findsOneWidget);
+    expect(find.text('B'), findsNothing);
+    expect(find.text('C'), findsNothing);
+
+    await tester.tap(find.widgetWithText(CheckboxMenuButton, '会员 (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('B'), findsOneWidget);
+    expect(find.text('C'), findsNothing);
+
+    await tester.tap(find.widgetWithText(CheckboxMenuButton, '全部标签 (3)'));
+    await tester.pumpAndSettle();
+    expect(find.text('C'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(CheckboxMenuButton, '会员 (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('按标签筛选'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('只看收藏'));
+    await tester.pumpAndSettle();
+    expect(find.text('没有符合标签的报价'), findsOneWidget);
+    expect(find.text('清除标签筛选'), findsOneWidget);
+
+    await tester.tap(find.text('清除标签筛选'));
+    await tester.pumpAndSettle();
+    expect(find.text('A'), findsOneWidget);
+    expect(find.text('B'), findsNothing);
+  });
+
+  testWidgets('tag filter options show matching offer counts', (tester) async {
+    await StorageService().saveProducts([
+      Product(
+        name: '鸡蛋',
+        units: const ['个'],
+        offers: [
+          Offer(
+            brand: 'A',
+            price: 10,
+            unit: '个',
+            quantity: 10,
+            tags: const ['促销', '会员'],
+          ),
+          Offer(
+            brand: 'B',
+            price: 20,
+            unit: '个',
+            quantity: 10,
+            tags: const ['促销'],
+          ),
+          Offer(brand: 'C', price: 30, unit: '个', quantity: 10),
+        ],
+      ),
+    ]);
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+
+    await tester.tap(find.byTooltip('按标签筛选'));
+    await tester.pumpAndSettle();
+    expect(
+      find.widgetWithText(CheckboxMenuButton, '全部标签 (3)'),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(CheckboxMenuButton, '促销 (2)'),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(CheckboxMenuButton, '会员 (1)'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('detail header fits on a phone in compact mode', (tester) async {
