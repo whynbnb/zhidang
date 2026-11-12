@@ -318,13 +318,14 @@ class _HomePageState extends State<HomePage> {
     final s = AppStrings.of(context);
     final inDetail = !isWide && _selected != null;
 
-    return PopScope(
-      canPop: !inDetail,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        if (inDetail) _clearSelection();
-      },
-      child: Scaffold(
+    return ResponsiveWidthScope(
+      child: PopScope(
+        canPop: !inDetail,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          if (inDetail) _clearSelection();
+        },
+        child: Scaffold(
         body: SafeArea(
           child: _loading
               ? const Center(child: CircularProgressIndicator())
@@ -365,6 +366,7 @@ class _HomePageState extends State<HomePage> {
                 icon: const Icon(Icons.add),
                 label: Text(s.newProduct),
               ),
+      ),
       ),
     );
   }

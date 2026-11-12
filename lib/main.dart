@@ -62,6 +62,29 @@ class _ZhidangAppState extends State<ZhidangApp>
     }
   }
 
+  /// Some Android ROMs finish restoring a freeform window without delivering
+  /// a fresh MediaQuery to every page. Rebuild once now and once after the
+  /// frame so responsive breakpoints settle on the restored window size.
+  @override
+  void didChangeMetrics() {
+    _refreshWindow();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshWindow();
+    }
+  }
+
+  void _refreshWindow() {
+    if (!mounted) return;
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
