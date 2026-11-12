@@ -82,7 +82,115 @@ class BackupService {
     final stamp = DateFormat('yyyyMMdd-HHmmss').format(DateTime.now());
     final name = 'zhidang-backup-$stamp.json';
     final bytes = Uint8List.fromList(utf8.encode(json));
+    return _saveBytes(name, bytes, dialogTitle);
+  }
 
+  /// CSV export for spreadsheet analysis. One row per offer measure, plus a
+  /// row for products without offers.
+  Future<String> buildCsv() async {
+    final products = await _storage.loadProducts();
+    final zh = AppSettings.instance.isZh;
+    final headers = zh
+        ? const [
+            '商品',
+            '大类',
+            '商品标签',
+            '品牌/规格',
+            '总价',
+            '数量',
+            '单位',
+            '单价',
+            '报价标签',
+            '店铺',
+            '报价备注',
+            '收藏',
+            '商品备注',
+            '更新时间',
+          ]
+        : const [
+            'Product',
+            'Category',
+            'Product tags',
+            'Brand / spec',
+            'Total price',
+            'Quantity',
+            'Unit',
+            'Unit price',
+            'Offer tags',
+            'Shop',
+            'Offer note',
+            'Favorite',
+            'Product note',
+            'Updated',
+          ];
+    final rows = <List<String>>[headers];
+
+    for (final product in products) {
+      final category =
+          CategoryStore.instance.byId(product.categoryId)?.name ?? '';
+      final productTags = product.tags.join(' / ');
+      if (product.offers.isEmpty) {
+        rows.add([
+          product.name,
+          category,
+          productTags,
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          product.note,
+          '',
+        ]);
+        continue;
+      }
+      for (final offer in product.offers) {
+        final updated = DateFormat('yyyy-MM-dd HH:mm').format(offer.updatedAt);
+        for (final measure in offer.measures) {
+          if (measure.quantity <= 0) continue;
+          rows.add([
+            product.name,
+            category,
+            productTags,
+            offer.brand,
+            _plainNumber(offer.price),
+            _plainNumber(measure.quantity),
+            measure.unit,
+            _plainNumber(offer.price / measure.quantity, decimals: 6),
+            offer.tags.join(' / '),
+            offer.shop,
+            offer.note,
+            offer.favorite ? (zh ? '是' : 'Yes') : (zh ? '否' : 'No'),
+            product.note,
+            updated,
+          ]);
+        }
+      }
+    }
+
+    return rows
+        .map((row) => row.map(_csvCell).join(','))
+        .join('\r\n');
+  }
+
+  /// Save the CSV using the platform file dialog (UTF-8 BOM for Excel).
+  Future<BackupExportResult> exportCsvFile({String? dialogTitle}) async {
+    final csv = await buildCsv();
+    final stamp = DateFormat('yyyyMMdd-HHmmss').format(DateTime.now());
+    final name = 'zhidang-products-$stamp.csv';
+    final bytes = Uint8List.fromList(utf8.encode('\uFEFF$csv'));
+    return _saveBytes(name, bytes, dialogTitle);
+  }
+
+  Future<BackupExportResult> _saveBytes(
+    String name,
+    Uint8List bytes,
+    String? dialogTitle,
+  ) async {
     final path = await FilePicker.platform.saveFile(
       dialogTitle: dialogTitle,
       fileName: name,
@@ -110,6 +218,16 @@ class BackupService {
       }
     }
     return BackupExportResult.saved;
+  }
+
+  static String _csvCell(String value) {
+    return '"${value.replaceAll('"', '""')}"';
+  }
+
+  static String _plainNumber(double value, {int decimals = 3}) {
+    if (value == value.roundToDouble()) return value.toInt().toString();
+    final text = value.toStringAsFixed(decimals);
+    return text.replaceFirst(RegExp(r'\.?0+$'), '');
   }
 
   BackupPayload parse(String raw) {

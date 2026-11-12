@@ -32,8 +32,31 @@ class DataManagePage extends StatelessWidget {
     }
   }
 
-  Future<void> _importData(BuildContext context) async {
+  Future<void> _exportCsv(BuildContext context) async {
     final s = AppStrings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await BackupService.instance.exportCsvFile(
+        dialogTitle: s.exportCsv,
+      );
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            result == BackupExportResult.saved
+                ? s.exportCsvDone
+                : s.exportCancelled,
+          ),
+        ),
+      );
+    } catch (e, st) {
+      debugPrint('CSV export failed: $e\n$st');
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(s.exportFailed)));
+    }
+  }
+
+  Future<void> _importData(BuildContext context) async {    final s = AppStrings.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
       final payload = await BackupService.instance.pickAndParse();
@@ -165,6 +188,18 @@ class DataManagePage extends StatelessWidget {
                   title: Text(s.exportData),
                   subtitle: Text(s.exportDataHint),
                   onTap: () => _exportData(context),
+                ),
+                Divider(
+                  height: 1,
+                  indent: 56,
+                  color: scheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+                ListTile(
+                  leading:
+                      Icon(Icons.table_chart_outlined, color: scheme.primary),
+                  title: Text(s.exportCsv),
+                  subtitle: Text(s.exportCsvHint),
+                  onTap: () => _exportCsv(context),
                 ),
                 Divider(
                   height: 1,

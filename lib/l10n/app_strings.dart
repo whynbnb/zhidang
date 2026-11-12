@@ -293,6 +293,11 @@ class AppStrings {
   String get exportDataHint => isZh
       ? '导出商品、供应商、大类、单位与比价组为 JSON'
       : 'Export products, suppliers, categories, units and compare groups as JSON';
+  String get exportCsv => isZh ? '导出 CSV' : 'Export CSV';
+  String get exportCsvHint => isZh
+      ? '导出商品与报价明细，便于在表格中分析'
+      : 'Export products and offer details for spreadsheet analysis';
+  String get exportCsvDone => isZh ? 'CSV 已导出' : 'CSV exported';
   String get importData => isZh ? '导入数据' : 'Import data';
   String get importDataHint => isZh
       ? '从备份恢复；将覆盖当前数据'
