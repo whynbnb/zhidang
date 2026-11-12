@@ -112,7 +112,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _openSettings() => AppNavigator.openSettings();
 
   Future<void> _addProduct() async {
-    final result = await showProductForm(context);
+    final result = await showProductForm(context, allProducts: _products);
     final product = result?.product;
     if (product == null) return;
     setState(() {
@@ -123,7 +123,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _editProduct(Product product) async {
-    final result = await showProductForm(context, product: product);
+    final result = await showProductForm(
+      context,
+      product: product,
+      allProducts: _products,
+    );
     if (result == null) return;
     if (result.deleted) {
       setState(() {
@@ -155,6 +159,7 @@ class _HomePageState extends State<HomePage> {
       context,
       units: product.measureUnits,
       defaultRelations: product.relations,
+      productOffers: product.offers,
       preferredUnit: unit,
     );
     final offer = result?.offer;
@@ -183,6 +188,7 @@ class _HomePageState extends State<HomePage> {
       offer: offer,
       units: product.measureUnits,
       defaultRelations: product.relations,
+      productOffers: product.offers,
       preferredUnit: offer.unit,
     );
     if (result == null) return;

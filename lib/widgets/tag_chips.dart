@@ -10,6 +10,8 @@ class TagPicker extends StatefulWidget {
     super.key,
     required this.selected,
     required this.onChanged,
+    this.suggestions = const [],
+    this.suggestionsLabel,
     this.maxTags = maxTagsPerEntity,
   });
 
@@ -17,6 +19,13 @@ class TagPicker extends StatefulWidget {
 
   final Set<String> selected;
   final ValueChanged<Set<String>> onChanged;
+
+  /// Optional tags to offer as one-tap additions, e.g. tags already used by
+  /// other products in the same category.
+  final List<String> suggestions;
+
+  /// Label above [suggestions]; defaults to the category tag hint.
+  final String? suggestionsLabel;
   final int maxTags;
 
   @override
@@ -34,16 +43,38 @@ class _TagPickerState extends State<TagPicker> {
 
   bool get _atLimit => widget.selected.length >= widget.maxTags;
 
-  void _addFromInput() {
-    final name = _input.text.trim();
-    if (name.isEmpty || _atLimit) return;
+  void _add(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || _atLimit) return;
     final exists = widget.selected.any(
-      (t) => t.toLowerCase() == name.toLowerCase(),
+      (t) => t.toLowerCase() == trimmed.toLowerCase(),
     );
     if (!exists) {
-      widget.onChanged({...widget.selected, name});
+      widget.onChanged({...widget.selected, trimmed});
     }
+  }
+
+  void _addFromInput() {
+    _add(_input.text);
     _input.clear();
+  }
+
+  List<String> get _availableSuggestions {
+    final selectedKeys = widget.selected
+        .map((tag) => tag.trim().toLowerCase())
+        .where((tag) => tag.isNotEmpty)
+        .toSet();
+    final seen = <String>{};
+    final result = <String>[];
+    for (final raw in widget.suggestions) {
+      final name = raw.trim();
+      final key = name.toLowerCase();
+      if (name.isEmpty || selectedKeys.contains(key) || !seen.add(key)) {
+        continue;
+      }
+      result.add(name);
+    }
+    return result;
   }
 
   void _remove(String name) {
@@ -58,6 +89,7 @@ class _TagPickerState extends State<TagPicker> {
     final tags = widget.selected.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final atLimit = _atLimit;
+    final suggestions = _availableSuggestions;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -76,6 +108,28 @@ class _TagPickerState extends State<TagPicker> {
                 InputChip(
                   label: Text(name),
                   onDeleted: () => _remove(name),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
+        if (!atLimit && suggestions.isNotEmpty) ...[
+          Text(
+            widget.suggestionsLabel ?? s.tagsInCategory,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final name in suggestions)
+                ActionChip(
+                  avatar: const Icon(Icons.add, size: 16),
+                  label: Text(name),
+                  onPressed: () => _add(name),
                 ),
             ],
           ),

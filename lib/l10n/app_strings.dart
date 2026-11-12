@@ -196,6 +196,12 @@ class AppStrings {
       : 'Up to $max; type to add, tap a tag to remove';
   String tagsLimitReached(int max) =>
       isZh ? '已达上限（$max 个）' : 'Limit reached ($max)';
+  String get tagsInCategory => isZh
+      ? '当前大类已有标签（点击添加）'
+      : 'Tags in this category (tap to add)';
+  String get tagsInProductOffers => isZh
+      ? '此商品报价已有标签（点击添加）'
+      : "Tags used by this product's offers (tap to add)";
 
   String get units => isZh ? '单位' : 'Units';
   String get unitsManage => isZh ? '管理单位' : 'Manage units';

@@ -11,6 +11,7 @@ import '../services/unit_store.dart';
 import '../utils/discard_changes.dart';
 import '../utils/ime_focus.dart';
 import '../utils/quantity_presets.dart';
+import '../utils/tag_suggestions.dart';
 import 'unit_relation_form.dart';
 import '../widgets/hint_title.dart';
 import '../widgets/tag_chips.dart';
@@ -30,18 +31,24 @@ class ProductFormResult {
 Future<ProductFormResult?> showProductForm(
   BuildContext context, {
   Product? product,
+  /// All products, used to suggest tags already used in the selected category.
+  List<Product> allProducts = const [],
 }) {
   return Navigator.of(context).push<ProductFormResult>(
     MaterialPageRoute(
-      builder: (context) => _ProductFormSheet(product: product),
+      builder: (context) => _ProductFormSheet(
+        product: product,
+        allProducts: allProducts,
+      ),
     ),
   );
 }
 
 class _ProductFormSheet extends StatefulWidget {
-  const _ProductFormSheet({this.product});
+  const _ProductFormSheet({this.product, this.allProducts = const []});
 
   final Product? product;
+  final List<Product> allProducts;
 
   @override
   State<_ProductFormSheet> createState() => _ProductFormSheetState();
@@ -146,6 +153,16 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
         }
       }
     });
+  }
+
+  List<String> get _categoryTagSuggestions {
+    final categoryId = _categoryId;
+    if (categoryId == null || categoryId.isEmpty) return const [];
+    return collectTagSuggestions(
+      widget.allProducts
+          .where((product) => product.categoryId == categoryId)
+          .map((product) => product.tags),
+    );
   }
 
   void _setCategory(String? id) {
@@ -479,6 +496,7 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
               const SizedBox(height: 16),
               TagPicker(
                 selected: _tags,
+                suggestions: _categoryTagSuggestions,
                 onChanged: (next) => setState(() => _tags = next),
               ),
               const SizedBox(height: 12),
@@ -650,6 +668,8 @@ Future<OfferFormResult?> showOfferForm(
   required List<String> units,
   /// Product-level defaults used only when creating a new offer.
   List<UnitRelation> defaultRelations = const [],
+  /// All offers of the product, used to suggest tags already in use.
+  List<Offer> productOffers = const [],
   String? preferredUnit,
 }) {
   return Navigator.of(context).push<OfferFormResult>(
@@ -658,6 +678,7 @@ Future<OfferFormResult?> showOfferForm(
         offer: offer,
         units: units,
         defaultRelations: defaultRelations,
+        productOffers: productOffers,
         preferredUnit: preferredUnit,
       ),
     ),
@@ -669,12 +690,14 @@ class _OfferFormSheet extends StatefulWidget {
     this.offer,
     required this.units,
     this.defaultRelations = const [],
+    this.productOffers = const [],
     this.preferredUnit,
   });
 
   final Offer? offer;
   final List<String> units;
   final List<UnitRelation> defaultRelations;
+  final List<Offer> productOffers;
   final String? preferredUnit;
 
   @override
@@ -707,6 +730,12 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
 
   List<UnitRelation> get _conversionRelations =>
       [...widget.defaultRelations, ..._offerRelations];
+
+  List<String> get _offerTagSuggestions {
+    return collectTagSuggestions(
+      widget.productOffers.map((offer) => offer.tags),
+    );
+  }
 
   @override
   void initState() {
@@ -1445,6 +1474,8 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
               const SizedBox(height: 16),
               TagPicker(
                 selected: _tags,
+                suggestions: _offerTagSuggestions,
+                suggestionsLabel: s.tagsInProductOffers,
                 onChanged: (next) => setState(() => _tags = next),
               ),
               const SizedBox(height: 12),
