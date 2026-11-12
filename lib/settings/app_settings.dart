@@ -265,6 +265,7 @@ class AppSettings extends ChangeNotifier {
   static const _settingsEntryKey = 'settings_entry_mode';
   static const _dataCenterNavKey = 'settings_data_center_nav_mode';
   static const _compactModeKey = 'settings_compact_mode';
+  static const _simpleNavModeKey = 'settings_simple_nav_mode';
 
   LocaleMode _localeMode = LocaleMode.zh;
   ThemeMode _themeMode = ThemeMode.system;
@@ -274,6 +275,7 @@ class AppSettings extends ChangeNotifier {
   DataCenterNavMode _dataCenterNavMode =
       DataCenterNavMode.defaultForPlatform();
   bool _compactMode = false;
+  bool _simpleNavMode = false;
   bool _ready = false;
 
   LocaleMode get localeMode => _localeMode;
@@ -298,6 +300,10 @@ class AppSettings extends ChangeNotifier {
   DataCenterNavMode get dataCenterNavMode => _dataCenterNavMode;
   /// Dense product rows instead of large cards.
   bool get compactMode => _compactMode;
+
+  /// One-switch layout: header icons for Data Center/Settings and Compare in
+  /// Data Center. Individual entry options are locked while enabled.
+  bool get simpleNavMode => _simpleNavMode;
   bool get ready => _ready;
   bool get isZh => locale.languageCode == 'zh';
 
@@ -343,6 +349,7 @@ class AppSettings extends ChangeNotifier {
     final settingsEntryRaw = prefs.getString(_settingsEntryKey);
     final dataCenterNavRaw = prefs.getString(_dataCenterNavKey);
     final compactRaw = prefs.getBool(_compactModeKey);
+    final simpleNavRaw = prefs.getBool(_simpleNavModeKey);
 
     _localeMode = LocaleMode.fromJson(localeCode);
     if (themeModeName != null) {
@@ -368,6 +375,10 @@ class AppSettings extends ChangeNotifier {
       _dataCenterNavMode = DataCenterNavMode.fromJson(dataCenterNavRaw);
     } else {
       _dataCenterNavMode = DataCenterNavMode.defaultForPlatform();
+    }
+    _simpleNavMode = simpleNavRaw ?? false;
+    if (_simpleNavMode) {
+      _applySimpleNavPreset();
     }
     _compactMode = compactRaw ?? false;
     _ready = true;
@@ -400,7 +411,7 @@ class AppSettings extends ChangeNotifier {
   }
 
   Future<void> setCompareNavMode(CompareNavMode mode) async {
-    if (_compareNavMode == mode) return;
+    if (_simpleNavMode || _compareNavMode == mode) return;
     _compareNavMode = mode;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
@@ -408,7 +419,7 @@ class AppSettings extends ChangeNotifier {
   }
 
   Future<void> setSettingsEntryMode(SettingsEntryMode mode) async {
-    if (_settingsEntryMode == mode) return;
+    if (_simpleNavMode || _settingsEntryMode == mode) return;
     _settingsEntryMode = mode;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
@@ -416,7 +427,7 @@ class AppSettings extends ChangeNotifier {
   }
 
   Future<void> setDataCenterNavMode(DataCenterNavMode mode) async {
-    if (_dataCenterNavMode == mode) return;
+    if (_simpleNavMode || _dataCenterNavMode == mode) return;
     _dataCenterNavMode = mode;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
@@ -429,5 +440,25 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_compactModeKey, enabled);
+  }
+
+  Future<void> setSimpleNavMode(bool enabled) async {
+    if (_simpleNavMode == enabled) return;
+    _simpleNavMode = enabled;
+    if (enabled) _applySimpleNavPreset();
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_simpleNavModeKey, enabled);
+    if (enabled) {
+      await prefs.setString(_dataCenterNavKey, _dataCenterNavMode.toJson());
+      await prefs.setString(_compareNavKey, _compareNavMode.toJson());
+      await prefs.setString(_settingsEntryKey, _settingsEntryMode.toJson());
+    }
+  }
+
+  void _applySimpleNavPreset() {
+    _dataCenterNavMode = DataCenterNavMode.headerIcon;
+    _compareNavMode = CompareNavMode.dataCenter;
+    _settingsEntryMode = SettingsEntryMode.headerIcon;
   }
 }

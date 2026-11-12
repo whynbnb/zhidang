@@ -47,6 +47,13 @@ class AppStrings {
   String get navModeHint => isZh
       ? '配置数据中心、比价与设置的入口位置'
       : 'Configure where Data Center, Compare and Settings appear';
+  String get simpleNavMode => isZh ? '简洁模式' : 'Simple mode';
+  String get simpleNavModeHint => isZh
+      ? '数据中心与设置收进顶部图标，比价收进数据中心；下方选项将锁定'
+      : 'Data Center and Settings use header icons and Compare moves into Data Center. Options below are locked.';
+  String get simpleNavModeLocked => isZh
+      ? '简洁模式下不可调整；关闭后可继续修改各入口'
+      : 'Locked in simple mode. Turn it off to change these entries.';
   String get compareEntry => isZh ? '比价入口' : 'Compare entry';
   String get compareEntryHint => isZh
       ? '选择如何进入跨商品比价'

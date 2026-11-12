@@ -23,108 +23,156 @@ class NavigationSettingsPage extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             children: [
-              Text(
-                s.navBarEmptyHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+              Card(
+                elevation: 0,
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: scheme.outlineVariant),
+                ),
+                child: SwitchListTile(
+                  secondary: Icon(Icons.auto_awesome_outlined,
+                      color: scheme.primary),
+                  title: Text(s.simpleNavMode),
+                  subtitle: Text(s.simpleNavModeHint),
+                  value: settings.simpleNavMode,
+                  onChanged: (value) => settings.setSimpleNavMode(value),
+                ),
               ),
+              if (settings.simpleNavMode) ...[
+                const SizedBox(height: 10),
+                Text(
+                  s.simpleNavModeLocked,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.primary,
+                      ),
+                ),
+              ],
               const SizedBox(height: 16),
-              _SectionTitle(s.dataCenterEntry),
-              _OptionCard(
-                children: [
-                  _ModeTile(
-                    icon: Icons.view_agenda_outlined,
-                    title: s.dataCenterNavBottom,
-                    subtitle: s.dataCenterNavBottomHint,
-                    selected: settings.dataCenterNavMode ==
-                        DataCenterNavMode.bottomNav,
-                    onTap: () => settings
-                        .setDataCenterNavMode(DataCenterNavMode.bottomNav),
+              Opacity(
+                opacity: settings.simpleNavMode ? 0.45 : 1,
+                child: IgnorePointer(
+                  ignoring: settings.simpleNavMode,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        s.navBarEmptyHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                      ),
+                      const SizedBox(height: 16),
+                      _SectionTitle(s.dataCenterEntry),
+                      _OptionCard(
+                        children: [
+                          _ModeTile(
+                            icon: Icons.view_agenda_outlined,
+                            title: s.dataCenterNavBottom,
+                            subtitle: s.dataCenterNavBottomHint,
+                            selected: settings.dataCenterNavMode ==
+                                DataCenterNavMode.bottomNav,
+                            onTap: () => settings.setDataCenterNavMode(
+                              DataCenterNavMode.bottomNav,
+                            ),
+                          ),
+                          _ModeTile(
+                            icon: Icons.dataset_outlined,
+                            title: s.dataCenterNavHeader,
+                            subtitle: s.dataCenterNavHeaderHint,
+                            selected: settings.dataCenterNavMode ==
+                                DataCenterNavMode.headerIcon,
+                            onTap: () => settings.setDataCenterNavMode(
+                              DataCenterNavMode.headerIcon,
+                            ),
+                            isLast: true,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _SectionTitle(s.compareEntry),
+                      _OptionCard(
+                        children: [
+                          _ModeTile(
+                            icon: Icons.view_agenda_outlined,
+                            title: s.compareNavBottom,
+                            subtitle: s.compareNavBottomHint,
+                            selected: settings.compareNavMode ==
+                                CompareNavMode.bottomNav,
+                            onTap: () => settings.setCompareNavMode(
+                              CompareNavMode.bottomNav,
+                            ),
+                          ),
+                          _ModeTile(
+                            icon: Icons.balance_outlined,
+                            title: s.compareNavHeader,
+                            subtitle: s.compareNavHeaderHint,
+                            selected: settings.compareNavMode ==
+                                CompareNavMode.headerIcon,
+                            onTap: () => settings.setCompareNavMode(
+                              CompareNavMode.headerIcon,
+                            ),
+                          ),
+                          _ModeTile(
+                            icon: Icons.dataset_outlined,
+                            title: s.compareNavDataCenter,
+                            subtitle: s.compareNavDataCenterHint,
+                            selected: settings.compareNavMode ==
+                                CompareNavMode.dataCenter,
+                            onTap: () => settings.setCompareNavMode(
+                              CompareNavMode.dataCenter,
+                            ),
+                          ),
+                          _ModeTile(
+                            icon: Icons.visibility_off_outlined,
+                            title: s.compareNavDisabled,
+                            subtitle: s.compareNavDisabledHint,
+                            selected: settings.compareNavMode ==
+                                CompareNavMode.disabled,
+                            onTap: () => settings.setCompareNavMode(
+                              CompareNavMode.disabled,
+                            ),
+                            isLast: true,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _SectionTitle(s.settingsEntry),
+                      _OptionCard(
+                        children: [
+                          _ModeTile(
+                            icon: Icons.view_agenda_outlined,
+                            title: s.settingsNavBar,
+                            subtitle: s.settingsNavBarHint,
+                            selected: settings.settingsEntryMode ==
+                                SettingsEntryMode.navBar,
+                            onTap: () => settings.setSettingsEntryMode(
+                              SettingsEntryMode.navBar,
+                            ),
+                          ),
+                          _ModeTile(
+                            icon: Icons.settings_outlined,
+                            title: s.settingsNavHeader,
+                            subtitle: s.settingsNavHeaderHint,
+                            selected: settings.settingsEntryMode ==
+                                SettingsEntryMode.headerIcon,
+                            onTap: () => settings.setSettingsEntryMode(
+                              SettingsEntryMode.headerIcon,
+                            ),
+                            isLast: true,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        s.sidebarAutoHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
                   ),
-                  _ModeTile(
-                    icon: Icons.dataset_outlined,
-                    title: s.dataCenterNavHeader,
-                    subtitle: s.dataCenterNavHeaderHint,
-                    selected: settings.dataCenterNavMode ==
-                        DataCenterNavMode.headerIcon,
-                    onTap: () => settings
-                        .setDataCenterNavMode(DataCenterNavMode.headerIcon),
-                    isLast: true,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _SectionTitle(s.compareEntry),
-              _OptionCard(
-                children: [
-                  _ModeTile(
-                    icon: Icons.view_agenda_outlined,
-                    title: s.compareNavBottom,
-                    subtitle: s.compareNavBottomHint,
-                    selected: settings.compareNavMode == CompareNavMode.bottomNav,
-                    onTap: () =>
-                        settings.setCompareNavMode(CompareNavMode.bottomNav),
-                  ),
-                  _ModeTile(
-                    icon: Icons.balance_outlined,
-                    title: s.compareNavHeader,
-                    subtitle: s.compareNavHeaderHint,
-                    selected: settings.compareNavMode == CompareNavMode.headerIcon,
-                    onTap: () =>
-                        settings.setCompareNavMode(CompareNavMode.headerIcon),
-                  ),
-                  _ModeTile(
-                    icon: Icons.dataset_outlined,
-                    title: s.compareNavDataCenter,
-                    subtitle: s.compareNavDataCenterHint,
-                    selected:
-                        settings.compareNavMode == CompareNavMode.dataCenter,
-                    onTap: () =>
-                        settings.setCompareNavMode(CompareNavMode.dataCenter),
-                  ),
-                  _ModeTile(
-                    icon: Icons.visibility_off_outlined,
-                    title: s.compareNavDisabled,
-                    subtitle: s.compareNavDisabledHint,
-                    selected: settings.compareNavMode == CompareNavMode.disabled,
-                    onTap: () =>
-                        settings.setCompareNavMode(CompareNavMode.disabled),
-                    isLast: true,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _SectionTitle(s.settingsEntry),
-              _OptionCard(
-                children: [
-                  _ModeTile(
-                    icon: Icons.view_agenda_outlined,
-                    title: s.settingsNavBar,
-                    subtitle: s.settingsNavBarHint,
-                    selected:
-                        settings.settingsEntryMode == SettingsEntryMode.navBar,
-                    onTap: () => settings
-                        .setSettingsEntryMode(SettingsEntryMode.navBar),
-                  ),
-                  _ModeTile(
-                    icon: Icons.settings_outlined,
-                    title: s.settingsNavHeader,
-                    subtitle: s.settingsNavHeaderHint,
-                    selected: settings.settingsEntryMode ==
-                        SettingsEntryMode.headerIcon,
-                    onTap: () => settings
-                        .setSettingsEntryMode(SettingsEntryMode.headerIcon),
-                    isLast: true,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                s.sidebarAutoHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                ),
               ),
             ],
           );
