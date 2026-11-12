@@ -76,4 +76,36 @@ void main() {
     expect(find.byType(BackButton), findsNothing);
     expect(find.byTooltip('快速换算'), findsOneWidget);
   });
+
+  testWidgets('pushed compare hides global navigation icons', (tester) async {
+    await AppSettings.instance.setCompareNavMode(CompareNavMode.headerIcon);
+    await AppSettings.instance
+        .setDataCenterNavMode(DataCenterNavMode.headerIcon);
+    await AppSettings.instance.setSettingsEntryMode(
+      SettingsEntryMode.headerIcon,
+    );
+    addTearDown(() async {
+      await AppSettings.instance.setCompareNavMode(CompareNavMode.bottomNav);
+      await AppSettings.instance
+          .setDataCenterNavMode(DataCenterNavMode.bottomNav);
+      await AppSettings.instance.setSettingsEntryMode(
+        SettingsEntryMode.navBar,
+      );
+    });
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ZhidangApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('比价').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BackButton), findsOneWidget);
+    expect(find.byTooltip('快速换算'), findsOneWidget);
+    expect(find.byTooltip('数据中心'), findsNothing);
+    expect(find.byTooltip('设置'), findsNothing);
+  });
 }

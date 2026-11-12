@@ -59,6 +59,10 @@ class AppStrings {
   String get compareNavHeaderHint => isZh
       ? '在页面顶部显示比价图标'
       : 'Show a compare icon in the page header';
+  String get compareNavDataCenter => isZh ? '数据中心' : 'Data Center';
+  String get compareNavDataCenterHint => isZh
+      ? '从导航栏和顶部移除，在数据中心快捷工具中打开'
+      : 'Remove from nav and header; open it from Data Center tools';
   String get compareNavDisabled => isZh ? '关闭入口' : 'Hidden';
   String get compareNavDisabledHint => isZh
       ? '隐藏所有比价入口'
@@ -121,6 +125,9 @@ class AppStrings {
   String get dataMaintenance => isZh ? '数据维护' : 'Maintenance';
   String get offersStat => isZh ? '报价' : 'Offers';
   String get comparisonGroupsStat => isZh ? '比价组' : 'Groups';
+  String comparisonGroupsCount(int n) => isZh
+      ? '$n 个比价组'
+      : (n == 1 ? '1 comparison group' : '$n comparison groups');
   String get suppliers => isZh ? '供应商' : 'Suppliers';
   String get suppliersManage => isZh ? '管理供应商' : 'Manage suppliers';
   String get suppliersManageHint => isZh

@@ -39,6 +39,9 @@ enum CompareNavMode {
   /// Header icon left of settings (when settings is also header).
   headerIcon,
 
+  /// Only reachable from the Data Center quick tools.
+  dataCenter,
+
   /// No compare entry points.
   disabled;
 
@@ -46,6 +49,8 @@ enum CompareNavMode {
     switch (raw?.toString()) {
       case 'headerIcon':
         return CompareNavMode.headerIcon;
+      case 'dataCenter':
+        return CompareNavMode.dataCenter;
       case 'disabled':
         return CompareNavMode.disabled;
       case 'bottomNav':

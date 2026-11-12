@@ -6,6 +6,8 @@ import '../settings/app_settings.dart';
 
 /// Shared top-right actions: quick convert, data center, compare, settings.
 /// Settings is always the rightmost control so pages stay aligned.
+/// Pushed pages already have a back button, so they only keep context tools
+/// such as quick convert and hide global navigation icons.
 class AppHeaderActions extends StatelessWidget {
   const AppHeaderActions({
     super.key,
@@ -25,10 +27,14 @@ class AppHeaderActions extends StatelessWidget {
       listenable: AppSettings.instance,
       builder: (context, _) {
         final settings = AppSettings.instance;
-        final dataCenter = settings.showDataCenterHeaderIcon;
-        final compare = showCompare && settings.showCompareHeaderIcon;
-        final settingsIcon =
-            settings.showSettingsHeaderIcon && onOpenSettings != null;
+        final canGoBack = ModalRoute.of(context)?.canPop ?? false;
+        final dataCenter =
+            !canGoBack && settings.showDataCenterHeaderIcon;
+        final compare =
+            !canGoBack && showCompare && settings.showCompareHeaderIcon;
+        final settingsIcon = !canGoBack &&
+            settings.showSettingsHeaderIcon &&
+            onOpenSettings != null;
         final quickCalc = onQuickCalc != null;
         if (!quickCalc && !dataCenter && !compare && !settingsIcon) {
           return const SizedBox(width: 4);

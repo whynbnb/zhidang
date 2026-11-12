@@ -55,6 +55,15 @@ void main() {
     expect(AppSettings.instance.showDataCenterHeaderIcon, isTrue);
   });
 
+  test('compare can be moved into the data center', () async {
+    await AppSettings.instance.setCompareNavMode(CompareNavMode.dataCenter);
+    expect(
+      AppSettings.instance.navDestinations,
+      isNot(contains(ShellNavDestination.compare)),
+    );
+    expect(AppSettings.instance.showCompareHeaderIcon, isFalse);
+  });
+
   testWidgets('data center lists the data management pages', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: DataCenterPage(embedded: true)),
@@ -98,9 +107,28 @@ void main() {
 
     expect(stat('products'), '2');
     expect(stat('offers'), '3');
+    expect(find.text('比价'), findsOneWidget);
+    expect(find.text('0 个比价组'), findsOneWidget);
     expect(find.text('单位换算'), findsOneWidget);
     expect(find.text('快速换算'), findsOneWidget);
     expect(find.text('未固定数据，打开后可固定常用换算'), findsOneWidget);
+  });
+
+  testWidgets('compare tool hides when compare is completely disabled', (
+    tester,
+  ) async {
+    await AppSettings.instance.setCompareNavMode(CompareNavMode.disabled);
+    await tester.pumpWidget(
+      const MaterialApp(home: DataCenterPage(embedded: true)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('比价'), findsNothing);
+    expect(find.text('单位换算'), findsOneWidget);
+
+    await AppSettings.instance.setCompareNavMode(CompareNavMode.dataCenter);
+    await tester.pumpAndSettle();
+    expect(find.text('比价'), findsOneWidget);
   });
 
   testWidgets('data center tab is reachable from the shell', (tester) async {

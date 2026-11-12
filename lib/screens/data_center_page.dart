@@ -9,7 +9,9 @@ import '../services/quick_calc_store.dart';
 import '../services/storage_service.dart';
 import '../services/supplier_store.dart';
 import '../services/unit_store.dart';
+import '../settings/app_settings.dart';
 import 'categories_page.dart';
+import 'compare_page.dart';
 import 'data_manage_page.dart';
 import 'quick_calc_page.dart';
 import 'suppliers_page.dart';
@@ -38,6 +40,7 @@ class _DataCenterPageState extends State<DataCenterPage> {
     SupplierStore.instance,
     ComparisonStore.instance,
     QuickCalcStore.instance,
+    AppSettings.instance,
   ]);
 
   @override
@@ -86,6 +89,9 @@ class _DataCenterPageState extends State<DataCenterPage> {
           final pinned = QuickCalcStore.instance.entries
               .where((entry) => entry.pinned)
               .length;
+          final showCompare =
+              AppSettings.instance.compareNavMode != CompareNavMode.disabled;
+          final groups = ComparisonStore.instance.groups.length;
           return ListView(
             padding: EdgeInsets.fromLTRB(
               16,
@@ -110,11 +116,25 @@ class _DataCenterPageState extends State<DataCenterPage> {
                 categories: CategoryStore.instance.categories.length,
                 units: UnitStore.instance.units.length,
                 groups: ComparisonStore.instance.groups.length,
-              ),
-              const SizedBox(height: 20),
+              ),              const SizedBox(height: 20),
               _SectionTitle(s.dataTools),
               _Panel(
                 children: [
+                  if (showCompare) ...[
+                    ListTile(
+                      leading:
+                          Icon(Icons.balance_outlined, color: scheme.primary),
+                      title: Text(s.tabCompare),
+                      subtitle: Text(s.comparisonGroupsCount(groups)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _push(
+                        context,
+                        ComparePage.routeName,
+                        const ComparePage(),
+                      ),
+                    ),
+                    _divider(scheme),
+                  ],
                   ListTile(
                     leading: Icon(Icons.swap_horiz, color: scheme.primary),
                     title: Text(s.unitConversions),

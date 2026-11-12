@@ -75,6 +75,15 @@ class NavigationSettingsPage extends StatelessWidget {
                         settings.setCompareNavMode(CompareNavMode.headerIcon),
                   ),
                   _ModeTile(
+                    icon: Icons.dataset_outlined,
+                    title: s.compareNavDataCenter,
+                    subtitle: s.compareNavDataCenterHint,
+                    selected:
+                        settings.compareNavMode == CompareNavMode.dataCenter,
+                    onTap: () =>
+                        settings.setCompareNavMode(CompareNavMode.dataCenter),
+                  ),
+                  _ModeTile(
                     icon: Icons.visibility_off_outlined,
                     title: s.compareNavDisabled,
                     subtitle: s.compareNavDisabledHint,
