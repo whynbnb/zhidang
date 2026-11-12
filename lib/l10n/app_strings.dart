@@ -45,8 +45,8 @@ class AppStrings {
   String get appearance => isZh ? '外观' : 'Appearance';
   String get navMode => isZh ? '导航栏模式' : 'Navigation mode';
   String get navModeHint => isZh
-      ? '配置比价与设置的入口位置'
-      : 'Configure where Compare and Settings appear';
+      ? '配置数据中心、比价与设置的入口位置'
+      : 'Configure where Data Center, Compare and Settings appear';
   String get compareEntry => isZh ? '比价入口' : 'Compare entry';
   String get compareEntryHint => isZh
       ? '选择如何进入跨商品比价'
@@ -63,6 +63,18 @@ class AppStrings {
   String get compareNavDisabledHint => isZh
       ? '隐藏所有比价入口'
       : 'Hide all compare entry points';
+  String get dataCenterEntry => isZh ? '数据中心入口' : 'Data center entry';
+  String get dataCenterEntryHint => isZh
+      ? '选择数据中心的显示位置'
+      : 'Choose where the Data Center appears';
+  String get dataCenterNavBottom => isZh ? '导航栏' : 'Nav bar';
+  String get dataCenterNavBottomHint => isZh
+      ? '在导航栏显示数据中心（与商品等一并出现）'
+      : 'Show Data Center on the navigation bar with Products';
+  String get dataCenterNavHeader => isZh ? '顶部图标' : 'Header icon';
+  String get dataCenterNavHeaderHint => isZh
+      ? '在页面顶部显示数据中心图标'
+      : 'Show a data center icon in the page header';
   String get settingsEntry => isZh ? '设置入口' : 'Settings entry';
   String get settingsEntryHint => isZh
       ? '选择设置图标的位置（桌面默认导航栏）'
@@ -104,6 +116,7 @@ class AppStrings {
       : 'This platform cannot change the launcher icon';
   String get appIconFailed => isZh ? '切换图标失败' : 'Failed to change icon';
   String get data => isZh ? '数据' : 'Data';
+  String get dataCenter => isZh ? '数据中心' : 'Data center';
   String get suppliers => isZh ? '供应商' : 'Suppliers';
   String get suppliersManage => isZh ? '管理供应商' : 'Manage suppliers';
   String get suppliersManageHint => isZh
@@ -308,6 +321,7 @@ class AppStrings {
   String get version => isZh ? '版本' : 'Version';
 
   String get tabProducts => isZh ? '商品' : 'Products';
+  String get tabData => isZh ? '数据' : 'Data';
   String get tabCompare => isZh ? '比价' : 'Compare';
   String get tempCompare => isZh ? '临时比价' : 'Quick compare';
   String get tempCompareHint => isZh

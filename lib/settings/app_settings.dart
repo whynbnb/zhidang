@@ -100,9 +100,42 @@ enum SettingsEntryMode {
   bool get isOnHeader => this == SettingsEntryMode.headerIcon;
 }
 
+/// Where the data center entry lives.
+enum DataCenterNavMode {
+  /// Data tab on the navigation bar (bottom or side).
+  bottomNav,
+
+  /// Data center icon in the page header.
+  headerIcon;
+
+  static DataCenterNavMode fromJson(Object? raw) {
+    switch (raw?.toString()) {
+      case 'headerIcon':
+        return DataCenterNavMode.headerIcon;
+      case 'bottomNav':
+        return DataCenterNavMode.bottomNav;
+      default:
+        return defaultForPlatform();
+    }
+  }
+
+  String toJson() => name;
+
+  static DataCenterNavMode defaultForPlatform() {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return DataCenterNavMode.headerIcon;
+    }
+    return DataCenterNavMode.bottomNav;
+  }
+
+  bool get isOnNav => this == DataCenterNavMode.bottomNav;
+  bool get isOnHeader => this == DataCenterNavMode.headerIcon;
+}
+
 /// Destinations that can appear on the shell navigation bar.
 enum ShellNavDestination {
   products,
+  dataCenter,
   compare,
   settings,
 }
@@ -225,6 +258,7 @@ class AppSettings extends ChangeNotifier {
   static const _colorKey = 'settings_theme_color';
   static const _compareNavKey = 'settings_compare_nav_mode';
   static const _settingsEntryKey = 'settings_entry_mode';
+  static const _dataCenterNavKey = 'settings_data_center_nav_mode';
   static const _compactModeKey = 'settings_compact_mode';
 
   LocaleMode _localeMode = LocaleMode.zh;
@@ -232,6 +266,8 @@ class AppSettings extends ChangeNotifier {
   String _colorId = 'teal';
   CompareNavMode _compareNavMode = CompareNavMode.defaultForPlatform();
   SettingsEntryMode _settingsEntryMode = SettingsEntryMode.defaultForPlatform();
+  DataCenterNavMode _dataCenterNavMode =
+      DataCenterNavMode.defaultForPlatform();
   bool _compactMode = false;
   bool _ready = false;
 
@@ -254,6 +290,7 @@ class AppSettings extends ChangeNotifier {
   String get colorId => _colorId;
   CompareNavMode get compareNavMode => _compareNavMode;
   SettingsEntryMode get settingsEntryMode => _settingsEntryMode;
+  DataCenterNavMode get dataCenterNavMode => _dataCenterNavMode;
   /// Dense product rows instead of large cards.
   bool get compactMode => _compactMode;
   bool get ready => _ready;
@@ -261,11 +298,13 @@ class AppSettings extends ChangeNotifier {
 
   /// Ordered destinations for the shell navigation bar (empty if hidden).
   List<ShellNavDestination> get navDestinations {
+    final dataOnNav = _dataCenterNavMode.isOnNav;
     final compareOnNav = _compareNavMode.isOnNav;
     final settingsOnNav = _settingsEntryMode.isOnNav;
-    if (!compareOnNav && !settingsOnNav) return const [];
+    if (!dataOnNav && !compareOnNav && !settingsOnNav) return const [];
     return [
       ShellNavDestination.products,
+      if (dataOnNav) ShellNavDestination.dataCenter,
       if (compareOnNav) ShellNavDestination.compare,
       if (settingsOnNav) ShellNavDestination.settings,
     ];
@@ -275,6 +314,7 @@ class AppSettings extends ChangeNotifier {
 
   bool get showCompareHeaderIcon => _compareNavMode.isOnHeader;
   bool get showSettingsHeaderIcon => _settingsEntryMode.isOnHeader;
+  bool get showDataCenterHeaderIcon => _dataCenterNavMode.isOnHeader;
 
   /// Whether shell should render a side rail instead of bottom bar.
   bool useSidebarNav(BuildContext context) {
@@ -296,6 +336,7 @@ class AppSettings extends ChangeNotifier {
     final colorId = prefs.getString(_colorKey);
     final compareNavRaw = prefs.getString(_compareNavKey);
     final settingsEntryRaw = prefs.getString(_settingsEntryKey);
+    final dataCenterNavRaw = prefs.getString(_dataCenterNavKey);
     final compactRaw = prefs.getBool(_compactModeKey);
 
     _localeMode = LocaleMode.fromJson(localeCode);
@@ -317,6 +358,11 @@ class AppSettings extends ChangeNotifier {
       _settingsEntryMode = SettingsEntryMode.fromJson(settingsEntryRaw);
     } else {
       _settingsEntryMode = SettingsEntryMode.defaultForPlatform();
+    }
+    if (dataCenterNavRaw != null) {
+      _dataCenterNavMode = DataCenterNavMode.fromJson(dataCenterNavRaw);
+    } else {
+      _dataCenterNavMode = DataCenterNavMode.defaultForPlatform();
     }
     _compactMode = compactRaw ?? false;
     _ready = true;
@@ -362,6 +408,14 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_settingsEntryKey, mode.toJson());
+  }
+
+  Future<void> setDataCenterNavMode(DataCenterNavMode mode) async {
+    if (_dataCenterNavMode == mode) return;
+    _dataCenterNavMode = mode;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_dataCenterNavKey, mode.toJson());
   }
 
   Future<void> setCompactMode(bool enabled) async {

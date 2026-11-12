@@ -4,11 +4,7 @@ import '../app/app_version.dart';
 import '../l10n/app_strings.dart';
 import '../services/app_icon_service.dart';
 import '../settings/app_settings.dart';
-import 'categories_page.dart';
-import 'data_manage_page.dart';
 import 'navigation_settings_page.dart';
-import 'suppliers_page.dart';
-import 'units_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key, this.embedded = false});
@@ -290,103 +286,6 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _SectionTitle(s.data),
-          Card(
-            elevation: 0,
-            color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: scheme.outlineVariant),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading:
-                      Icon(Icons.storefront_outlined, color: scheme.primary),
-                  title: Text(s.suppliersManage),
-                  subtitle: Text(s.suppliersManageHint),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        settings: const RouteSettings(
-                          name: SuppliersPage.routeName,
-                        ),
-                        builder: (_) => const SuppliersPage(),
-                      ),
-                    );
-                  },
-                ),
-                Divider(
-                  height: 1,
-                  indent: 56,
-                  color: scheme.outlineVariant.withValues(alpha: 0.6),
-                ),
-                ListTile(
-                  leading:
-                      Icon(Icons.category_outlined, color: scheme.primary),
-                  title: Text(s.categoriesManage),
-                  subtitle: Text(s.categoriesManageHint),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        settings: const RouteSettings(
-                          name: CategoriesPage.routeName,
-                        ),
-                        builder: (_) => const CategoriesPage(),
-                      ),
-                    );
-                  },
-                ),
-                Divider(
-                  height: 1,
-                  indent: 56,
-                  color: scheme.outlineVariant.withValues(alpha: 0.6),
-                ),
-                ListTile(
-                  leading:
-                      Icon(Icons.straighten_outlined, color: scheme.primary),
-                  title: Text(s.unitsManage),
-                  subtitle: Text(s.unitsManageHint),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        settings: const RouteSettings(
-                          name: UnitsPage.routeName,
-                        ),
-                        builder: (_) => const UnitsPage(),
-                      ),
-                    );
-                  },
-                ),
-                Divider(
-                  height: 1,
-                  indent: 56,
-                  color: scheme.outlineVariant.withValues(alpha: 0.6),
-                ),
-                ListTile(
-                  leading:
-                      Icon(Icons.folder_special_outlined, color: scheme.primary),
-                  title: Text(s.dataManage),
-                  subtitle: Text(s.dataManageHint),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        settings: const RouteSettings(
-                          name: DataManagePage.routeName,
-                        ),
-                        builder: (_) => const DataManagePage(),
-                      ),
-                    );
-                  },
-                ),
-              ],
             ),
           ),
           const SizedBox(height: 20),

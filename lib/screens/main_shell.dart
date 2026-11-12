@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
 import '../screens/compare_page.dart';
+import '../screens/data_center_page.dart';
 import '../screens/home_page.dart';
 import '../screens/settings_page.dart';
 import '../settings/app_settings.dart';
@@ -62,6 +63,8 @@ class _MainShellState extends State<MainShell> {
     switch (d) {
       case ShellNavDestination.products:
         return const HomePage();
+      case ShellNavDestination.dataCenter:
+        return const DataCenterPage(embedded: true);
       case ShellNavDestination.compare:
         return ComparePage(key: _compareKey);
       case ShellNavDestination.settings:
@@ -79,6 +82,12 @@ class _MainShellState extends State<MainShell> {
           icon: const Icon(Icons.inventory_2_outlined),
           selectedIcon: const Icon(Icons.inventory_2),
           label: s.tabProducts,
+        );
+      case ShellNavDestination.dataCenter:
+        return NavigationDestination(
+          icon: const Icon(Icons.dataset_outlined),
+          selectedIcon: const Icon(Icons.dataset),
+          label: s.tabData,
         );
       case ShellNavDestination.compare:
         return NavigationDestination(

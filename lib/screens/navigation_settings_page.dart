@@ -30,6 +30,31 @@ class NavigationSettingsPage extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 16),
+              _SectionTitle(s.dataCenterEntry),
+              _OptionCard(
+                children: [
+                  _ModeTile(
+                    icon: Icons.view_agenda_outlined,
+                    title: s.dataCenterNavBottom,
+                    subtitle: s.dataCenterNavBottomHint,
+                    selected: settings.dataCenterNavMode ==
+                        DataCenterNavMode.bottomNav,
+                    onTap: () => settings
+                        .setDataCenterNavMode(DataCenterNavMode.bottomNav),
+                  ),
+                  _ModeTile(
+                    icon: Icons.dataset_outlined,
+                    title: s.dataCenterNavHeader,
+                    subtitle: s.dataCenterNavHeaderHint,
+                    selected: settings.dataCenterNavMode ==
+                        DataCenterNavMode.headerIcon,
+                    onTap: () => settings
+                        .setDataCenterNavMode(DataCenterNavMode.headerIcon),
+                    isLast: true,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               _SectionTitle(s.compareEntry),
               _OptionCard(
                 children: [

@@ -4,7 +4,7 @@ import '../app/app_navigator.dart';
 import '../l10n/app_strings.dart';
 import '../settings/app_settings.dart';
 
-/// Shared top-right actions: quick convert, compare, then settings.
+/// Shared top-right actions: quick convert, data center, compare, settings.
 /// Settings is always the rightmost control so pages stay aligned.
 class AppHeaderActions extends StatelessWidget {
   const AppHeaderActions({
@@ -25,11 +25,12 @@ class AppHeaderActions extends StatelessWidget {
       listenable: AppSettings.instance,
       builder: (context, _) {
         final settings = AppSettings.instance;
+        final dataCenter = settings.showDataCenterHeaderIcon;
         final compare = showCompare && settings.showCompareHeaderIcon;
         final settingsIcon =
             settings.showSettingsHeaderIcon && onOpenSettings != null;
         final quickCalc = onQuickCalc != null;
-        if (!quickCalc && !compare && !settingsIcon) {
+        if (!quickCalc && !dataCenter && !compare && !settingsIcon) {
           return const SizedBox(width: 4);
         }
         return Row(
@@ -40,6 +41,12 @@ class AppHeaderActions extends StatelessWidget {
                 onPressed: onQuickCalc,
                 icon: const Icon(Icons.calculate_outlined),
                 tooltip: s.quickCalcTitle,
+              ),
+            if (dataCenter)
+              IconButton(
+                onPressed: () => AppNavigator.openDataCenter(),
+                icon: const Icon(Icons.dataset_outlined),
+                tooltip: s.dataCenter,
               ),
             if (compare)
               IconButton(

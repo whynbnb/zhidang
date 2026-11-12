@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../screens/categories_page.dart';
 import '../screens/compare_page.dart';
+import '../screens/data_center_page.dart';
 import '../screens/data_manage_page.dart';
 import '../screens/navigation_settings_page.dart';
 import '../screens/quick_calc_page.dart';
@@ -45,6 +46,23 @@ class AppNavigator {
       MaterialPageRoute<void>(
         settings: const RouteSettings(name: ComparePage.routeName),
         builder: (_) => const ComparePage(),
+      ),
+    );
+  }
+
+  static Future<void> openDataCenter() async {
+    final navigator = key.currentState;
+    if (navigator == null) return;
+    String? topName;
+    navigator.popUntil((route) {
+      topName = route.settings.name;
+      return true;
+    });
+    if (topName == DataCenterPage.routeName) return;
+    await navigator.push(
+      MaterialPageRoute<void>(
+        settings: const RouteSettings(name: DataCenterPage.routeName),
+        builder: (_) => const DataCenterPage(),
       ),
     );
   }
