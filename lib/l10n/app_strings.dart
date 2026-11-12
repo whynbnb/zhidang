@@ -117,6 +117,10 @@ class AppStrings {
   String get appIconFailed => isZh ? '切换图标失败' : 'Failed to change icon';
   String get data => isZh ? '数据' : 'Data';
   String get dataCenter => isZh ? '数据中心' : 'Data center';
+  String get dataTools => isZh ? '快捷工具' : 'Tools';
+  String get dataMaintenance => isZh ? '数据维护' : 'Maintenance';
+  String get offersStat => isZh ? '报价' : 'Offers';
+  String get comparisonGroupsStat => isZh ? '比价组' : 'Groups';
   String get suppliers => isZh ? '供应商' : 'Suppliers';
   String get suppliersManage => isZh ? '管理供应商' : 'Manage suppliers';
   String get suppliersManageHint => isZh
@@ -618,6 +622,12 @@ class AppStrings {
   String get quickCalcTitleHint => isZh
       ? '双击标题打开快速换算'
       : 'Double-click the title to convert prices';
+  String quickCalcPinnedCount(int n) => isZh
+      ? '已固定 $n 条数据'
+      : (n == 1 ? '1 pinned row' : '$n pinned rows');
+  String get quickCalcNoPinned => isZh
+      ? '未固定数据，打开后可固定常用换算'
+      : 'No pinned rows; pin common conversions inside';
   String get quickCalcHint => isZh
       ? '输入总价和数量，自动算出单价。未固定的数据只在本次运行中保留；固定后下次打开仍保留。'
       : 'Enter the total price and quantity to see the unit price. Unpinned data stays for this run only; pinned rows are restored next launch.';
