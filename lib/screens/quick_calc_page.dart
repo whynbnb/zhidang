@@ -4,7 +4,6 @@ import '../l10n/app_strings.dart';
 import '../services/quick_calc_store.dart';
 import '../services/unit_store.dart';
 import '../settings/app_settings.dart';
-import '../utils/layout.dart';
 import '../utils/quick_calc.dart';
 import 'unit_conversions_page.dart';
 
@@ -183,9 +182,8 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
       }
     }
 
-    return ResponsiveWidthScope(
-      child: Scaffold(
-        appBar: AppBar(
+    return Scaffold(
+      appBar: AppBar(
         title: Tooltip(
           message: s.quickCalcHint,
           triggerMode: TooltipTriggerMode.longPress,
@@ -270,7 +268,6 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
             ),
           ],
         ),
-      ),
       ),
     );
   }

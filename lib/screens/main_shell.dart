@@ -6,7 +6,6 @@ import '../screens/data_center_page.dart';
 import '../screens/home_page.dart';
 import '../screens/settings_page.dart';
 import '../settings/app_settings.dart';
-import '../utils/layout.dart';
 
 /// Root shell: products + optional compare / settings on nav bar or header.
 class MainShell extends StatefulWidget {
@@ -133,42 +132,38 @@ class _MainShellState extends State<MainShell> {
     ];
 
     if (useSidebar) {
-      return ResponsiveWidthScope(
-        child: Scaffold(
-          body: Row(
-            children: [
-              NavigationRail(
-                selectedIndex: _index.clamp(0, dests.length - 1),
-                onDestinationSelected: _select,
-                labelType: NavigationRailLabelType.all,
-                destinations: [
-                  for (final d in navDestinations)
-                    NavigationRailDestination(
-                      icon: d.icon,
-                      selectedIcon: d.selectedIcon,
-                      label: Text(d.label),
-                    ),
-                ],
-              ),
-              const VerticalDivider(width: 1, thickness: 1),
-              Expanded(child: body),
-            ],
-          ),
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: _index.clamp(0, dests.length - 1),
+              onDestinationSelected: _select,
+              labelType: NavigationRailLabelType.all,
+              destinations: [
+                for (final d in navDestinations)
+                  NavigationRailDestination(
+                    icon: d.icon,
+                    selectedIcon: d.selectedIcon,
+                    label: Text(d.label),
+                  ),
+              ],
+            ),
+            const VerticalDivider(width: 1, thickness: 1),
+            Expanded(child: body),
+          ],
         ),
       );
     }
 
-    return ResponsiveWidthScope(
-      child: Scaffold(
-        body: body,
-        bottomNavigationBar: showNav
-            ? NavigationBar(
-                selectedIndex: _index.clamp(0, dests.length - 1),
-                onDestinationSelected: _select,
-                destinations: navDestinations,
-              )
-            : null,
-      ),
+    return Scaffold(
+      body: body,
+      bottomNavigationBar: showNav
+          ? NavigationBar(
+              selectedIndex: _index.clamp(0, dests.length - 1),
+              onDestinationSelected: _select,
+              destinations: navDestinations,
+            )
+          : null,
     );
   }
 

@@ -586,15 +586,14 @@ class ComparePageState extends State<ComparePage> {
       onQuickCalc: AppNavigator.openQuickCalc,
     );
 
-    return ResponsiveWidthScope(
-      child: Scaffold(
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'fab-compare-new-group',
-          onPressed: _products.length < 2 ? null : () => _addOrEditGroup(),
-          icon: const Icon(Icons.link),
-          label: Text(s.addFixedGroup),
-        ),
-        body: SafeArea(
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab-compare-new-group',
+        onPressed: _products.length < 2 ? null : () => _addOrEditGroup(),
+        icon: const Icon(Icons.link),
+        label: Text(s.addFixedGroup),
+      ),
+      body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : isWide
@@ -628,7 +627,6 @@ class ComparePageState extends State<ComparePage> {
                       ),
                     ],
                   ),
-        ),
       ),
     );
   }
