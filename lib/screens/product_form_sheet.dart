@@ -653,13 +653,18 @@ class _ProductFormSheetState extends State<_ProductFormSheet> {
 }
 
 class OfferFormResult {
-  const OfferFormResult.saved(this.offer) : deleted = false;
+  const OfferFormResult.saved(this.offer, {this.moveToProductId})
+      : deleted = false;
   const OfferFormResult.deleted()
       : offer = null,
-        deleted = true;
+        deleted = true,
+        moveToProductId = null;
 
   final Offer? offer;
   final bool deleted;
+
+  /// When set, save should move the offer to this product.
+  final String? moveToProductId;
 }
 
 Future<OfferFormResult?> showOfferForm(
@@ -670,6 +675,10 @@ Future<OfferFormResult?> showOfferForm(
   List<UnitRelation> defaultRelations = const [],
   /// All offers of the product, used to suggest tags already in use.
   List<Offer> productOffers = const [],
+  /// Current product being edited, used to exclude it when moving offers.
+  String? productId,
+  /// All products, used as move targets.
+  List<Product> allProducts = const [],
   String? preferredUnit,
 }) {
   return Navigator.of(context).push<OfferFormResult>(
@@ -679,6 +688,8 @@ Future<OfferFormResult?> showOfferForm(
         units: units,
         defaultRelations: defaultRelations,
         productOffers: productOffers,
+        productId: productId,
+        allProducts: allProducts,
         preferredUnit: preferredUnit,
       ),
     ),
@@ -691,6 +702,8 @@ class _OfferFormSheet extends StatefulWidget {
     required this.units,
     this.defaultRelations = const [],
     this.productOffers = const [],
+    this.productId,
+    this.allProducts = const [],
     this.preferredUnit,
   });
 
@@ -698,6 +711,8 @@ class _OfferFormSheet extends StatefulWidget {
   final List<String> units;
   final List<UnitRelation> defaultRelations;
   final List<Offer> productOffers;
+  final String? productId;
+  final List<Product> allProducts;
   final String? preferredUnit;
 
   @override
@@ -726,7 +741,21 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   final Set<String> _autoFilledUnits = {};
   String? _activePresetUnit;
   String? _measureError;
+  String? _moveTargetId;
   late final String _initialSignature;
+
+  Product? get _moveTarget {
+    final id = _moveTargetId;
+    if (id == null) return null;
+    for (final product in widget.allProducts) {
+      if (product.id == id) return product;
+    }
+    return null;
+  }
+
+  bool get _canMoveOffer =>
+      widget.offer != null &&
+      widget.allProducts.any((product) => product.id != widget.productId);
 
   List<UnitRelation> get _conversionRelations =>
       [...widget.defaultRelations, ..._offerRelations];
@@ -835,6 +864,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
       relations,
       tags,
       _counterMode.name,
+      _moveTargetId,
     ]);
   }
 
@@ -1183,6 +1213,22 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     }
     setState(() => _measureError = null);
 
+    final moveTarget = _moveTarget;
+    if (moveTarget != null) {
+      final adaptation = moveTarget.adaptationFor(
+        measures,
+        extraRelations: _offerRelations,
+      );
+      if (adaptation == null) {
+        setState(() => _measureError = s.moveOfferUnitMismatch);
+        return;
+      }
+      if (adaptation.dropped.isNotEmpty) {
+        final confirmed = await _confirmDroppedMeasures(adaptation.dropped);
+        if (confirmed != true || !mounted) return;
+      }
+    }
+
     final price = double.parse(_price.text.trim());
     final shop = _shop.text.trim();
     if (shop.isNotEmpty) {
@@ -1212,7 +1258,142 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             note: _note.text.trim(),
           );
     if (!mounted) return;
-    Navigator.of(context).pop(OfferFormResult.saved(result));
+    Navigator.of(context).pop(
+      OfferFormResult.saved(result, moveToProductId: _moveTargetId),
+    );
+  }
+
+  Future<bool?> _confirmDroppedMeasures(List<OfferMeasure> dropped) {
+    final s = AppStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(s.moveOfferDropTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(s.moveOfferDropHint),
+            const SizedBox(height: 8),
+            for (final measure in dropped)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  '• ${formatQuantityValue(measure.quantity)}${measure.unit}',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(s.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(s.moveOfferDropConfirm),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickMoveTarget() async {
+    final s = AppStrings.of(context);
+    final targets = widget.allProducts
+        .where((product) => product.id != widget.productId)
+        .toList();
+    if (targets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.moveOfferNoTargets)),
+      );
+      return;
+    }
+
+    final currentMeasures = _collectMeasures();
+    final measures = currentMeasures.isEmpty
+        ? (widget.offer?.measures ?? const <OfferMeasure>[])
+        : currentMeasures;
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        final scheme = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          title: Text(s.moveOfferToProduct),
+          content: SizedBox(
+            width: 420,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 420),
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  Text(
+                    s.moveOfferHint,
+                    style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final target in targets)
+                    Builder(
+                      builder: (context) {
+                        final adaptation = target.adaptationFor(
+                          measures,
+                          extraRelations: _offerRelations,
+                        );
+                        final compatible = adaptation != null;
+                        final partial =
+                            adaptation != null && adaptation.dropped.isNotEmpty;
+                        final units = target.units.join(' / ');
+                        return ListTile(
+                          enabled: compatible,
+                          leading: Icon(
+                            compatible
+                                ? partial
+                                    ? Icons.warning_amber_rounded
+                                    : Icons.inventory_2_outlined
+                                : Icons.block,
+                            color: compatible
+                                ? partial
+                                    ? scheme.tertiary
+                                    : scheme.primary
+                                : scheme.onSurfaceVariant,
+                          ),
+                          title: Text(target.name),
+                          subtitle: Text(
+                            compatible
+                                ? partial
+                                    ? s.moveOfferPartial(units)
+                                    : s.moveOfferUnits(units)
+                                : s.moveOfferIncompatible(units),
+                          ),
+                          trailing: _moveTargetId == target.id
+                              ? Icon(Icons.check_circle, color: scheme.primary)
+                              : null,
+                          onTap: compatible
+                              ? () => Navigator.pop(dialogContext, target.id)
+                              : null,
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(s.cancel),
+            ),
+          ],
+        );
+      },
+    );
+    if (selected != null && mounted) {
+      setState(() => _moveTargetId = selected);
+    }
   }
 
   Future<void> _deleteOffer() async {
@@ -1265,6 +1446,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     final presetUnit = _activePresetUnit ?? _availableUnits.first;
     final quickPresets = quantityPresetsFor(presetUnit);
     final hasRelations = _offerRelations.isNotEmpty;
+    final moveTarget = _moveTarget;
     final title = editing ? s.editOffer : s.addOffer;
 
     return PopScope(
@@ -1647,6 +1829,31 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                 ),
               ),
               if (editing) ...[
+                if (_canMoveOffer) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: _pickMoveTarget,
+                      icon: const Icon(Icons.drive_file_move_outline),
+                      label: Text(
+                        moveTarget == null
+                            ? s.moveOfferToProduct
+                            : s.moveOfferTarget(moveTarget.name),
+                      ),
+                    ),
+                  ),
+                  if (moveTarget != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, bottom: 4),
+                      child: Text(
+                        s.moveOfferHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ),
+                ],
                 const SizedBox(height: 8),
                 TextButton.icon(
                   onPressed: _deleteOffer,

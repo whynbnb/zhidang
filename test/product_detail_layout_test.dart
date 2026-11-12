@@ -266,6 +266,109 @@ void main() {
     expect(find.text('快速数量 · 个'), findsNothing);
   });
 
+  testWidgets('offer moves to another product with unit conversion', (
+    tester,
+  ) async {
+    await StorageService().saveProducts([
+      Product(
+        name: '鸡蛋',
+        units: const ['g'],
+        offers: [
+          Offer(brand: 'A', price: 10, unit: 'g', quantity: 500),
+        ],
+      ),
+      Product(name: '牛奶', units: const ['kg']),
+    ]);
+
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    await tester.tap(find.text('A').first);
+    await tester.pumpAndSettle();
+
+    final move = find.text('移动到其他商品');
+    await tester.ensureVisible(move);
+    await tester.pumpAndSettle();
+    await tester.tap(move);
+    await tester.pumpAndSettle();
+
+    final dialog = find.byType(AlertDialog);
+    final targetTile =
+        find.descendant(of: dialog, matching: find.text('牛奶'));
+    expect(targetTile, findsOneWidget);
+    await tester.tap(targetTile);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    final products = await StorageService().loadProducts();
+    final source = products.firstWhere((product) => product.name == '鸡蛋');
+    final target = products.firstWhere((product) => product.name == '牛奶');
+    expect(source.offers, isEmpty);
+    expect(target.offers, hasLength(1));
+    final moved = target.offers.single;
+    expect(moved.brand, 'A');
+    expect(moved.price, 10);
+    expect(moved.measures.single.unit, 'kg');
+    expect(moved.measures.single.quantity, closeTo(0.5, 1e-9));
+  });
+
+  testWidgets('moving asks before dropping incompatible measures', (
+    tester,
+  ) async {
+    await StorageService().saveProducts([
+      Product(
+        name: '鸡蛋',
+        units: const ['个', 'g'],
+        offers: [
+          Offer(
+            brand: 'A',
+            price: 10,
+            measures: [
+              OfferMeasure(unit: '个', quantity: 30),
+              OfferMeasure(unit: 'g', quantity: 500),
+            ],
+          ),
+        ],
+      ),
+      Product(name: '牛奶', units: const ['kg']),
+    ]);
+
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    await tester.tap(find.text('A').first);
+    await tester.pumpAndSettle();
+
+    final move = find.text('移动到其他商品');
+    await tester.ensureVisible(move);
+    await tester.pumpAndSettle();
+    await tester.tap(move);
+    await tester.pumpAndSettle();
+
+    final targetTile = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.text('牛奶'),
+    );
+    expect(targetTile, findsOneWidget);
+    expect(find.text('部分规格将丢弃 · kg'), findsOneWidget);
+    await tester.tap(targetTile);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(find.text('部分规格无法换算'), findsOneWidget);
+    expect(find.text('• 30个'), findsOneWidget);
+
+    await tester.tap(find.text('丢弃并移动'));
+    await tester.pumpAndSettle();
+
+    final products = await StorageService().loadProducts();
+    final target = products.firstWhere((product) => product.name == '牛奶');
+    expect(target.offers, hasLength(1));
+    final moved = target.offers.single;
+    expect(moved.measures, hasLength(1));
+    expect(moved.measures.single.unit, 'kg');
+    expect(moved.measures.single.quantity, closeTo(0.5, 1e-9));
+  });
+
   testWidgets('detail header fits on a phone in compact mode', (tester) async {
     await pumpDetail(tester, const Size(320, 640), compact: true);
   });

@@ -462,6 +462,36 @@ class AppStrings {
   String get deleteOffer => isZh ? '删除报价' : 'Delete offer';
   String deleteOfferConfirm(String brand) =>
       isZh ? '确定删除「$brand」？' : 'Delete "$brand"?';
+  String get moveOfferToProduct =>
+      isZh ? '移动到其他商品' : 'Move to another product';
+  String get moveOfferHint => isZh
+      ? '保存后从当前商品移除；数量会按目标商品的单位自动换算'
+      : 'Removed from this product after saving; quantities convert to the target units';
+  String moveOfferTarget(String name) => isZh
+      ? '将移动到「$name」'
+      : 'Will move to "$name"';
+  String moveOfferUnits(String units) =>
+      isZh ? '目标单位：$units' : 'Target units: $units';
+  String moveOfferIncompatible(String units) => isZh
+      ? '单位不兼容 · $units'
+      : 'Incompatible units · $units';
+  String moveOfferPartial(String units) => isZh
+      ? '部分规格将丢弃 · $units'
+      : 'Some measures will be discarded · $units';
+  String get moveOfferDropTitle =>
+      isZh ? '部分规格无法换算' : 'Some measures cannot convert';
+  String get moveOfferDropHint => isZh
+      ? '以下规格无法换算到目标商品的单位，移动时将丢弃：'
+      : 'These measures cannot convert to the target units and will be discarded:';
+  String get moveOfferDropConfirm =>
+      isZh ? '丢弃并移动' : 'Discard and move';
+  String get moveOfferNoTargets =>
+      isZh ? '没有其他商品可移动' : 'No other products to move to';
+  String get moveOfferUnitMismatch => isZh
+      ? '当前规格无法换算到目标商品的单位'
+      : 'These measures cannot convert to the target product units';
+  String offerMoved(String name) =>
+      isZh ? '已移动到「$name」' : 'Moved to "$name"';
 
   String get bestValueNow => isZh ? '当前最值当' : 'Best value now';
   String get preferredOfferNow => isZh ? '当前关注' : 'Preferred';

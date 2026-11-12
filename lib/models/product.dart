@@ -78,6 +78,20 @@ class OfferMeasure {
       );
 }
 
+/// Result of adapting offer measures to a product's units.
+class OfferMeasureAdaptation {
+  const OfferMeasureAdaptation({
+    required this.measures,
+    required this.dropped,
+  });
+
+  /// Measures expressed in the target product's units.
+  final List<OfferMeasure> measures;
+
+  /// Measures that cannot be expressed in the target product's units.
+  final List<OfferMeasure> dropped;
+}
+
 enum OfferCounterMode {
   none,
   countOnly,
@@ -543,6 +557,92 @@ class Product {
       });
     }
     return result;
+  }
+
+  /// Adapts [measures] to this product's units, reporting measures that
+  /// cannot be converted.
+  ///
+  /// Returns `null` when none of the measures can be expressed in this
+  /// product's units; otherwise [OfferMeasureAdaptation.dropped] lists the
+  /// incompatible measures.
+  OfferMeasureAdaptation? adaptationFor(
+    List<OfferMeasure> measures, {
+    List<UnitRelation> extraRelations = const [],
+  }) {
+    if (measures.isEmpty) return null;
+    final targetUnits = units;
+    final relations = [...this.relations, ...extraRelations];
+    final remaining = [
+      for (final measure in measures)
+        if (measure.quantity > 0) measure,
+    ];
+    if (remaining.isEmpty) return null;
+
+    final priority = [
+      unit,
+      ...targetUnits.where((target) => target != unit),
+    ];
+    final quantities = <String, double>{};
+
+    for (final target in priority) {
+      if (!targetUnits.contains(target)) continue;
+      for (final measure in remaining) {
+        final factors = conversionFactors(
+          measure.unit,
+          relations: relations,
+        );
+        final factor = factors[target];
+        if (factor == null) continue;
+        quantities[target] = measure.quantity * factor;
+        // Measures in the same conversion component describe the same
+        // quantity, so only emit one target unit for that component.
+        remaining.removeWhere((other) => factors.containsKey(other.unit));
+        break;
+      }
+    }
+
+    if (quantities.isEmpty) return null;
+    return OfferMeasureAdaptation(
+      measures: [
+        for (final target in targetUnits)
+          if (quantities[target] != null)
+            OfferMeasure(unit: target, quantity: quantities[target]!),
+      ],
+      dropped: List<OfferMeasure>.unmodifiable(remaining),
+    );
+  }
+
+  /// Converts [measures] into this product's declared units.
+  ///
+  /// With [dropIncompatible], measures that cannot be converted are discarded;
+  /// otherwise any incompatible measure makes the whole adaptation fail.
+  List<OfferMeasure>? adaptMeasures(
+    List<OfferMeasure> measures, {
+    List<UnitRelation> extraRelations = const [],
+    bool dropIncompatible = false,
+  }) {
+    final adaptation = adaptationFor(
+      measures,
+      extraRelations: extraRelations,
+    );
+    if (adaptation == null) return null;
+    if (adaptation.dropped.isNotEmpty && !dropIncompatible) return null;
+    return adaptation.measures;
+  }
+
+  /// Copy of [offer] with measures adapted to this product's units, or `null`
+  /// when none of the measures can be represented by this product.
+  Offer? adaptOffer(
+    Offer offer, {
+    bool dropIncompatible = false,
+  }) {
+    final measures = adaptMeasures(
+      offer.measures,
+      extraRelations: offer.relations,
+      dropIncompatible: dropIncompatible,
+    );
+    if (measures == null) return null;
+    return offer.copyWith(measures: measures);
   }
 
   List<Offer> offersFor(String unit) {

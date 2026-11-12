@@ -161,6 +161,8 @@ class _HomePageState extends State<HomePage> {
       units: product.measureUnits,
       defaultRelations: product.relations,
       productOffers: product.offers,
+      productId: product.id,
+      allProducts: _products,
       preferredUnit: unit,
     );
     final offer = result?.offer;
@@ -190,6 +192,8 @@ class _HomePageState extends State<HomePage> {
       units: product.measureUnits,
       defaultRelations: product.relations,
       productOffers: product.offers,
+      productId: product.id,
+      allProducts: _products,
       preferredUnit: offer.unit,
     );
     if (result == null) return;
@@ -207,6 +211,50 @@ class _HomePageState extends State<HomePage> {
     }
     final saved = result.offer;
     if (saved == null) return;
+    final moveTo = result.moveToProductId;
+    if (moveTo != null && moveTo != product.id) {
+      Product source = product;
+      Product? target;
+      for (final p in _products) {
+        if (p.id == product.id) source = p;
+        if (p.id == moveTo) target = p;
+      }
+      final moved = target?.adaptOffer(saved, dropIncompatible: true);
+      final destination = target;
+      if (destination != null && moved != null) {
+        final sourceOffers =
+            source.offers.where((o) => o.id != offer.id).toList();
+        final targetOffers = [
+          ...destination.offers.where((o) => o.id != moved.id),
+          moved,
+        ];
+        final updatedSource = source.copyWith(offers: sourceOffers);
+        final updatedTarget = destination.copyWith(offers: targetOffers);
+        setState(() {
+          _products = _products
+              .map(
+                (p) => p.id == source.id
+                    ? updatedSource
+                    : p.id == destination.id
+                        ? updatedTarget
+                        : p,
+              )
+              .toList()
+            ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+          _selectedId = destination.id;
+        });
+        await _persist();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text(AppStrings.of(context).offerMoved(destination.name)),
+            ),
+          );
+        }
+        return;
+      }
+    }
     final offers =
         product.offers.map((o) => o.id == saved.id ? saved : o).toList();
     final units = <String>[...product.units];
