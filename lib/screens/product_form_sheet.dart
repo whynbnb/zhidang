@@ -1263,6 +1263,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
     final presetUnit = _activePresetUnit ?? _availableUnits.first;
+    final quickPresets = quantityPresetsFor(presetUnit);
     final hasRelations = _offerRelations.isNotEmpty;
     final title = editing ? s.editOffer : s.addOffer;
 
@@ -1391,39 +1392,41 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                     style: TextStyle(color: scheme.error, fontSize: 12),
                   ),
                 ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '${s.quantityQuickPick} · $presetUnit',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+              if (quickPresets.isNotEmpty) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${s.quantityQuickPick} · $presetUnit',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final preset in quantityPresetsFor(presetUnit))
-                    ActionChip(
-                      label: Text(preset.label),
-                      onPressed: () {
-                        final text = formatQuantityValue(preset.value);
-                        final controller = _qtyControllers[presetUnit];
-                        if (controller == null) return;
-                        _editedUnits.add(presetUnit);
-                        _autoFilledUnits.remove(presetUnit);
-                        controller.text = text;
-                        controller.selection = TextSelection.collapsed(
-                          offset: text.length,
-                        );
-                        _measureError = null;
-                        _convertFrom(presetUnit, text);
-                      },
-                    ),
-                ],
-              ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final preset in quickPresets)
+                      ActionChip(
+                        label: Text(preset.label),
+                        onPressed: () {
+                          final text = formatQuantityValue(preset.value);
+                          final controller = _qtyControllers[presetUnit];
+                          if (controller == null) return;
+                          _editedUnits.add(presetUnit);
+                          _autoFilledUnits.remove(presetUnit);
+                          controller.text = text;
+                          controller.selection = TextSelection.collapsed(
+                            offset: text.length,
+                          );
+                          _measureError = null;
+                          _convertFrom(presetUnit, text);
+                        },
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
               ListenableBuilder(
                 listenable: SupplierStore.instance,

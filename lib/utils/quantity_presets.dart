@@ -1,14 +1,22 @@
-class QuantityPreset {
-  const QuantityPreset({
-    required this.value,
-    required this.label,
-  });
+import '../models/quantity_preset.dart';
+import '../services/unit_store.dart';
 
-  final double value;
-  final String label;
+/// Presets configured for [unit], or the built-in defaults when the unit has
+/// no custom list. Disabled presets are kept in the configured list.
+List<QuantityPreset> editableQuantityPresetsFor(String unit) {
+  return UnitStore.instance.findByName(unit)?.presets ??
+      defaultQuantityPresetsFor(unit);
 }
 
+/// Presets that the offer editor should show: configured/default minus any
+/// entries the user disabled.
 List<QuantityPreset> quantityPresetsFor(String unit) {
+  return editableQuantityPresetsFor(unit)
+      .where((preset) => preset.enabled && preset.value > 0)
+      .toList();
+}
+
+List<QuantityPreset> defaultQuantityPresetsFor(String unit) {
   switch (unit) {
     case 'g':
       return const [

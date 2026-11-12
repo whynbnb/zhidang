@@ -251,6 +251,21 @@ void main() {
     );
   });
 
+  testWidgets('quick quantities hide when all presets are cleared', (
+    tester,
+  ) async {
+    final unit = UnitStore.instance.findByName('个')!;
+    await UnitStore.instance.update(unit.copyWith(presets: const []));
+
+    await pumpDetail(tester, const Size(390, 844), compact: false);
+    await tester.tap(find.text('A').first);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('标签'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('快速数量 · 个'), findsNothing);
+  });
+
   testWidgets('detail header fits on a phone in compact mode', (tester) async {
     await pumpDetail(tester, const Size(320, 640), compact: true);
   });

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/custom_unit.dart';
 import '../models/product.dart';
+import '../models/quantity_preset.dart';
 
 /// Built-in unit presets. Seeded into the store when empty / on reset.
 const defaultUnitNamesZh = [
@@ -256,7 +257,11 @@ class UnitStore extends ChangeNotifier {
     await _persistRelations();
   }
 
-  Future<CustomUnit> add({required String name, String note = ''}) async {
+  Future<CustomUnit> add({
+    required String name,
+    String note = '',
+    List<QuantityPreset>? presets,
+  }) async {
     final trimmed = name.trim();
     final existing = findByName(trimmed);
     if (existing != null) {
@@ -265,7 +270,11 @@ class UnitStore extends ChangeNotifier {
       }
       return existing;
     }
-    final unit = CustomUnit(name: trimmed, note: note.trim());
+    final unit = CustomUnit(
+      name: trimmed,
+      note: note.trim(),
+      presets: presets,
+    );
     _units = [..._units, unit];
     notifyListeners();
     await _persist();
@@ -293,6 +302,7 @@ class UnitStore extends ChangeNotifier {
               id: e.id,
               name: e.name.trim(),
               note: e.note,
+              presets: e.presets,
               updatedAt: e.updatedAt,
             ))
         .where((e) => e.name.isNotEmpty)

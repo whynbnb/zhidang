@@ -226,6 +226,26 @@ class AppStrings {
   String get unitsHint => isZh
       ? '这里的单位会出现在创建商品的维度选择中。'
       : 'Units here appear when choosing product dimensions.';
+  String get quickQuantityPresets => isZh
+      ? '快速数量预设'
+      : 'Quick quantity presets';
+  String get quickQuantityPresetsHint => isZh
+      ? '报价编辑时显示的快捷数量按钮；关闭开关可暂时隐藏，删除则彻底移除。'
+      : 'Buttons shown in the offer editor. Turn one off to hide it, or delete it entirely.';
+  String get addQuickPreset => isZh
+      ? '添加快速数量'
+      : 'Add quick quantity';
+  String get addQuickPresetHint =>
+      isZh ? '输入数量，例如 2.5' : 'Enter a quantity, e.g. 2.5';
+  String get restoreDefaultPresets =>
+      isZh ? '恢复默认' : 'Restore defaults';
+  String get noQuickPresets => isZh
+      ? '还没有快速数量，可添加或恢复默认'
+      : 'No quick quantities yet; add one or restore defaults';
+  String get presetValueInvalid =>
+      isZh ? '请输入大于 0 的数量' : 'Enter a quantity greater than 0';
+  String get presetDuplicate =>
+      isZh ? '该数量已存在' : 'This quantity already exists';
   String unitCount(int n) =>
       isZh ? '共 $n 个单位' : (n == 1 ? '1 unit' : '$n units');
   String get resetUnits => isZh ? '恢复默认单位' : 'Reset to defaults';
