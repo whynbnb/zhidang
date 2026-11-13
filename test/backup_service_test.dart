@@ -19,7 +19,7 @@ void main() {
         },
       ],
       'suppliers': [
-        {'id': 's1', 'name': '超市'},
+        {'id': 's1', 'name': '超市', 'areas': ['熟食区']},
       ],
       'categories': [
         {
@@ -43,6 +43,7 @@ void main() {
     final payload = service.parse(raw);
     expect(payload.products, hasLength(1));
     expect(payload.suppliers, hasLength(1));
+    expect(payload.suppliers.single.areas, ['熟食区']);
     expect(payload.categories.single.units, ['ml', 'L']);
     expect(payload.units, hasLength(1));
     expect(payload.comparisons, hasLength(1));

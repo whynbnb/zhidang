@@ -1065,7 +1065,7 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
                         if (row.offer == null) return s.noOfferForUnit(unit);
                         final parts = <String>[
                           if (row.isLimitedPrice) s.limitedBadge,
-                          if (row.offer!.shop.isNotEmpty) row.offer!.shop,
+                          if (row.offer!.shopLabel.isNotEmpty) row.offer!.shopLabel,
                           if (isFav) '★',
                         ];
                         return parts.isEmpty

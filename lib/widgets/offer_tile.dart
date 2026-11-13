@@ -169,7 +169,7 @@ class OfferTile extends StatelessWidget {
                           Expanded(
                             child: Text(
                               '¥${_currency.format(offer.price)} / ${_currency.format(qty)}$unit'
-                              '${offer.shop.isNotEmpty ? ' · ${offer.shop}' : ''}'
+                              '${offer.shopLabel.isNotEmpty ? ' · ${offer.shopLabel}' : ''}'
                               '${showOriginalMeasures ? ' · $allMeasures' : ''}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -304,7 +304,7 @@ class OfferTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         '¥${_currency.format(offer.price)} / ${_currency.format(qty)}$unit'
-                        '${offer.shop.isNotEmpty ? ' · ${offer.shop}' : ''}',
+                        '${offer.shopLabel.isNotEmpty ? ' · ${offer.shopLabel}' : ''}',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(

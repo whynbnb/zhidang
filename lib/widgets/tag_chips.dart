@@ -13,6 +13,11 @@ class TagPicker extends StatefulWidget {
     this.suggestions = const [],
     this.suggestionsLabel,
     this.maxTags = maxTagsPerEntity,
+    this.title,
+    this.hint,
+    this.addLabel,
+    this.nameHint,
+    this.limitText,
   });
 
   static const maxTagsPerEntity = 5;
@@ -27,6 +32,13 @@ class TagPicker extends StatefulWidget {
   /// Label above [suggestions]; defaults to the category tag hint.
   final String? suggestionsLabel;
   final int maxTags;
+
+  /// Optional label overrides so the same picker can edit other name lists.
+  final String? title;
+  final String? hint;
+  final String? addLabel;
+  final String? nameHint;
+  final String? limitText;
 
   @override
   State<TagPicker> createState() => _TagPickerState();
@@ -95,8 +107,8 @@ class _TagPickerState extends State<TagPicker> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         HintTitle(
-          title: s.tags,
-          hint: s.tagsAssignHint(widget.maxTags),
+          title: widget.title ?? s.tags,
+          hint: widget.hint ?? s.tagsAssignHint(widget.maxTags),
         ),
         const SizedBox(height: 10),
         if (tags.isNotEmpty) ...[
@@ -137,7 +149,7 @@ class _TagPickerState extends State<TagPicker> {
         ],
         if (atLimit)
           Text(
-            s.tagsLimitReached(widget.maxTags),
+            widget.limitText ?? s.tagsLimitReached(widget.maxTags),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -150,8 +162,8 @@ class _TagPickerState extends State<TagPicker> {
                   controller: _input,
                   textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
-                    labelText: s.addTag,
-                    hintText: s.tagNameHint,
+                    labelText: widget.addLabel ?? s.addTag,
+                    hintText: widget.nameHint ?? s.tagNameHint,
                     border: const OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -162,7 +174,7 @@ class _TagPickerState extends State<TagPicker> {
               IconButton.filledTonal(
                 onPressed: _addFromInput,
                 icon: const Icon(Icons.add),
-                tooltip: s.addTag,
+                tooltip: widget.addLabel ?? s.addTag,
               ),
             ],
           ),

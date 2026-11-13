@@ -47,6 +47,7 @@ class SupplierStore extends ChangeNotifier {
     required String name,
     List<SupplierType> types = const [],
     String address = '',
+    List<String> areas = const [],
     String note = '',
   }) async {
     final trimmed = name.trim();
@@ -58,15 +59,18 @@ class SupplierStore extends ChangeNotifier {
       final nextTypes = types.isNotEmpty ? types : existing.types;
       final nextAddress =
           address.trim().isNotEmpty ? address.trim() : existing.address;
+      final nextAreas = areas.isNotEmpty ? areas : existing.areas;
       if (nextNote == existing.note &&
           nextTypes == existing.types &&
-          nextAddress == existing.address) {
+          nextAddress == existing.address &&
+          listEquals(nextAreas, existing.areas)) {
         return existing;
       }
       return update(
         existing.copyWith(
           types: nextTypes,
           address: nextAddress,
+          areas: nextAreas,
           note: nextNote,
         ),
       );
@@ -75,6 +79,7 @@ class SupplierStore extends ChangeNotifier {
       name: trimmed,
       types: types,
       address: address.trim(),
+      areas: areas,
       note: note.trim(),
     );
     _suppliers = [..._suppliers, supplier]
@@ -91,6 +96,7 @@ class SupplierStore extends ChangeNotifier {
       name: trimmed,
       types: supplier.types,
       address: hasStore ? supplier.address.trim() : '',
+      areas: supplier.areas.map((e) => e.trim()).toList(),
       note: supplier.note.trim(),
     );
     _suppliers = _suppliers
@@ -116,7 +122,11 @@ class SupplierStore extends ChangeNotifier {
     await _persist();
   }
 
-  Future<void> clear() => replaceAll(const []);
+  Future<void> clear() async {
+    _suppliers = [];
+    notifyListeners();
+    await _persist();
+  }
 
   Supplier? findByName(String name) {
     final key = name.trim().toLowerCase();
@@ -126,6 +136,9 @@ class SupplierStore extends ChangeNotifier {
     }
     return null;
   }
+
+  /// Areas configured for the supplier with [name].
+  List<String> areasForName(String name) => findByName(name)?.areas ?? const [];
 
   Future<void> ensureName(String name) async {
     final trimmed = name.trim();

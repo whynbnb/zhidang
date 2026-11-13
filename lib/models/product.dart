@@ -161,6 +161,7 @@ class Offer {
     String? unit,
     double? quantity,
     this.shop = '',
+    this.shopArea = '',
     this.note = '',
     this.favorite = false,
     this.limitedPrice = false,
@@ -184,6 +185,8 @@ class Offer {
   int counterValue;
   List<OfferCounterLog> counterLogs;
   String shop;
+  /// Optional area of [shop], such as 熟食区 inside a supermarket.
+  String shopArea;
   String note;
   bool favorite;
   /// When true this is a hard-to-get / limited-time price. It stays in offer
@@ -205,6 +208,14 @@ class Offer {
   String get unit => measures.isNotEmpty ? measures.first.unit : 'g';
 
   double get quantity => measures.isNotEmpty ? measures.first.quantity : 0;
+
+  /// Supplier plus optional area, e.g. `盒马 · 熟食区`.
+  String get shopLabel {
+    if (shop.isEmpty) return shopArea;
+    return shopArea.isEmpty ? shop : '$shop · $shopArea';
+  }
+
+  bool get hasShopArea => shopArea.isNotEmpty;
 
   double get unitPrice => unitPriceFor(unit) ?? 0;
 
@@ -251,6 +262,7 @@ class Offer {
         'unit': unit,
         'quantity': quantity,
         'shop': shop,
+        'shopArea': shopArea,
         'note': note,
         'favorite': favorite,
         'limitedPrice': limitedPrice,
@@ -292,6 +304,7 @@ class Offer {
       unit: normalizeUnit(json['unit'] as String?, fallback: fallbackUnit),
       quantity: (json['quantity'] as num?)?.toDouble(),
       shop: json['shop'] as String? ?? '',
+      shopArea: json['shopArea'] as String? ?? '',
       note: json['note'] as String? ?? '',
       favorite: json['favorite'] as bool? ?? false,
       limitedPrice: json['limitedPrice'] as bool? ?? false,
@@ -311,6 +324,7 @@ class Offer {
     int? counterValue,
     List<OfferCounterLog>? counterLogs,
     String? shop,
+    String? shopArea,
     String? note,
     bool? favorite,
     bool? limitedPrice,
@@ -326,6 +340,7 @@ class Offer {
         counterValue: counterValue ?? this.counterValue,
         counterLogs: counterLogs ?? this.counterLogs,
         shop: shop ?? this.shop,
+        shopArea: shopArea ?? this.shopArea,
         note: note ?? this.note,
         favorite: favorite ?? this.favorite,
         limitedPrice: limitedPrice ?? this.limitedPrice,

@@ -217,6 +217,17 @@ class AppStrings {
       isZh ? '实体店可选填地址' : 'Optional for physical stores';
   String get supplierAddressOptional =>
       isZh ? '门店地址（可选）' : 'Store address (optional)';
+  String get supplierAreas => isZh ? '区域/分类' : 'Areas';
+  String get supplierAreasHint => isZh
+      ? '属于当前供应商的区域或分类，例如熟食区、生鲜区'
+      : 'Areas or departments of this supplier, e.g. deli, fresh produce';
+  String get addSupplierArea => isZh ? '添加区域' : 'Add area';
+  String get supplierAreaNameHint =>
+      isZh ? '例如熟食区、生鲜区' : 'e.g. deli, produce';
+  String supplierAreasLimit(int n) =>
+      isZh ? '最多 $n 个区域' : (n == 1 ? '1 area max' : '$n areas max');
+  String get shopAreaOptional => isZh ? '区域（可选）' : 'Area (optional)';
+  String get noShopArea => isZh ? '不指定区域' : 'No area';
 
   String get tags => isZh ? '标签' : 'Tags';
   String get addTag => isZh ? '添加标签' : 'Add tag';

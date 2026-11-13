@@ -144,10 +144,10 @@ class ProductCard extends StatelessWidget {
                         child: Text(
                           isLimited
                               ? '${s.limitedBadge} · ${best.brand}'
-                                  '${best.shop.isEmpty ? '' : ' · ${best.shop}'}'
-                              : (best.shop.isEmpty
+                                  '${best.shopLabel.isEmpty ? '' : ' · ${best.shopLabel}'}'
+                              : (best.shopLabel.isEmpty
                                   ? best.brand
-                                  : '${best.brand} · ${best.shop}'),
+                                  : '${best.brand} · ${best.shopLabel}'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
@@ -248,7 +248,7 @@ class ProductCard extends StatelessWidget {
               if (best != null) ...[
                 Text(
                   '${isLimited ? s.limitedPriceLabel(best.brand) : s.bestBrand(best.brand)}'
-                  '${best.shop.isEmpty ? '' : ' · ${best.shop}'}',
+                  '${best.shopLabel.isEmpty ? '' : ' · ${best.shopLabel}'}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium,

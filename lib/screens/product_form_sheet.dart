@@ -732,6 +732,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   late Set<String> _tags;
   late OfferCounterMode _counterMode;
   late bool _limitedPrice;
+  late String _shopArea;
   /// Units stored on the offer when the editor opened. These stay available
   /// even if the product later stops showing that unit.
   final Set<String> _originalUnits = {};
@@ -774,6 +775,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     _tags = {...(o?.tags ?? const [])};
     _counterMode = o?.counterMode ?? OfferCounterMode.none;
     _limitedPrice = o?.limitedPrice ?? false;
+    _shopArea = o?.shopArea ?? '';
     _offerRelations = o == null
         ? widget.defaultRelations
             .map(
@@ -867,6 +869,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
       tags,
       _counterMode.name,
       _limitedPrice,
+      _shopArea,
       _moveTargetId,
     ]);
   }
@@ -925,7 +928,10 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     if (name == null || name.isEmpty || !mounted) return;
     final supplier = await SupplierStore.instance.add(name: name);
     if (!mounted) return;
-    setState(() => _shop.text = supplier.name);
+    setState(() {
+      _shop.text = supplier.name;
+      _shopArea = '';
+    });
   }
 
   Future<void> _addOrEditRelation([UnitRelation? existing]) async {
@@ -1234,6 +1240,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
 
     final price = double.parse(_price.text.trim());
     final shop = _shop.text.trim();
+    final shopArea = shop.isEmpty ? '' : _shopArea.trim();
     if (shop.isNotEmpty) {
       await SupplierStore.instance.ensureName(shop);
     }
@@ -1248,6 +1255,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             tags: tags,
             counterMode: _counterMode,
             shop: shop,
+            shopArea: shopArea,
             note: _note.text.trim(),
             limitedPrice: _limitedPrice,
           )
@@ -1259,6 +1267,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             tags: tags,
             counterMode: _counterMode,
             shop: shop,
+            shopArea: shopArea,
             note: _note.text.trim(),
             limitedPrice: _limitedPrice,
           );
@@ -1624,39 +1633,79 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                     if (shop.isNotEmpty && !names.contains(shop)) shop,
                     ...names,
                   ];
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  final areas = SupplierStore.instance.areasForName(shop);
+                  final areaValues = <String>[
+                    if (_shopArea.isNotEmpty && !areas.contains(_shopArea))
+                      _shopArea,
+                    ...areas,
+                  ];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          key: ValueKey('shop-$shop-${names.length}'),
-                          initialValue: shop,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              key: ValueKey('shop-$shop-${names.length}'),
+                              initialValue: shop,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                labelText: s.shopOptional,
+                                border: const OutlineInputBorder(),
+                              ),
+                              items: [
+                                DropdownMenuItem<String>(
+                                  value: '',
+                                  child: Text(s.noneOption),
+                                ),
+                                for (final name in options)
+                                  DropdownMenuItem<String>(
+                                    value: name,
+                                    child: Text(name),
+                                  ),
+                              ],
+                              onChanged: (value) => setState(() {
+                                _shop.text = value ?? '';
+                                _shopArea = '';
+                              }),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filledTonal(
+                            onPressed: _quickAddSupplier,
+                            icon: const Icon(Icons.add),
+                            tooltip: s.addSupplier,
+                          ),
+                        ],
+                      ),
+                      if (areaValues.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          key: ValueKey(
+                            'shop-area-$shop-${areaValues.length}-$_shopArea',
+                          ),
+                          initialValue: _shopArea,
                           isExpanded: true,
                           decoration: InputDecoration(
-                            labelText: s.shopOptional,
+                            labelText: s.shopAreaOptional,
                             border: const OutlineInputBorder(),
                           ),
                           items: [
                             DropdownMenuItem<String>(
                               value: '',
-                              child: Text(s.noneOption),
+                              child: Text(s.noShopArea),
                             ),
-                            for (final name in options)
+                            for (final area in areaValues)
                               DropdownMenuItem<String>(
-                                value: name,
-                                child: Text(name),
+                                value: area,
+                                child: Text(area),
                               ),
                           ],
                           onChanged: (value) =>
-                              setState(() => _shop.text = value ?? ''),
+                              setState(() => _shopArea = value ?? ''),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filledTonal(
-                        onPressed: _quickAddSupplier,
-                        icon: const Icon(Icons.add),
-                        tooltip: s.addSupplier,
-                      ),
+                      ],
                     ],
                   );
                 },

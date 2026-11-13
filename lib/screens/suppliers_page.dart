@@ -4,6 +4,7 @@ import '../l10n/app_strings.dart';
 import '../models/supplier.dart';
 import '../services/supplier_store.dart';
 import '../utils/ime_focus.dart';
+import '../widgets/tag_chips.dart';
 
 class SuppliersPage extends StatefulWidget {
   const SuppliersPage({super.key});
@@ -47,6 +48,9 @@ class _SuppliersPageState extends State<SuppliersPage> {
     if (_query.isEmpty) return all;
     return all.where((supplier) {
       if (supplier.name.toLowerCase().contains(_query)) return true;
+      if (supplier.areas.any((area) => area.toLowerCase().contains(_query))) {
+        return true;
+      }
       if (supplier.note.toLowerCase().contains(_query)) return true;
       if (supplier.address.toLowerCase().contains(_query)) return true;
       for (final type in supplier.types) {
@@ -66,6 +70,7 @@ class _SuppliersPageState extends State<SuppliersPage> {
         name: result.name,
         types: result.types,
         address: result.address,
+        areas: result.areas,
         note: result.note,
       );
     } else {
@@ -74,6 +79,7 @@ class _SuppliersPageState extends State<SuppliersPage> {
           name: result.name,
           types: result.types,
           address: result.address,
+          areas: result.areas,
           note: result.note,
         ),
       );
@@ -106,8 +112,13 @@ class _SuppliersPageState extends State<SuppliersPage> {
 
   String? _subtitle(Supplier supplier, AppStrings s) {
     final parts = <String>[];
-    if (supplier.types.isNotEmpty) {
-      parts.add(supplier.types.map((t) => _typeLabel(s, t)).join(' · '));
+    final badges = <String>[
+      if (supplier.areas.isNotEmpty) supplier.areas.join(' / '),
+      if (supplier.types.isNotEmpty)
+        supplier.types.map((t) => _typeLabel(s, t)).join(' · '),
+    ];
+    if (badges.isNotEmpty) {
+      parts.add(badges.join(' · '));
     }
     if (supplier.hasStore && supplier.address.isNotEmpty) {
       parts.add(supplier.address);
@@ -280,12 +291,14 @@ class SupplierDraft {
     required this.name,
     this.types = const [],
     this.address = '',
+    this.areas = const [],
     this.note = '',
   });
 
   final String name;
   final List<SupplierType> types;
   final String address;
+  final List<String> areas;
   final String note;
 }
 
@@ -317,6 +330,7 @@ class _SupplierFormSheetState extends State<_SupplierFormSheet> {
   late final TextEditingController _note;
   late final TextEditingController _address;
   late Set<SupplierType> _types;
+  late Set<String> _areas;
 
   @override
   void initState() {
@@ -325,6 +339,7 @@ class _SupplierFormSheetState extends State<_SupplierFormSheet> {
     _note = TextEditingController(text: widget.supplier?.note ?? '');
     _address = TextEditingController(text: widget.supplier?.address ?? '');
     _types = {...(widget.supplier?.types ?? const [])};
+    _areas = {...(widget.supplier?.areas ?? const [])};
     if (widget.supplier == null) {
       scheduleTextFocus(_nameFocus);
     }
@@ -361,6 +376,7 @@ class _SupplierFormSheetState extends State<_SupplierFormSheet> {
             .where((t) => _types.contains(t))
             .toList(),
         address: hasStore ? _address.text.trim() : '',
+        areas: _areas.toList(),
         note: _note.text.trim(),
       ),
     );
@@ -409,6 +425,17 @@ class _SupplierFormSheetState extends State<_SupplierFormSheet> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+              TagPicker(
+                selected: _areas,
+                onChanged: (next) => setState(() => _areas = next),
+                title: s.supplierAreas,
+                hint: s.supplierAreasHint,
+                addLabel: s.addSupplierArea,
+                nameHint: s.supplierAreaNameHint,
+                limitText: s.supplierAreasLimit(8),
+                maxTags: 8,
               ),
               const SizedBox(height: 16),
               Text(
