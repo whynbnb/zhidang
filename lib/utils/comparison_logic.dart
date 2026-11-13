@@ -23,6 +23,8 @@ class ComparisonRow {
       offer == null ? null : product.unitPriceForOffer(offer!, unit);
 
   bool get hasPrice => unitPrice != null;
+
+  bool get isLimitedPrice => offer?.limitedPrice ?? false;
 }
 
 /// Shared helpers for fixed / temporary comparisons.
@@ -104,7 +106,8 @@ class ComparisonLogic {
         }
       case CompareViewMode.cheapest:
         for (final p in products) {
-          final best = p.bestOfferFor(target);
+          final best =
+              p.bestOfferFor(target) ?? p.cheapestOfferFor(target);
           rows.add(ComparisonRow(product: p, unit: target, offer: best));
         }
     }

@@ -124,6 +124,10 @@ class OfferTile extends StatelessWidget {
                                               ),
                                         ),
                                 ),
+                                if (offer.limitedPrice) ...[
+                                  const SizedBox(width: 6),
+                                  _LimitedBadge(label: s.limitedBadge),
+                                ],
                                 if (offer.tags.isNotEmpty) ...[
                                   const SizedBox(width: 6),
                                   Expanded(
@@ -270,6 +274,10 @@ class OfferTile extends StatelessWidget {
                                               ),
                                         ),
                                 ),
+                                if (offer.limitedPrice) ...[
+                                  const SizedBox(width: 6),
+                                  _LimitedBadge(label: s.limitedBadge),
+                                ],
                                 if (offer.tags.isNotEmpty) ...[
                                   const SizedBox(width: 6),
                                   Expanded(
@@ -439,6 +447,32 @@ class _OfferActions extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _LimitedBadge extends StatelessWidget {
+  const _LimitedBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: scheme.onTertiaryContainer,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
     );
   }
 }

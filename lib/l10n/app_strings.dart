@@ -537,6 +537,14 @@ class AppStrings {
   String get noOfferHintCard =>
       isZh ? '还没有报价，点进来添加' : 'No offers yet — tap to add';
   String get bestBadge => isZh ? '优' : 'Best';
+  String get limitedPrice => isZh ? '限时价格' : 'Limited-time price';
+  String get limitedPriceHint => isZh
+      ? '不易买到，仅在列表中作为比较，不参与最优价计算'
+      : 'Hard to buy; kept for comparison only and excluded from best-price calculation';
+  String get limitedBadge => isZh ? '限时' : 'Limited';
+  String limitedPriceLabel(String brand) =>
+      isZh ? '限时：$brand' : 'Limited: $brand';
+  String get limitedPriceNow => isZh ? '当前限时参考' : 'Limited reference';
 
   String get productName => isZh ? '商品名称' : 'Product name';
   String get productNameHint =>

@@ -731,6 +731,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
   late List<UnitRelation> _offerRelations;
   late Set<String> _tags;
   late OfferCounterMode _counterMode;
+  late bool _limitedPrice;
   /// Units stored on the offer when the editor opened. These stay available
   /// even if the product later stops showing that unit.
   final Set<String> _originalUnits = {};
@@ -772,6 +773,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     final o = widget.offer;
     _tags = {...(o?.tags ?? const [])};
     _counterMode = o?.counterMode ?? OfferCounterMode.none;
+    _limitedPrice = o?.limitedPrice ?? false;
     _offerRelations = o == null
         ? widget.defaultRelations
             .map(
@@ -864,6 +866,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
       relations,
       tags,
       _counterMode.name,
+      _limitedPrice,
       _moveTargetId,
     ]);
   }
@@ -1246,6 +1249,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             counterMode: _counterMode,
             shop: shop,
             note: _note.text.trim(),
+            limitedPrice: _limitedPrice,
           )
         : base.copyWith(
             brand: _brand.text.trim(),
@@ -1256,6 +1260,7 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
             counterMode: _counterMode,
             shop: shop,
             note: _note.text.trim(),
+            limitedPrice: _limitedPrice,
           );
     if (!mounted) return;
     Navigator.of(context).pop(
@@ -1669,6 +1674,22 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                 decoration: InputDecoration(
                   labelText: s.noteOptional,
                   border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 4),
+              CheckboxListTile(
+                value: _limitedPrice,
+                onChanged: (value) =>
+                    setState(() => _limitedPrice = value ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                title: Text(s.limitedPrice),
+                subtitle: Text(
+                  s.limitedPriceHint,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                 ),
               ),
               const SizedBox(height: 8),

@@ -828,9 +828,14 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
       unit: unit,
       mode: _viewMode,
     );
-    final best = rows.where((r) => r.hasPrice).firstOrNull;
-    final showPreferredBadge =
-        best?.offer?.favorite == true && _viewMode != CompareViewMode.cheapest;
+    final regularBest =
+        rows.where((r) => r.hasPrice && !r.isLimitedPrice).firstOrNull;
+    final best = regularBest ?? rows.where((r) => r.hasPrice).firstOrNull;
+    final bestIsLimited = regularBest == null && best != null;
+    final bestIndex =
+        rows.indexWhere((r) => r.hasPrice && !r.isLimitedPrice);
+    final showPreferredBadge = regularBest?.offer?.favorite == true &&
+        _viewMode != CompareViewMode.cheapest;
 
     final content = ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
@@ -923,7 +928,9 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
           if (best != null)
             Card(
               elevation: 0,
-              color: scheme.primaryContainer.withValues(alpha: 0.55),
+              color: bestIsLimited
+                  ? scheme.tertiaryContainer.withValues(alpha: 0.45)
+                  : scheme.primaryContainer.withValues(alpha: 0.55),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -933,11 +940,15 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      showPreferredBadge
-                          ? s.preferredOfferNow
-                          : s.bestValueNow,
+                      bestIsLimited
+                          ? s.limitedPriceNow
+                          : showPreferredBadge
+                              ? s.preferredOfferNow
+                              : s.bestValueNow,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: scheme.onPrimaryContainer,
+                            color: bestIsLimited
+                                ? scheme.onTertiaryContainer
+                                : scheme.onPrimaryContainer,
                             fontWeight: FontWeight.w700,
                           ),
                     ),
@@ -950,14 +961,18 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
                     ),
                     if (best.offer != null)
                       Text(
-                        s.bestBrand(best.offer!.brand),
+                        bestIsLimited
+                            ? s.limitedPriceLabel(best.offer!.brand)
+                            : s.bestBrand(best.offer!.brand),
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     const SizedBox(height: 6),
                     Text(
                       '¥${_currency.format(best.unitPrice ?? 0)} / $unit',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: scheme.primary,
+                            color: bestIsLimited
+                                ? scheme.onSurfaceVariant
+                                : scheme.primary,
                             fontWeight: FontWeight.w800,
                           ),
                     ),
@@ -1008,7 +1023,7 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
           else
             ...List.generate(rows.length, (i) {
               final row = rows[i];
-              final isBest = i == 0 && row.hasPrice;
+              final isBest = i == bestIndex;
               final isFav = row.offer?.favorite == true;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -1049,6 +1064,7 @@ class _CompareSessionPageState extends State<CompareSessionPage> {
                       () {
                         if (row.offer == null) return s.noOfferForUnit(unit);
                         final parts = <String>[
+                          if (row.isLimitedPrice) s.limitedBadge,
                           if (row.offer!.shop.isNotEmpty) row.offer!.shop,
                           if (isFav) '★',
                         ];

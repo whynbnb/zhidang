@@ -163,6 +163,7 @@ class Offer {
     this.shop = '',
     this.note = '',
     this.favorite = false,
+    this.limitedPrice = false,
     DateTime? updatedAt,
   })  : id = id ?? _uuid.v4(),
         measures = _normalizeMeasures(measures, unit: unit, quantity: quantity),
@@ -185,6 +186,9 @@ class Offer {
   String shop;
   String note;
   bool favorite;
+  /// When true this is a hard-to-get / limited-time price. It stays in offer
+  /// lists for reference but is excluded from best-price calculations.
+  bool limitedPrice;
   DateTime updatedAt;
 
   int get displayCount {
@@ -249,6 +253,7 @@ class Offer {
         'shop': shop,
         'note': note,
         'favorite': favorite,
+        'limitedPrice': limitedPrice,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -289,6 +294,7 @@ class Offer {
       shop: json['shop'] as String? ?? '',
       note: json['note'] as String? ?? '',
       favorite: json['favorite'] as bool? ?? false,
+      limitedPrice: json['limitedPrice'] as bool? ?? false,
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'] as String)
           : null,
@@ -307,6 +313,7 @@ class Offer {
     String? shop,
     String? note,
     bool? favorite,
+    bool? limitedPrice,
   }) =>
       Offer(
         id: id,
@@ -321,6 +328,7 @@ class Offer {
         shop: shop ?? this.shop,
         note: note ?? this.note,
         favorite: favorite ?? this.favorite,
+        limitedPrice: limitedPrice ?? this.limitedPrice,
         updatedAt: DateTime.now(),
       );
 
@@ -673,17 +681,26 @@ class Product {
     return offer.price / qty;
   }
 
-  Offer? bestOfferFor(String unit) {
-    final list = offersFor(unit);
-    if (list.isEmpty) return null;
+  /// Cheapest offer for [unit], including limited-time prices by default.
+  Offer? cheapestOfferFor(String unit, {bool includeLimited = true}) {
     final target = normalizeUnit(unit, fallback: this.unit);
-    final sorted = [...list]
-      ..sort((a, b) {
-        final pa = unitPriceForOffer(a, target) ?? double.infinity;
-        final pb = unitPriceForOffer(b, target) ?? double.infinity;
-        return pa.compareTo(pb);
-      });
-    return sorted.first;
+    final list = offersFor(target)
+        .where((offer) => includeLimited || !offer.limitedPrice)
+        .toList();
+    if (list.isEmpty) return null;
+    list.sort((a, b) {
+      final pa = unitPriceForOffer(a, target) ?? double.infinity;
+      final pb = unitPriceForOffer(b, target) ?? double.infinity;
+      return pa.compareTo(pb);
+    });
+    return list.first;
+  }
+
+  /// Cheapest normal (non-limited) offer for [unit].
+  ///
+  /// Limited-time prices stay in the offer list but never win this comparison.
+  Offer? bestOfferFor(String unit) {
+    return cheapestOfferFor(unit, includeLimited: false);
   }
 
   /// Favorite offers that have this unit, cheapest first.

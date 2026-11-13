@@ -834,15 +834,13 @@ class _ProductDetailPaneState extends State<_ProductDetailPane> {
       preferred = product.preferredOfferFor(selectedUnit);
     } else {
       final tagged = _visibleOffers(selectedUnit, _OfferViewMode.all);
+      final regular = tagged.where((offer) => !offer.limitedPrice).toList();
+      best = regular.isEmpty ? null : regular.first;
       if (tagged.isEmpty) {
-        best = null;
         preferred = null;
       } else {
-        best = tagged.first;
-        preferred = tagged.firstWhere(
-          (offer) => offer.favorite,
-          orElse: () => tagged.first,
-        );
+        final favorites = tagged.where((offer) => offer.favorite).toList();
+        preferred = favorites.isNotEmpty ? favorites.first : best;
       }
     }
 

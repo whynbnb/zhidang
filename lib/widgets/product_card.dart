@@ -31,7 +31,9 @@ class ProductCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final s = AppStrings.of(context);
     final primaryUnit = product.displayUnit;
-    final best = product.bestOfferFor(primaryUnit) ?? product.bestOffer;
+    final best = product.bestOfferFor(primaryUnit) ??
+        product.cheapestOfferFor(primaryUnit);
+    final isLimited = best?.limitedPrice ?? false;
     final bestUnit = best == null
         ? primaryUnit
         : (product.quantityForOffer(best, primaryUnit) != null
@@ -130,7 +132,9 @@ class ProductCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style:
                               Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: scheme.primary,
+                                    color: isLimited
+                                        ? scheme.onSurfaceVariant
+                                        : scheme.primary,
                                     fontWeight: FontWeight.w800,
                                   ),
                         ),
@@ -138,9 +142,12 @@ class ProductCard extends StatelessWidget {
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 170),
                         child: Text(
-                          best.shop.isEmpty
-                              ? best.brand
-                              : '${best.brand} · ${best.shop}',
+                          isLimited
+                              ? '${s.limitedBadge} · ${best.brand}'
+                                  '${best.shop.isEmpty ? '' : ' · ${best.shop}'}'
+                              : (best.shop.isEmpty
+                                  ? best.brand
+                                  : '${best.brand} · ${best.shop}'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
@@ -240,9 +247,8 @@ class ProductCard extends StatelessWidget {
               const SizedBox(height: 8),
               if (best != null) ...[
                 Text(
-                  best.shop.isEmpty
-                      ? s.bestBrand(best.brand)
-                      : '${s.bestBrand(best.brand)} · ${best.shop}',
+                  '${isLimited ? s.limitedPriceLabel(best.brand) : s.bestBrand(best.brand)}'
+                  '${best.shop.isEmpty ? '' : ' · ${best.shop}'}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium,
@@ -251,7 +257,9 @@ class ProductCard extends StatelessWidget {
                 Text(
                   '¥${_currency.format(bestPrice ?? 0)} / $bestUnit',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: scheme.primary,
+                        color: isLimited
+                            ? scheme.onSurfaceVariant
+                            : scheme.primary,
                         fontWeight: FontWeight.w800,
                       ),
                 ),

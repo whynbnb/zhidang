@@ -104,6 +104,7 @@ class BackupService {
             '店铺',
             '报价备注',
             '收藏',
+            '限时',
             '商品备注',
             '更新时间',
           ]
@@ -120,6 +121,7 @@ class BackupService {
             'Shop',
             'Offer note',
             'Favorite',
+            'Limited',
             'Product note',
             'Updated',
           ];
@@ -134,6 +136,7 @@ class BackupService {
           product.name,
           category,
           productTags,
+          '',
           '',
           '',
           '',
@@ -165,6 +168,7 @@ class BackupService {
             offer.shop,
             offer.note,
             offer.favorite ? (zh ? '是' : 'Yes') : (zh ? '否' : 'No'),
+            offer.limitedPrice ? (zh ? '是' : 'Yes') : (zh ? '否' : 'No'),
             product.note,
             updated,
           ]);
