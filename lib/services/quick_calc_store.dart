@@ -16,6 +16,7 @@ class QuickCalcEntry {
     required this.quantity,
     required this.unit,
     this.pinned = false,
+    this.fromSaved = false,
   }) : id = id ?? _uuid.v4();
 
   final String id;
@@ -25,6 +26,10 @@ class QuickCalcEntry {
   final String unit;
   bool pinned;
 
+  /// True when the row was copied from a product offer that was already
+  /// saved, rather than typed in by hand.
+  final bool fromSaved;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -32,6 +37,7 @@ class QuickCalcEntry {
         'quantity': quantity,
         'unit': unit,
         'pinned': pinned,
+        'fromSaved': fromSaved,
       };
 
   factory QuickCalcEntry.fromJson(Map<String, dynamic> json) => QuickCalcEntry(
@@ -41,6 +47,7 @@ class QuickCalcEntry {
         quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
         unit: json['unit'] as String? ?? '',
         pinned: json['pinned'] as bool? ?? true,
+        fromSaved: json['fromSaved'] as bool? ?? false,
       );
 }
 
@@ -102,12 +109,14 @@ class QuickCalcStore extends ChangeNotifier {
     required double price,
     required double quantity,
     required String unit,
+    bool fromSaved = false,
   }) {
     final entry = QuickCalcEntry(
       name: name,
       price: price,
       quantity: quantity,
       unit: unit,
+      fromSaved: fromSaved,
     );
     _entries.add(entry);
     draft.name = '';

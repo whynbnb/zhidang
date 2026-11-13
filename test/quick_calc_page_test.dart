@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zhidang/l10n/app_strings.dart';
+import 'package:zhidang/models/product.dart';
 import 'package:zhidang/screens/quick_calc_page.dart';
 import 'package:zhidang/screens/unit_conversions_page.dart';
 import 'package:zhidang/services/quick_calc_store.dart';
+import 'package:zhidang/services/storage_service.dart';
 import 'package:zhidang/services/unit_store.dart';
 import 'package:zhidang/settings/app_settings.dart';
 import 'package:zhidang/utils/quick_calc.dart';
@@ -15,6 +17,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     await QuickCalcStore.instance.clear();
+    QuickCalcStore.instance.draft.unit = '';
     await AppSettings.instance.load();
     await UnitStore.instance.load(locale: AppSettings.instance.locale);
     await UnitStore.instance.replaceRelations(const []);
@@ -96,6 +99,8 @@ void main() {
     expect(find.byTooltip('删除这组数据'), findsNWidgets(3));
     expect(find.text('单位：个'), findsOneWidget);
     expect(find.text('重量'), findsOneWidget);
+    // Hand-typed rows carry no saved-offer badge.
+    expect(find.byIcon(Icons.inventory_2_outlined), findsNothing);
   });
 
   testWidgets('keeps committed rows and the draft during the session', (
@@ -211,6 +216,154 @@ void main() {
     expect(find.text('×1'), findsOneWidget);
     expect(find.text('¥50'), findsOneWidget);
     expect(find.text('已凑够'), findsOneWidget);
+  });
+
+  testWidgets('saved offer picker fits and filters on a narrow phone', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await StorageService().saveProducts([
+      Product(
+        name: '有机散养土鸡蛋礼盒装',
+        units: const ['个'],
+        offers: [
+          Offer(
+            brand: '某某农场精选',
+            price: 123.5,
+            unit: '个',
+            quantity: 30,
+            shop: '盒马鲜生',
+            shopArea: '生鲜区',
+          ),
+        ],
+      ),
+    ]);
+
+    await pumpPage(tester);
+    await openAddSheet(tester);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('从商品报价添加'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('选择商品报价'), findsOneWidget);
+    expect(find.text('有机散养土鸡蛋礼盒装'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).last, '盒马');
+    await tester.pumpAndSettle();
+    expect(find.text('某某农场精选'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).last, '不存在');
+    await tester.pumpAndSettle();
+    expect(find.text('还没有已保存的商品报价'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('adds offers that were already saved with products', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await StorageService().saveProducts([
+      Product(
+        name: '鸡蛋',
+        units: const ['个'],
+        offers: [
+          Offer(
+            brand: '正大',
+            price: 20,
+            unit: '个',
+            quantity: 15,
+            shop: '盒马',
+            shopArea: '生鲜区',
+          ),
+          Offer(brand: '德青源', price: 30, unit: '个', quantity: 20),
+        ],
+      ),
+    ]);
+
+    await pumpPage(tester);
+    await openAddSheet(tester);
+    await tester.tap(find.text('从商品报价添加'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('选择商品报价'), findsOneWidget);
+    expect(find.text('鸡蛋'), findsOneWidget);
+    expect(find.text('正大'), findsOneWidget);
+    expect(find.text('¥20 / 15个 · 盒马 · 生鲜区'), findsOneWidget);
+
+    await tester.tap(find.text('正大'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加 1 项'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('鸡蛋 · 正大'), findsOneWidget);
+    expect(find.text('¥20 / 15 个'), findsOneWidget);
+    expect(find.text('已添加 1 项商品报价'), findsOneWidget);
+    // Copied rows carry a small source icon instead of a text badge.
+    expect(find.text('已有报价'), findsNothing);
+    expect(find.byIcon(Icons.inventory_2_outlined), findsOneWidget);
+    expect(find.byTooltip('来自已保存的商品报价'), findsOneWidget);
+  });
+
+  testWidgets('saved offers start selected in the bundle tab', (tester) async {
+    await StorageService().saveProducts([
+      Product(
+        name: '牛奶',
+        units: const ['盒'],
+        offers: [Offer(brand: '光明', price: 25, unit: '盒', quantity: 10)],
+      ),
+    ]);
+
+    await pumpPage(tester);
+    await tester.tap(find.text('凑单'));
+    await tester.pumpAndSettle();
+    await openAddSheet(tester);
+    await tester.tap(find.text('从商品报价添加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('光明'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加 1 项'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('牛奶 · 光明'), findsOneWidget);
+    expect(find.text('×1'), findsOneWidget);
+    expect(find.text('小计 ¥25'), findsOneWidget);
+    expect(find.byIcon(Icons.inventory_2_outlined), findsOneWidget);
+  });
+
+  testWidgets('combo header keeps its height when a portion is added', (
+    tester,
+  ) async {
+    QuickCalcStore.instance.commit(
+      name: '牛奶',
+      price: 25,
+      quantity: 10,
+      unit: '盒',
+    );
+    await pumpPage(tester);
+    await tester.tap(find.text('凑单'));
+    await tester.pumpAndSettle();
+
+    final header = find.byKey(const ValueKey('quick-calc-combo-header'));
+    final before = tester.getSize(header);
+    final clear = find.byKey(const ValueKey('quick-calc-combo-clear'));
+    expect(tester.widget<AnimatedOpacity>(clear).opacity, 0);
+
+    await tester.tap(find.byTooltip('增加一份'));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(header), before);
+    expect(tester.widget<AnimatedOpacity>(clear).opacity, 1);
+    expect(find.text('×1'), findsOneWidget);
   });
 
   testWidgets('combo tab reuses the add sheet and starts at one', (
@@ -483,5 +636,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(QuickCalcStore.instance.entries.single.pinned, isFalse);
     expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
+  });
+
+  test('pinned saved offers keep their source flag across a restart', () async {
+    final store = QuickCalcStore.instance;
+    final entry = store.commit(
+      name: '抽纸',
+      price: 10,
+      quantity: 500,
+      unit: '包',
+      fromSaved: true,
+    );
+    await store.togglePin(entry.id);
+
+    store.clearMemory();
+    await store.load();
+
+    expect(store.entries.single.fromSaved, isTrue);
+    expect(store.entries.single.name, '抽纸');
   });
 }

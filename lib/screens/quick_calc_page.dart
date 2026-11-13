@@ -5,6 +5,7 @@ import '../services/quick_calc_store.dart';
 import '../services/unit_store.dart';
 import '../settings/app_settings.dart';
 import '../utils/quick_calc.dart';
+import 'quick_offer_picker.dart';
 import 'unit_conversions_page.dart';
 
 class QuickCalcPage extends StatefulWidget {
@@ -117,6 +118,39 @@ class _QuickCalcPageState extends State<QuickCalcPage>
   void _submitFromSheet() {
     if (!_commitDraft()) return;
     Navigator.of(context).maybePop();
+  }
+
+  Future<void> _pickSavedOffers({bool closeSheet = false}) async {
+    final s = AppStrings.of(context);
+    FocusManager.instance.primaryFocus?.unfocus();
+    final picks = await showQuickOfferPicker(context);
+    if (picks == null || picks.isEmpty || !mounted) return;
+    var added = 0;
+    for (final pick in picks) {
+      if (pick.quantity <= 0 || pick.unit.isEmpty) continue;
+      final entry = _store.commit(
+        name: pick.name.trim(),
+        price: pick.price,
+        quantity: pick.quantity,
+        unit: pick.unit,
+        fromSaved: true,
+      );
+      if (_tabs.index == 1) {
+        _comboCounts[entry.id] = 1;
+      }
+      added++;
+    }
+    if (added == 0) return;
+    _name.clear();
+    _price.clear();
+    _quantity.clear();
+    setState(() {});
+    if (closeSheet) Navigator.of(context).maybePop();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(s.quickCalcPickSavedAdded(added))),
+      );
   }
 
   void _showIncomplete(AppStrings s) {
@@ -283,6 +317,11 @@ class _QuickCalcPageState extends State<QuickCalcPage>
         ),
         actions: [
           IconButton(
+            tooltip: s.quickCalcPickSaved,
+            onPressed: _pickSavedOffers,
+            icon: const Icon(Icons.playlist_add),
+          ),
+          IconButton(
             tooltip: s.unitConversions,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -353,31 +392,39 @@ class _QuickCalcPageState extends State<QuickCalcPage>
                   16,
                   16 + insets.bottom,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            s.quickCalcAddItem,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              s.quickCalcAddItem,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          tooltip: MaterialLocalizations.of(context)
-                              .closeButtonTooltip,
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                    _buildDraftCard(context, s, wide: wide),
-                  ],
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            tooltip: MaterialLocalizations.of(context)
+                                .closeButtonTooltip,
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                      _buildDraftCard(context, s, wide: wide),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: () => _pickSavedOffers(closeSheet: true),
+                        icon: const Icon(Icons.playlist_add, size: 20),
+                        label: Text(s.quickCalcPickSaved),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -541,7 +588,10 @@ class _QuickCalcPageState extends State<QuickCalcPage>
               ),
             )
           else ...[
+            // The clear button stays mounted (just disabled) so the header
+            // keeps the same height when the first portion is selected.
             Row(
+              key: const ValueKey('quick-calc-combo-header'),
               children: [
                 Expanded(
                   child: Text(
@@ -552,12 +602,23 @@ class _QuickCalcPageState extends State<QuickCalcPage>
                     ),
                   ),
                 ),
-                if (_comboCounts.isNotEmpty)
-                  TextButton.icon(
-                    onPressed: () => setState(_comboCounts.clear),
-                    icon: const Icon(Icons.clear_all, size: 18),
-                    label: Text(s.quickCalcComboClearSelection),
+                ExcludeSemantics(
+                  excluding: _comboCounts.isEmpty,
+                  child: IgnorePointer(
+                    ignoring: _comboCounts.isEmpty,
+                    child: AnimatedOpacity(
+                      key: const ValueKey('quick-calc-combo-clear'),
+                      opacity: _comboCounts.isEmpty ? 0 : 1,
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOut,
+                      child: TextButton.icon(
+                        onPressed: () => setState(_comboCounts.clear),
+                        icon: const Icon(Icons.clear_all, size: 18),
+                        label: Text(s.quickCalcComboClearSelection),
+                      ),
+                    ),
                   ),
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -602,13 +663,23 @@ class _QuickCalcPageState extends State<QuickCalcPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  entry.name.isEmpty ? priceLine : entry.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        entry.name.isEmpty ? priceLine : entry.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (entry.fromSaved) ...[
+                      const SizedBox(width: 6),
+                      _savedMark(context, s),
+                    ],
+                  ],
                 ),
                 Text(
                   entry.name.isEmpty
@@ -744,6 +815,21 @@ class _QuickCalcPageState extends State<QuickCalcPage>
         _comboCounts[entry.id] = next;
       }
     });
+  }
+
+  Widget _savedMark(BuildContext context, AppStrings s) {
+    return Semantics(
+      label: s.quickCalcFromSaved,
+      child: Tooltip(
+        message: s.quickCalcFromSavedHint,
+        triggerMode: TooltipTriggerMode.longPress,
+        child: Icon(
+          Icons.inventory_2_outlined,
+          size: 14,
+          color: Theme.of(context).colorScheme.secondary,
+        ),
+      ),
+    );
   }
 
   Widget _buildGroupHeader(
@@ -903,6 +989,7 @@ class _QuickCalcPageState extends State<QuickCalcPage>
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                if (entry.fromSaved) _savedMark(context, s),
                 Text(
                   '¥${formatCalcNumber(entry.price)} / '
                   '${formatCalcNumber(entry.quantity)} ${entry.unit}',

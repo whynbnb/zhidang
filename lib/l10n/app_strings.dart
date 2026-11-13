@@ -754,6 +754,29 @@ class AppStrings {
   String get quickCalcUnpin => isZh ? '取消固定' : 'Unpin';
   String get quickCalcPrimaryUnit =>
       isZh ? '主显示单位' : 'Primary display unit';
+  String get quickCalcPickSaved =>
+      isZh ? '从商品报价添加' : 'Add saved offer';
+  String get quickCalcPickSavedTitle =>
+      isZh ? '选择商品报价' : 'Choose saved offers';
+  String get quickCalcPickSavedHint => isZh
+      ? '点选已保存的商品报价，可多选；添加后直接比较单价'
+      : 'Tap saved offers to add them. Multiple selection is allowed.';
+  String get quickCalcPickSavedEmpty =>
+      isZh ? '还没有已保存的商品报价' : 'No saved offers yet';
+  String get quickCalcPickSavedEmptyHint => isZh
+      ? '先在首页添加商品和报价，再来这里比较'
+      : 'Add products and offers on the home page first.';
+  String get quickCalcPickSavedDefault =>
+      isZh ? '默认报价' : 'Default offer';
+  String quickCalcPickSavedConfirm(int n) => isZh
+      ? '添加 $n 项'
+      : (n == 1 ? 'Add 1 item' : 'Add $n items');
+  String quickCalcPickSavedAdded(int n) => isZh
+      ? '已添加 $n 项商品报价'
+      : (n == 1 ? 'Added 1 offer' : 'Added $n offers');
+  String get quickCalcFromSaved => isZh ? '已有报价' : 'Saved';
+  String get quickCalcFromSavedHint =>
+      isZh ? '来自已保存的商品报价' : 'Copied from a saved product offer';
 }
 
 class _StringsScope extends InheritedWidget {
