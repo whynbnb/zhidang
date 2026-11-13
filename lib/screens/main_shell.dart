@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/shell_navigation.dart';
 import '../l10n/app_strings.dart';
 import '../screens/compare_page.dart';
 import '../screens/data_center_page.dart';
@@ -24,13 +25,32 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     AppSettings.instance.addListener(_onSettings);
+    ShellNavigation.tabRequest.addListener(_onTabRequest);
     _destinations = AppSettings.instance.navDestinations;
   }
 
   @override
   void dispose() {
+    ShellNavigation.tabRequest.removeListener(_onTabRequest);
     AppSettings.instance.removeListener(_onSettings);
     super.dispose();
+  }
+
+  void _onTabRequest() {
+    final destination = ShellNavigation.tabRequest.value;
+    if (destination == null) return;
+    ShellNavigation.tabRequest.value = null;
+    if (!mounted) return;
+    final dests = AppSettings.instance.navDestinations;
+    final index = dests.indexOf(destination);
+    if (index < 0) return;
+    setState(() {
+      _destinations = dests;
+      _index = index;
+    });
+    if (destination == ShellNavDestination.compare) {
+      _compareKey.currentState?.reload();
+    }
   }
 
   void _onSettings() {

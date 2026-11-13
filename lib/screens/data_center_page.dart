@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app/shell_navigation.dart';
 import '../l10n/app_strings.dart';
 import '../models/product.dart';
 import '../services/category_store.dart';
@@ -116,7 +117,25 @@ class _DataCenterPageState extends State<DataCenterPage> {
                 categories: CategoryStore.instance.categories.length,
                 units: UnitStore.instance.units.length,
                 groups: ComparisonStore.instance.groups.length,
-              ),              const SizedBox(height: 20),
+                onOpenProducts: () => _openTab(ShellNavDestination.products),
+                onOpenSuppliers: () => _push(
+                  context,
+                  SuppliersPage.routeName,
+                  const SuppliersPage(),
+                ),
+                onOpenCategories: () => _push(
+                  context,
+                  CategoriesPage.routeName,
+                  const CategoriesPage(),
+                ),
+                onOpenUnits: () => _push(
+                  context,
+                  UnitsPage.routeName,
+                  const UnitsPage(),
+                ),
+                onOpenGroups: showCompare ? _openCompare : null,
+              ),
+              const SizedBox(height: 20),
               _SectionTitle(s.dataTools),
               _Panel(
                 children: [
@@ -253,6 +272,23 @@ class _DataCenterPageState extends State<DataCenterPage> {
       ),
     );
   }
+
+  /// Switches the root shell to [destination], leaving pushed pages first.
+  void _openTab(ShellNavDestination destination) {
+    if (!widget.embedded) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+    ShellNavigation.selectTab(destination);
+  }
+
+  void _openCompare() {
+    if (AppSettings.instance.navDestinations
+        .contains(ShellNavDestination.compare)) {
+      _openTab(ShellNavDestination.compare);
+      return;
+    }
+    _push(context, ComparePage.routeName, const ComparePage());
+  }
 }
 
 class _Overview extends StatelessWidget {
@@ -263,6 +299,11 @@ class _Overview extends StatelessWidget {
     required this.categories,
     required this.units,
     required this.groups,
+    this.onOpenProducts,
+    this.onOpenSuppliers,
+    this.onOpenCategories,
+    this.onOpenUnits,
+    this.onOpenGroups,
   });
 
   final int? products;
@@ -271,6 +312,11 @@ class _Overview extends StatelessWidget {
   final int categories;
   final int units;
   final int groups;
+  final VoidCallback? onOpenProducts;
+  final VoidCallback? onOpenSuppliers;
+  final VoidCallback? onOpenCategories;
+  final VoidCallback? onOpenUnits;
+  final VoidCallback? onOpenGroups;
 
   String _value(int? value) => value == null ? '—' : '$value';
 
@@ -279,16 +325,47 @@ class _Overview extends StatelessWidget {
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
     final items = [
-      ('products', Icons.inventory_2_outlined, s.tabProducts, _value(products)),
-      ('offers', Icons.local_offer_outlined, s.offersStat, _value(offers)),
-      ('suppliers', Icons.storefront_outlined, s.suppliers, '$suppliers'),
-      ('categories', Icons.category_outlined, s.categories, '$categories'),
-      ('units', Icons.straighten_outlined, s.units, '$units'),
+      (
+        'products',
+        Icons.inventory_2_outlined,
+        s.tabProducts,
+        _value(products),
+        onOpenProducts,
+      ),
+      (
+        'offers',
+        Icons.local_offer_outlined,
+        s.offersStat,
+        _value(offers),
+        null,
+      ),
+      (
+        'suppliers',
+        Icons.storefront_outlined,
+        s.suppliers,
+        '$suppliers',
+        onOpenSuppliers,
+      ),
+      (
+        'categories',
+        Icons.category_outlined,
+        s.categories,
+        '$categories',
+        onOpenCategories,
+      ),
+      (
+        'units',
+        Icons.straighten_outlined,
+        s.units,
+        '$units',
+        onOpenUnits,
+      ),
       (
         'groups',
         Icons.balance_outlined,
         s.comparisonGroupsStat,
         '$groups',
+        onOpenGroups,
       ),
     ];
 
@@ -323,6 +400,7 @@ class _Overview extends StatelessWidget {
                       icon: item.$2,
                       label: item.$3,
                       value: item.$4,
+                      onTap: item.$5,
                     ),
                   ),
               ],
@@ -340,22 +418,26 @@ class _StatTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.onTap,
   });
 
   final String id;
   final IconData icon;
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
+    final interactive = onTap != null;
+    final radius = BorderRadius.circular(12);
+    final background = scheme.surfaceContainerHighest.withValues(
+      alpha: interactive ? 0.32 : 0.25,
+    );
+
+    final content = Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(12),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -373,16 +455,42 @@ class _StatTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
+              if (interactive)
+                Icon(
+                  Icons.chevron_right,
+                  size: 16,
                   color: scheme.onSurfaceVariant,
                 ),
+            ],
           ),
         ],
       ),
+    );
+
+    return Material(
+      key: ValueKey('stat-$id'),
+      color: background,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: interactive
+          ? InkWell(
+              borderRadius: radius,
+              onTap: onTap,
+              child: content,
+            )
+          : content,
     );
   }
 }

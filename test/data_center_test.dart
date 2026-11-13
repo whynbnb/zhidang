@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zhidang/models/product.dart';
 import 'package:zhidang/screens/data_center_page.dart';
 import 'package:zhidang/screens/main_shell.dart';
+import 'package:zhidang/screens/suppliers_page.dart';
 import 'package:zhidang/services/category_store.dart';
 import 'package:zhidang/services/comparison_store.dart';
 import 'package:zhidang/services/storage_service.dart';
@@ -125,10 +126,76 @@ void main() {
 
     expect(find.text('比价'), findsNothing);
     expect(find.text('单位换算'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('stat-groups')),
+        matching: find.byType(InkWell),
+      ),
+      findsNothing,
+    );
 
     await AppSettings.instance.setCompareNavMode(CompareNavMode.dataCenter);
     await tester.pumpAndSettle();
     expect(find.text('比价'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('stat-groups')),
+        matching: find.byType(InkWell),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('overview only makes linked stats tappable', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: DataCenterPage(embedded: true)),
+    );
+    await tester.pumpAndSettle();
+
+    Finder tileInk(String id) => find.descendant(
+          of: find.byKey(ValueKey('stat-$id')),
+          matching: find.byType(InkWell),
+        );
+
+    expect(tileInk('products'), findsOneWidget);
+    expect(tileInk('suppliers'), findsOneWidget);
+    expect(tileInk('categories'), findsOneWidget);
+    expect(tileInk('units'), findsOneWidget);
+    expect(tileInk('groups'), findsOneWidget);
+    expect(tileInk('offers'), findsNothing);
+  });
+
+  testWidgets('tapping a linked stat opens its management page', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: DataCenterPage(embedded: true)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('stat-suppliers-value')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SuppliersPage), findsOneWidget);
+  });
+
+  testWidgets('products stat returns to the home tab', (tester) async {
+    await AppSettings.instance
+        .setDataCenterNavMode(DataCenterNavMode.bottomNav);
+    await AppSettings.instance
+        .setSettingsEntryMode(SettingsEntryMode.headerIcon);
+    await AppSettings.instance.setCompareNavMode(CompareNavMode.disabled);
+
+    await tester.pumpWidget(const MaterialApp(home: MainShell()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.dataset_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('数据中心'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('stat-products-value')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('数据中心'), findsNothing);
+    expect(find.text('值当'), findsWidgets);
   });
 
   testWidgets('data center tab is reachable from the shell', (tester) async {
