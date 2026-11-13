@@ -699,9 +699,6 @@ class AppStrings {
   String get quickCalcHint => isZh
       ? '输入总价和数量，自动算出单价。未固定的数据只在本次运行中保留；固定后下次打开仍保留。'
       : 'Enter the total price and quantity to see the unit price. Unpinned data stays for this run only; pinned rows are restored next launch.';
-  String get quickCalcAddHint => isZh
-      ? '填好后点右侧 ✓ 保留；点图钉固定后，下次打开仍保留'
-      : 'Tap ✓ to keep a row; pin it to keep it after restart';
   String get quickCalcIncomplete =>
       isZh ? '请填写总价和数量' : 'Enter a price and quantity';
   String get quickCalcClear => isZh ? '清空' : 'Clear';
@@ -718,9 +715,6 @@ class AppStrings {
   String get quickCalcGroupVolume => isZh ? '体积' : 'Volume';
   String quickCalcGroupUnit(String unit) =>
       isZh ? '单位：$unit' : 'Unit: $unit';
-  String get quickCalcEmptyHint => isZh
-      ? '填写总价和数量后显示单价'
-      : 'Enter a price and quantity to see the unit price';
   String get quickCalcDeleteRow => isZh ? '删除这组数据' : 'Remove this row';
   String get quickCalcPin =>
       isZh ? '固定，下次打开仍保留' : 'Pin to keep after restart';

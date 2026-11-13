@@ -22,6 +22,9 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
   late final TextEditingController _name;
   late final TextEditingController _price;
   late final TextEditingController _quantity;
+  final _priceFocus = FocusNode();
+  final _quantityFocus = FocusNode();
+  final _nameFocus = FocusNode();
 
   bool get _isZh => AppSettings.instance.locale.languageCode != 'en';
 
@@ -54,6 +57,9 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     _name.dispose();
     _price.dispose();
     _quantity.dispose();
+    _priceFocus.dispose();
+    _quantityFocus.dispose();
+    _nameFocus.dispose();
     super.dispose();
   }
 
@@ -68,10 +74,14 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     final s = AppStrings.of(context);
     final price = parseCalcNumber(_price.text);
     final quantity = parseCalcNumber(_quantity.text);
-    if (price == null || quantity == null || quantity <= 0) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(s.quickCalcIncomplete)));
+    if (price == null) {
+      _priceFocus.requestFocus();
+      _showIncomplete(s);
+      return;
+    }
+    if (quantity == null || quantity <= 0) {
+      _quantityFocus.requestFocus();
+      _showIncomplete(s);
       return;
     }
     _store.commit(
@@ -84,6 +94,14 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     _price.clear();
     _quantity.clear();
     setState(() {});
+    // Keep the flow going: the next entry starts at the price field.
+    _priceFocus.requestFocus();
+  }
+
+  void _showIncomplete(AppStrings s) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(s.quickCalcIncomplete)));
   }
 
   Future<void> _clearAll() async {
@@ -117,7 +135,6 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final wide = MediaQuery.sizeOf(context).width >= 720;
 
     final relations = UnitStore.instance.relations;
@@ -259,13 +276,6 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
               const SizedBox(height: 6),
             ],
             _buildDraftCard(context, s, wide: wide),
-            const SizedBox(height: 8),
-            Text(
-              s.quickCalcAddHint,
-              style: textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
           ],
         ),
       ),
@@ -517,7 +527,9 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
 
     final nameField = TextField(
       controller: _name,
-      textInputAction: TextInputAction.next,
+      focusNode: _nameFocus,
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) => _commitDraft(),
       decoration: InputDecoration(
         labelText: s.quickCalcName,
         hintText: s.quickCalcNameHint,
@@ -527,8 +539,10 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     );
     final priceField = TextField(
       controller: _price,
+      focusNode: _priceFocus,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textInputAction: TextInputAction.next,
+      onSubmitted: (_) => _quantityFocus.requestFocus(),
       decoration: InputDecoration(
         labelText: s.quickCalcPrice,
         isDense: true,
@@ -537,6 +551,7 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     );
     final quantityField = TextField(
       controller: _quantity,
+      focusNode: _quantityFocus,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textInputAction: TextInputAction.done,
       onSubmitted: (_) => _commitDraft(),
@@ -578,13 +593,13 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
       fieldRow = Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(flex: 3, child: nameField),
-          const SizedBox(width: 10),
           Expanded(flex: 2, child: priceField),
           const SizedBox(width: 10),
           Expanded(flex: 2, child: quantityField),
           const SizedBox(width: 10),
           SizedBox(width: 120, child: unitField),
+          const SizedBox(width: 10),
+          Expanded(flex: 3, child: nameField),
           const SizedBox(width: 4),
           addButton,
         ],
@@ -594,14 +609,6 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            children: [
-              Expanded(child: nameField),
-              const SizedBox(width: 8),
-              addButton,
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(flex: 3, child: priceField),
@@ -609,6 +616,14 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
               Expanded(flex: 3, child: quantityField),
               const SizedBox(width: 8),
               Expanded(flex: 2, child: unitField),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(child: nameField),
+              const SizedBox(width: 8),
+              addButton,
             ],
           ),
         ],
@@ -670,27 +685,19 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             fieldRow,
-            const SizedBox(height: 10),
-            _buildPreview(context, s, preview),
+            if (preview != null) ...[
+              const SizedBox(height: 10),
+              _buildPreview(context, preview),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPreview(
-    BuildContext context,
-    AppStrings s,
-    QuickCalcResult? result,
-  ) {
+  Widget _buildPreview(BuildContext context, QuickCalcResult result) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    if (result == null) {
-      return Text(
-        s.quickCalcEmptyHint,
-        style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-      );
-    }
 
     return Wrap(
       spacing: 8,

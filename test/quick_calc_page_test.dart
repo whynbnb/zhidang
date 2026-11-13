@@ -49,8 +49,8 @@ void main() {
     await pumpPage(tester);
     expect(find.byType(TextField), findsNWidgets(3));
 
-    await tester.enterText(find.byType(TextField).at(1), '20');
-    await tester.enterText(find.byType(TextField).at(2), '15');
+    await tester.enterText(find.byType(TextField).at(0), '20');
+    await tester.enterText(find.byType(TextField).at(1), '15');
     await tester.pump();
     expect(find.text('¥1.33 / 个'), findsOneWidget);
     await commitDraft(tester);
@@ -60,8 +60,8 @@ void main() {
     expect(find.text('¥1.33 / 个'), findsOneWidget);
     expect(find.text('¥20 / 15 个'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField).at(1), '9.6');
-    await tester.enterText(find.byType(TextField).at(2), '400');
+    await tester.enterText(find.byType(TextField).at(0), '9.6');
+    await tester.enterText(find.byType(TextField).at(1), '400');
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('g').last);
@@ -71,8 +71,8 @@ void main() {
     await commitDraft(tester);
     expect(find.text('¥12 / 斤'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField).at(1), '10');
-    await tester.enterText(find.byType(TextField).at(2), '15');
+    await tester.enterText(find.byType(TextField).at(0), '10');
+    await tester.enterText(find.byType(TextField).at(1), '15');
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('个').last);
@@ -92,13 +92,13 @@ void main() {
     tester,
   ) async {
     await pumpPage(tester);
-    await tester.enterText(find.byType(TextField).at(1), '20');
-    await tester.enterText(find.byType(TextField).at(2), '15');
+    await tester.enterText(find.byType(TextField).at(0), '20');
+    await tester.enterText(find.byType(TextField).at(1), '15');
     await tester.pump();
     await commitDraft(tester);
 
-    await tester.enterText(find.byType(TextField).at(1), '9.6');
-    await tester.enterText(find.byType(TextField).at(2), '400');
+    await tester.enterText(find.byType(TextField).at(0), '9.6');
+    await tester.enterText(find.byType(TextField).at(1), '400');
     await tester.pump();
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -109,6 +109,39 @@ void main() {
     expect(find.text('¥20 / 15 个'), findsOneWidget);
     expect(find.text('9.6'), findsOneWidget);
     expect(find.text('400'), findsOneWidget);
+  });
+
+  testWidgets('draft card has no helper text and refocuses price', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    expect(find.text('填写总价和数量后显示单价'), findsNothing);
+    expect(
+      find.text('填好后点右侧 ✓ 保留；点图钉固定后，下次打开仍保留'),
+      findsNothing,
+    );
+
+    await tester.enterText(find.byType(TextField).at(0), '10');
+    await tester.enterText(find.byType(TextField).at(1), '4');
+    await tester.pump();
+    expect(find.text('¥2.5 / 个'), findsOneWidget);
+
+    await commitDraft(tester);
+    final priceNode =
+        tester.widget<TextField>(find.byType(TextField).at(0)).focusNode!;
+    expect(priceNode.hasFocus, isTrue);
+    expect(find.text('¥10 / 4 个'), findsOneWidget);
+  });
+
+  testWidgets('keyboard done commits the draft', (tester) async {
+    await pumpPage(tester);
+    await tester.enterText(find.byType(TextField).at(0), '8');
+    await tester.enterText(find.byType(TextField).at(1), '2');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(find.text('¥4 / 个'), findsOneWidget);
+    expect(find.text('¥8 / 2 个'), findsOneWidget);
   });
 
   testWidgets('row hint is hidden in the title until long press', (
@@ -167,8 +200,8 @@ void main() {
     );
     await pumpPage(tester);
 
-    await tester.enterText(find.byType(TextField).at(1), '30');
-    await tester.enterText(find.byType(TextField).at(2), '1');
+    await tester.enterText(find.byType(TextField).at(0), '30');
+    await tester.enterText(find.byType(TextField).at(1), '1');
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('斤').last);
@@ -185,8 +218,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await pumpPage(tester);
-    await tester.enterText(find.byType(TextField).at(1), '123');
-    await tester.enterText(find.byType(TextField).at(2), '5');
+    await tester.enterText(find.byType(TextField).at(0), '123');
+    await tester.enterText(find.byType(TextField).at(1), '5');
     await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButtonFormField<String>));
@@ -215,8 +248,8 @@ void main() {
   ) async {
     await pumpPage(tester);
 
-    await tester.enterText(find.byType(TextField).at(1), '123');
-    await tester.enterText(find.byType(TextField).at(2), '5');
+    await tester.enterText(find.byType(TextField).at(0), '123');
+    await tester.enterText(find.byType(TextField).at(1), '5');
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('斤').last);
@@ -247,8 +280,8 @@ void main() {
 
   testWidgets('rows can be pinned and unpinned', (tester) async {
     await pumpPage(tester);
-    await tester.enterText(find.byType(TextField).at(1), '123');
-    await tester.enterText(find.byType(TextField).at(2), '5');
+    await tester.enterText(find.byType(TextField).at(0), '123');
+    await tester.enterText(find.byType(TextField).at(1), '5');
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('斤').last);
