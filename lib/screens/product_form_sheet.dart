@@ -13,6 +13,7 @@ import '../utils/ime_focus.dart';
 import '../utils/quantity_presets.dart';
 import '../utils/tag_suggestions.dart';
 import 'unit_relation_form.dart';
+import 'suppliers_page.dart';
 import '../widgets/hint_title.dart';
 import '../widgets/tag_chips.dart';
 
@@ -920,18 +921,13 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
     super.dispose();
   }
 
-  Future<void> _quickAddSupplier() async {
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => const _SupplierNameDialog(),
+  Future<void> _manageSuppliers() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        settings: const RouteSettings(name: SuppliersPage.routeName),
+        builder: (_) => const SuppliersPage(),
+      ),
     );
-    if (name == null || name.isEmpty || !mounted) return;
-    final supplier = await SupplierStore.instance.add(name: name);
-    if (!mounted) return;
-    setState(() {
-      _shop.text = supplier.name;
-      _shopArea = '';
-    });
   }
 
   Future<void> _addOrEditRelation([UnitRelation? existing]) async {
@@ -1639,71 +1635,72 @@ class _OfferFormSheetState extends State<_OfferFormSheet> {
                       _shopArea,
                     ...areas,
                   ];
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              key: ValueKey('shop-$shop-${names.length}'),
-                              initialValue: shop,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: s.shopOptional,
-                                border: const OutlineInputBorder(),
-                              ),
-                              items: [
-                                DropdownMenuItem<String>(
-                                  value: '',
-                                  child: Text(s.noneOption),
-                                ),
-                                for (final name in options)
-                                  DropdownMenuItem<String>(
-                                    value: name,
-                                    child: Text(name),
-                                  ),
-                              ],
-                              onChanged: (value) => setState(() {
-                                _shop.text = value ?? '';
-                                _shopArea = '';
-                              }),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filledTonal(
-                            onPressed: _quickAddSupplier,
-                            icon: const Icon(Icons.add),
-                            tooltip: s.addSupplier,
-                          ),
-                        ],
+                      IconButton.filledTonal(
+                        onPressed: _manageSuppliers,
+                        icon: const Icon(Icons.storefront_outlined),
+                        tooltip: s.suppliersManage,
                       ),
-                      if (areaValues.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          key: ValueKey(
-                            'shop-area-$shop-${areaValues.length}-$_shopArea',
-                          ),
-                          initialValue: _shopArea,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 3,
+                        child: DropdownButtonFormField<String>(
+                          key: ValueKey('shop-$shop-${names.length}'),
+                          initialValue: shop,
                           isExpanded: true,
                           decoration: InputDecoration(
-                            labelText: s.shopAreaOptional,
+                            labelText: s.shopOptional,
                             border: const OutlineInputBorder(),
+                            isDense: true,
                           ),
                           items: [
                             DropdownMenuItem<String>(
                               value: '',
-                              child: Text(s.noShopArea),
+                              child: Text(s.noneOption),
                             ),
-                            for (final area in areaValues)
+                            for (final name in options)
                               DropdownMenuItem<String>(
-                                value: area,
-                                child: Text(area),
+                                value: name,
+                                child: Text(name),
                               ),
                           ],
-                          onChanged: (value) =>
-                              setState(() => _shopArea = value ?? ''),
+                          onChanged: (value) => setState(() {
+                            _shop.text = value ?? '';
+                            _shopArea = '';
+                          }),
+                        ),
+                      ),
+                      if (areaValues.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: DropdownButtonFormField<String>(
+                            key: ValueKey(
+                              'shop-area-$shop-${areaValues.length}-$_shopArea',
+                            ),
+                            initialValue: _shopArea,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: s.shopAreaLabel,
+                              border: const OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            items: [
+                              DropdownMenuItem<String>(
+                                value: '',
+                                child: Text(s.noShopArea),
+                              ),
+                              for (final area in areaValues)
+                                DropdownMenuItem<String>(
+                                  value: area,
+                                  child: Text(area),
+                                ),
+                            ],
+                            onChanged: (value) =>
+                                setState(() => _shopArea = value ?? ''),
+                          ),
                         ),
                       ],
                     ],
@@ -1966,57 +1963,6 @@ class _UnitPriceLabel extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
       ),
-    );
-  }
-}
-
-class _SupplierNameDialog extends StatefulWidget {
-  const _SupplierNameDialog();
-
-  @override
-  State<_SupplierNameDialog> createState() => _SupplierNameDialogState();
-}
-
-class _SupplierNameDialogState extends State<_SupplierNameDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final name = _controller.text.trim();
-    if (name.isEmpty) return;
-    Navigator.of(context).pop(name);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final s = AppStrings.of(context);
-    return AlertDialog(
-      title: Text(s.addSupplier),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textInputAction: TextInputAction.done,
-        decoration: InputDecoration(
-          labelText: s.supplierName,
-          border: const OutlineInputBorder(),
-        ),
-        onSubmitted: (_) => _submit(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(s.cancel),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(s.add),
-        ),
-      ],
     );
   }
 }

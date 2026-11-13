@@ -6,6 +6,7 @@ import 'package:zhidang/main.dart';
 import 'package:zhidang/l10n/app_strings.dart';
 import 'package:zhidang/models/product.dart';
 import 'package:zhidang/screens/categories_page.dart';
+import 'package:zhidang/screens/suppliers_page.dart';
 import 'package:zhidang/services/category_store.dart';
 import 'package:zhidang/services/comparison_store.dart';
 import 'package:zhidang/services/storage_service.dart';
@@ -432,23 +433,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('offer editor quick-adds a supplier', (tester) async {
+  testWidgets('offer editor opens supplier management', (tester) async {
     await pumpDetail(tester, const Size(390, 844), compact: false);
     await tester.tap(find.text('A').first);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('添加供应商'));
-    await tester.pumpAndSettle();
-    final dialogField = find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.byType(TextField),
-    );
-    await tester.enterText(dialogField, '新供应商');
-    await tester.tap(find.widgetWithText(FilledButton, '添加'));
+    await tester.tap(find.byTooltip('管理供应商'));
     await tester.pumpAndSettle();
 
-    expect(SupplierStore.instance.names, contains('新供应商'));
-    expect(find.text('新供应商'), findsOneWidget);
+    expect(find.byType(SuppliersPage), findsOneWidget);
   });
 
   testWidgets('counter options live under advanced options', (tester) async {

@@ -226,7 +226,7 @@ class AppStrings {
       isZh ? '例如熟食区、生鲜区' : 'e.g. deli, produce';
   String supplierAreasLimit(int n) =>
       isZh ? '最多 $n 个区域' : (n == 1 ? '1 area max' : '$n areas max');
-  String get shopAreaOptional => isZh ? '区域（可选）' : 'Area (optional)';
+  String get shopAreaLabel => isZh ? '区域' : 'Area';
   String get noShopArea => isZh ? '不指定区域' : 'No area';
 
   String get tags => isZh ? '标签' : 'Tags';

@@ -101,6 +101,11 @@ void main() {
   testWidgets('offer editor picks an area of the chosen supplier', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await SupplierStore.instance.add(
       name: '盒马',
       areas: const ['熟食区', '生鲜区'],
@@ -151,5 +156,6 @@ void main() {
 
     expect(result?.offer?.shop, '盒马');
     expect(result?.offer?.shopArea, '熟食区');
+    expect(tester.takeException(), isNull);
   });
 }
