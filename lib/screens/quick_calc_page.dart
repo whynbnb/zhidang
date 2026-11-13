@@ -16,12 +16,17 @@ class QuickCalcPage extends StatefulWidget {
   State<QuickCalcPage> createState() => _QuickCalcPageState();
 }
 
-class _QuickCalcPageState extends State<QuickCalcPage> {
+class _QuickCalcPageState extends State<QuickCalcPage>
+    with SingleTickerProviderStateMixin {
   final _store = QuickCalcStore.instance;
 
+  late final TabController _tabs;
   late final TextEditingController _name;
   late final TextEditingController _price;
   late final TextEditingController _quantity;
+  late final TextEditingController _comboTarget;
+  final _comboCounts = <String, int>{};
+  final _draftRevision = ValueNotifier<int>(0);
   final _priceFocus = FocusNode();
   final _quantityFocus = FocusNode();
   final _nameFocus = FocusNode();
@@ -35,6 +40,7 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
   @override
   void initState() {
     super.initState();
+    _tabs = TabController(length: 2, vsync: this);
     UnitStore.instance.addListener(_onUnitsChanged);
     if (_draft.unit.isEmpty) {
       _draft.unit = _defaultUnit;
@@ -42,9 +48,13 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     _name = TextEditingController(text: _draft.name);
     _price = TextEditingController(text: _draft.price);
     _quantity = TextEditingController(text: _draft.quantity);
+    _comboTarget = TextEditingController();
     _name.addListener(_syncDraft);
     _price.addListener(_syncDraft);
     _quantity.addListener(_syncDraft);
+    _comboTarget.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   void _onUnitsChanged() {
@@ -54,9 +64,12 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
   @override
   void dispose() {
     UnitStore.instance.removeListener(_onUnitsChanged);
+    _tabs.dispose();
     _name.dispose();
     _price.dispose();
     _quantity.dispose();
+    _comboTarget.dispose();
+    _draftRevision.dispose();
     _priceFocus.dispose();
     _quantityFocus.dispose();
     _nameFocus.dispose();
@@ -67,35 +80,43 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     _draft.name = _name.text;
     _draft.price = _price.text;
     _draft.quantity = _quantity.text;
+    _draftRevision.value++;
     if (mounted) setState(() {});
   }
 
-  void _commitDraft() {
+  bool _commitDraft() {
     final s = AppStrings.of(context);
     final price = parseCalcNumber(_price.text);
     final quantity = parseCalcNumber(_quantity.text);
     if (price == null) {
       _priceFocus.requestFocus();
       _showIncomplete(s);
-      return;
+      return false;
     }
     if (quantity == null || quantity <= 0) {
       _quantityFocus.requestFocus();
       _showIncomplete(s);
-      return;
+      return false;
     }
-    _store.commit(
+    final entry = _store.commit(
       name: _name.text.trim(),
       price: price,
       quantity: quantity,
       unit: _draft.unit,
     );
+    if (_tabs.index == 1) {
+      _comboCounts[entry.id] = 1;
+    }
     _name.clear();
     _price.clear();
     _quantity.clear();
     setState(() {});
-    // Keep the flow going: the next entry starts at the price field.
-    _priceFocus.requestFocus();
+    return true;
+  }
+
+  void _submitFromSheet() {
+    if (!_commitDraft()) return;
+    Navigator.of(context).maybePop();
   }
 
   void _showIncomplete(AppStrings s) {
@@ -128,6 +149,8 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
     _name.clear();
     _price.clear();
     _quantity.clear();
+    _comboTarget.clear();
+    _comboCounts.clear();
     setState(() {});
   }
 
@@ -135,7 +158,6 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
-    final wide = MediaQuery.sizeOf(context).width >= 720;
 
     final relations = UnitStore.instance.relations;
     final provisional = <String, QuickCalcResult?>{};
@@ -199,6 +221,44 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
       }
     }
 
+    final convertView = SafeArea(
+      top: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 96),
+        children: [
+          for (final group in groups.entries) ...[
+            _buildGroupHeader(
+              context,
+              s,
+              group.key,
+              group.value,
+              primary: groupPrimaries[group.key]!,
+              options: groupOptions[group.key]!,
+              onPrimarySelected: (unit) => setState(
+                () => _store.primaryUnits[group.key] = unit,
+              ),
+            ),
+            for (final entry in group.value) ...[
+              _buildCommittedRow(
+                context,
+                s,
+                entry,
+                result: results[entry.id],
+                groupCount: results[entry.id] == null
+                    ? 0
+                    : groupCounts[results[entry.id]!.groupKey] ?? 0,
+                groupBest: results[entry.id] == null
+                    ? null
+                    : groupBest[results[entry.id]!.groupKey],
+              ),
+              const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 6),
+          ],
+        ],
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Tooltip(
@@ -240,46 +300,450 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
           ),
           const SizedBox(width: 4),
         ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-          children: [
-            for (final group in groups.entries) ...[
-              _buildGroupHeader(
-                context,
-                s,
-                group.key,
-                group.value,
-                primary: groupPrimaries[group.key]!,
-                options: groupOptions[group.key]!,
-                onPrimarySelected: (unit) => setState(
-                  () => _store.primaryUnits[group.key] = unit,
-                ),
-              ),
-              for (final entry in group.value) ...[
-                _buildCommittedRow(
-                  context,
-                  s,
-                  entry,
-                  result: results[entry.id],
-                  groupCount: results[entry.id] == null
-                      ? 0
-                      : groupCounts[results[entry.id]!.groupKey] ?? 0,
-                  groupBest: results[entry.id] == null
-                      ? null
-                      : groupBest[results[entry.id]!.groupKey],
-                ),
-                const SizedBox(height: 8),
-              ],
-              const SizedBox(height: 6),
-            ],
-            _buildDraftCard(context, s, wide: wide),
+        bottom: TabBar(
+          controller: _tabs,
+          tabs: [
+            Tab(text: s.quickCalcTabConvert),
+            Tab(text: s.quickCalcTabCombo),
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'quick-calc-add',
+        onPressed: _showAddSheet,
+        tooltip: s.quickCalcAddItem,
+        child: const Icon(Icons.add),
+      ),
+      body: TabBarView(
+        controller: _tabs,
+        children: [
+          convertView,
+          _buildComboView(context, s),
+        ],
+      ),
     );
+  }
+
+  Future<void> _showAddSheet() async {
+    final s = AppStrings.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _priceFocus.requestFocus();
+        });
+        return AnimatedBuilder(
+          animation: Listenable.merge([
+            _name,
+            _price,
+            _quantity,
+            _draftRevision,
+          ]),
+          builder: (context, _) {
+            final insets = MediaQuery.viewInsetsOf(context);
+            final wide = MediaQuery.sizeOf(context).width >= 720;
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  0,
+                  16,
+                  16 + insets.bottom,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            s.quickCalcAddItem,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          tooltip: MaterialLocalizations.of(context)
+                              .closeButtonTooltip,
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    _buildDraftCard(context, s, wide: wide),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildComboView(BuildContext context, AppStrings s) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final entries = _store.entries;
+    final target = parseCalcNumber(_comboTarget.text);
+    final hasTarget = target != null && target > 0;
+
+    var total = 0.0;
+    for (final entry in entries) {
+      total += entry.price * (_comboCounts[entry.id] ?? 0);
+    }
+    final reached = hasTarget && total >= target - 1e-9;
+    final over = hasTarget && total > target + 1e-9;
+    final remaining = hasTarget ? target - total : null;
+
+    final String? summaryChip;
+    if (!hasTarget) {
+      summaryChip = null;
+    } else if (over) {
+      summaryChip = s.quickCalcComboOver(formatCalcNumber(total - target));
+    } else if (reached) {
+      summaryChip = s.quickCalcComboReached;
+    } else {
+      summaryChip = s.quickCalcComboRemaining(
+        formatCalcNumber(remaining!),
+      );
+    }
+
+    return SafeArea(
+      top: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+        children: [
+          Card(
+            elevation: 0,
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: scheme.outlineVariant),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _comboTarget,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: s.quickCalcComboTarget,
+                      prefixText: '¥ ',
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s.quickCalcComboSelected,
+                              style: textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            Text(
+                              '¥${formatCalcNumber(total)}',
+                              style: textTheme.titleLarge?.copyWith(
+                                color: reached ? scheme.tertiary : scheme.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (summaryChip != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: reached
+                                ? scheme.tertiaryContainer
+                                : scheme.secondaryContainer,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            summaryChip,
+                            style: textTheme.labelMedium?.copyWith(
+                              color: reached
+                                  ? scheme.onTertiaryContainer
+                                  : scheme.onSecondaryContainer,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (hasTarget) ...[
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: (total / target).clamp(0.0, 1.0),
+                        minHeight: 8,
+                        backgroundColor: scheme.surfaceContainerHighest,
+                        color: reached ? scheme.tertiary : scheme.primary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (entries.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.shopping_basket_outlined,
+                    size: 48,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    s.quickCalcComboEmptyTitle,
+                    style: textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    s.quickCalcComboEmptyHint,
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    onPressed: () => _tabs.animateTo(0),
+                    icon: const Icon(Icons.swap_horiz),
+                    label: Text(s.quickCalcComboGoConvert),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    s.quickCalcComboItems,
+                    style: textTheme.titleSmall?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (_comboCounts.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: () => setState(_comboCounts.clear),
+                    icon: const Icon(Icons.clear_all, size: 18),
+                    label: Text(s.quickCalcComboClearSelection),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            for (final entry in entries) ...[
+              _buildComboRow(context, s, entry),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComboRow(
+    BuildContext context,
+    AppStrings s,
+    QuickCalcEntry entry,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final count = _comboCounts[entry.id] ?? 0;
+    final selected = count > 0;
+    final unitPrice = entry.quantity > 0 ? entry.price / entry.quantity : 0.0;
+    final priceLine = '¥${formatCalcNumber(entry.price)} / '
+        '${formatCalcNumber(entry.quantity)} ${entry.unit}';
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: selected
+            ? scheme.primaryContainer.withValues(alpha: 0.35)
+            : scheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: selected ? scheme.primary : scheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.name.isEmpty ? priceLine : entry.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  entry.name.isEmpty
+                      ? '¥${formatCalcNumber(unitPrice)} / ${entry.unit}'
+                      : '$priceLine · ¥${formatCalcNumber(unitPrice)} / ${entry.unit}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                if (selected)
+                  Text(
+                    s.quickCalcComboSubtotal(
+                      formatCalcNumber(entry.price * count),
+                    ),
+                    style: textTheme.labelMedium?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            onPressed: count > 0
+                ? () => setState(() {
+                      if (count <= 1) {
+                        _comboCounts.remove(entry.id);
+                      } else {
+                        _comboCounts[entry.id] = count - 1;
+                      }
+                    })
+                : null,
+            tooltip: s.quickCalcComboRemoveOne,
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.remove_circle_outline, size: 20),
+          ),
+          Semantics(
+            button: true,
+            label: s.quickCalcComboEditCount,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onLongPress: () => _editComboCount(context, s, entry),
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: Center(
+                  child: Text(
+                    '×$count',
+                    textAlign: TextAlign.center,
+                    style: textTheme.titleSmall?.copyWith(
+                      color:
+                          selected ? scheme.primary : scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: () =>
+                setState(() => _comboCounts[entry.id] = count + 1),
+            tooltip: s.quickCalcComboAddOne,
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.add_circle_outline, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _editComboCount(
+    BuildContext context,
+    AppStrings s,
+    QuickCalcEntry entry,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    var text = '${_comboCounts[entry.id] ?? 0}';
+    final next = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(s.quickCalcComboCountTitle),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            initialValue: text,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: s.quickCalcComboCountLabel,
+              helperText: s.quickCalcComboCountHint,
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: (value) => text = value,
+            validator: (value) {
+              final n = int.tryParse((value ?? '').trim());
+              if (n == null || n < 0) {
+                return s.quickCalcComboCountInvalid;
+              }
+              return null;
+            },
+            onFieldSubmitted: (_) {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.of(dialogContext).pop(int.parse(text.trim()));
+              }
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(s.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.of(dialogContext).pop(int.parse(text.trim()));
+              }
+            },
+            child: Text(s.save),
+          ),
+        ],
+      ),
+    );
+    if (next == null || !mounted) return;
+    setState(() {
+      if (next <= 0) {
+        _comboCounts.remove(entry.id);
+      } else {
+        _comboCounts[entry.id] = next;
+      }
+    });
   }
 
   Widget _buildGroupHeader(
@@ -529,7 +993,7 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
       controller: _name,
       focusNode: _nameFocus,
       textInputAction: TextInputAction.done,
-      onSubmitted: (_) => _commitDraft(),
+      onSubmitted: (_) => _submitFromSheet(),
       decoration: InputDecoration(
         labelText: s.quickCalcName,
         hintText: s.quickCalcNameHint,
@@ -554,7 +1018,7 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
       focusNode: _quantityFocus,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textInputAction: TextInputAction.done,
-      onSubmitted: (_) => _commitDraft(),
+      onSubmitted: (_) => _submitFromSheet(),
       decoration: InputDecoration(
         labelText: s.quickCalcQuantity,
         isDense: true,
@@ -580,10 +1044,11 @@ class _QuickCalcPageState extends State<QuickCalcPage> {
       onChanged: (value) {
         if (value == null) return;
         setState(() => _draft.unit = value);
+        _draftRevision.value++;
       },
     );
     final addButton = IconButton.filledTonal(
-      onPressed: _commitDraft,
+      onPressed: _submitFromSheet,
       tooltip: s.add,
       icon: const Icon(Icons.check),
     );

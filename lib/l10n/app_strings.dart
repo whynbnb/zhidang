@@ -701,6 +701,39 @@ class AppStrings {
       : 'Enter the total price and quantity to see the unit price. Unpinned data stays for this run only; pinned rows are restored next launch.';
   String get quickCalcIncomplete =>
       isZh ? '请填写总价和数量' : 'Enter a price and quantity';
+  String get quickCalcAddItem => isZh ? '添加换算' : 'Add conversion';
+  String get quickCalcTabConvert => isZh ? '换算' : 'Convert';
+  String get quickCalcTabCombo => isZh ? '凑单' : 'Bundle';
+  String get quickCalcComboTarget =>
+      isZh ? '目标金额（元）' : 'Target amount';
+  String get quickCalcComboSelected => isZh ? '已选' : 'Selected';
+  String quickCalcComboRemaining(String amount) =>
+      isZh ? '还差 ¥$amount' : '¥$amount to go';
+  String quickCalcComboOver(String amount) =>
+      isZh ? '超出 ¥$amount' : '¥$amount over';
+  String get quickCalcComboReached => isZh ? '已凑够' : 'Target reached';
+  String get quickCalcComboEmptyTitle =>
+      isZh ? '还没有可凑单的商品' : 'No items to bundle yet';
+  String get quickCalcComboEmptyHint => isZh
+      ? '先在「换算」页添加商品，再回来凑单'
+      : 'Add items on the Convert tab, then come back';
+  String get quickCalcComboGoConvert => isZh ? '去换算' : 'Go to Convert';
+  String get quickCalcComboItems => isZh ? '商品' : 'Items';
+  String get quickCalcComboClearSelection =>
+      isZh ? '清空已选' : 'Clear selection';
+  String get quickCalcComboEditCount =>
+      isZh ? '长按修改数量' : 'Long-press to edit quantity';
+  String get quickCalcComboCountTitle =>
+      isZh ? '修改数量' : 'Edit quantity';
+  String get quickCalcComboCountLabel => isZh ? '份数' : 'Portions';
+  String get quickCalcComboCountHint =>
+      isZh ? '0 表示不加入凑单' : '0 excludes it from the bundle';
+  String get quickCalcComboCountInvalid =>
+      isZh ? '请输入 0 或正整数' : 'Enter 0 or a positive whole number';
+  String get quickCalcComboAddOne => isZh ? '增加一份' : 'Add one';
+  String get quickCalcComboRemoveOne => isZh ? '减少一份' : 'Remove one';
+  String quickCalcComboSubtotal(String amount) =>
+      isZh ? '小计 ¥$amount' : 'Subtotal ¥$amount';
   String get quickCalcClear => isZh ? '清空' : 'Clear';
   String get quickCalcClearConfirm => isZh
       ? '清空本次全部换算数据？'

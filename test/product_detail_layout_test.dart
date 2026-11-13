@@ -899,6 +899,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('快速换算'), findsOneWidget);
-    expect(find.byTooltip('添加'), findsOneWidget);
+    expect(find.byTooltip('添加换算'), findsOneWidget);
   });
 }
